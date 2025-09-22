@@ -19,14 +19,17 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.makeLenientGtvGson
 
 object ContainerConfigFactory : KLogging() {
 
     private const val REMOTE_DEBUG_PORT = 8000
+    private val gson = makeLenientGtvGson()
 
     fun setConfig(createContainerCmd: CreateContainerCmd, fs: FileSystem, appConfig: AppConfig,
                   containerNodeConfig: ContainerNodeConfig, containerName: ContainerName,
-                  resourceLimits: ContainerResourceLimits, readOnly: Boolean) {
+                  resourceLimits: ContainerResourceLimits, readOnly: Boolean, directoryContainerConfiguration: GtvDictionary) {
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
         val volumes = createVolumes(fs, containerName, containerNodeConfig)
@@ -40,7 +43,7 @@ object ContainerConfigFactory : KLogging() {
                 .withName(containerName.dockerContainer)
                 .withHostConfig(hostConfig)
                 .withExposedPorts(portBindings.map { it.exposedPort })
-                .withEnv(createNodeConfigEnv(appConfig, containerNodeConfig, containerName, readOnly))
+                .withEnv(createNodeConfigEnv(appConfig, containerNodeConfig, containerName, readOnly, directoryContainerConfiguration))
                 .withLabels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
     }
 
@@ -178,7 +181,7 @@ object ContainerConfigFactory : KLogging() {
         return volumes
     }
 
-    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, containerName: ContainerName, readOnly: Boolean) = buildList {
+    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, containerName: ContainerName, readOnly: Boolean, directoryContainerConfiguration: GtvDictionary) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
@@ -264,6 +267,9 @@ object ContainerConfigFactory : KLogging() {
                         .filterKeys { it.startsWith("POSTCHAIN_EXTENSION_") }
                         .map { (key, value) -> "$key=$value" }
         )
+
+        // Container owner configuration
+        add("DIRECTORY_CONTAINER_CONFIGURATION=${gson.toJson(directoryContainerConfiguration)}")
     }
 
     private fun createJavaToolOptions(containerNodeConfig: ContainerNodeConfig, containerName: ContainerName): List<String> {

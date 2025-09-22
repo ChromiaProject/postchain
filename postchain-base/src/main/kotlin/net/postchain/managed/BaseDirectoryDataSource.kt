@@ -8,6 +8,7 @@ import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.ResourceLimitFactory
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.managed.query.QueryRunner
@@ -160,5 +161,20 @@ open class BaseDirectoryDataSource(
             logger.error { "Can't find rate limits for container $container: ${e.message}" }
             return mapOf()
         }
+    }
+
+    override fun getContainerConfiguration(container: String): GtvDictionary {
+        return if (nmApiVersion >= 26) {
+            val response = query(
+                    "nm_get_container_configuration",
+                    buildArgs("name" to gtv(container))
+            )
+
+            if (response.isNull()) {
+                GtvDictionary.build(emptyMap())
+            } else {
+                response as GtvDictionary
+            }
+        } else GtvDictionary.build(emptyMap())
     }
 }

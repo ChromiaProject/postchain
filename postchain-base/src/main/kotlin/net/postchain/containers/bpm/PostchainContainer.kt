@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.crypto.PrivKey
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class ContainerState {
@@ -15,6 +16,7 @@ interface PostchainContainer {
     var containerId: String?
     val resourceLimits: ContainerResourceLimits
     val image: ContainerImageInfo?
+    val configuration: GtvDictionary
     val containerPortMapping: MutableMap<Int, Int>
     val readOnly: AtomicBoolean
 
@@ -40,6 +42,9 @@ interface PostchainContainer {
 
     /** @return `true` if there are updates */
     fun updateImage(): Boolean
+
+    /** @return `true` if there are updates */
+    fun updateConfiguration(): Boolean
 
     /** @return `false` if a limit is reached and state has changed */
     fun checkResourceLimits(fileSystem: FileSystem): Boolean

@@ -190,7 +190,7 @@ class ContainerJobHandler(
             getDefaultContainerImage(containerNodeConfig)
         }
         pullImage(image)
-        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image).also {
+        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image, psContainer.configuration).also {
             logger.debug { dcLog(psContainer.containerName, "created", psContainer) }
         }
     }

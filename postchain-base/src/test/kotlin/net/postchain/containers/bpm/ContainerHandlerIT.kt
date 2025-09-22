@@ -16,6 +16,7 @@ import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.GtvDictionary
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.AfterEach
@@ -72,7 +73,9 @@ internal class ContainerHandlerIT {
                 containerName,
                 resourceLimits,
                 false,
-                containerNodeConfig.containerImage)
+                containerNodeConfig.containerImage,
+                GtvDictionary.build(emptyMap())
+        )
         logger.debug { ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().toString() }
         sut.startContainer(postchainContainerMock)
         await().atMost(Duration.TEN_SECONDS).untilAsserted {

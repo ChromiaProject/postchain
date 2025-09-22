@@ -34,6 +34,9 @@ class DefaultPostchainContainer(
     @Volatile
     override var image = getImageForContainer()
 
+    @Volatile
+    override var configuration = dataSource.getContainerConfiguration(containerName.directoryContainer)
+
     override val readOnly = AtomicBoolean(false)
     private var lastUpdated = clock.millis()
 
@@ -152,6 +155,18 @@ class DefaultPostchainContainer(
         val newImage = getImageForContainer()
         return if (newImage != oldImage) {
             image = newImage
+            setLastUpdated()
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun updateConfiguration(): Boolean {
+        val oldConfig = configuration
+        val newConfig = dataSource.getContainerConfiguration(containerName.directoryContainer)
+        return if (oldConfig != newConfig) {
+            configuration = newConfig
             setLastUpdated()
             true
         } else {
