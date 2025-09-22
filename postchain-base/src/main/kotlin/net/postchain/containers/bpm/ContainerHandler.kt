@@ -13,6 +13,7 @@ import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.docker.DockerTools.listSubContainersCmd
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.gtv.GtvDictionary
 import net.postchain.metrics.SubContainerResourceMetrics
 
 open class ContainerHandler(
@@ -33,10 +34,10 @@ open class ContainerHandler(
     }
 
     fun createDockerContainer(containerName: ContainerName, resourceLimits: ContainerResourceLimits,
-                              readOnly: Boolean, image: String): String {
+                              readOnly: Boolean, image: String, directoryContainerConfiguration: GtvDictionary): String {
         val createContainerCmd = dockerClient.createContainerCmd(image)
         ContainerConfigFactory.setConfig(createContainerCmd, fileSystem, appConfig, containerNodeConfig,
-                containerName, resourceLimits, readOnly)
+                containerName, resourceLimits, readOnly, directoryContainerConfiguration)
         return createContainerCmd.exec().id!!
     }
 

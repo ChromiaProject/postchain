@@ -64,6 +64,7 @@ class ContainerHealthcheckHandler(
         val psContainer = postchainContainers()[cname]!!
         val currentResourceLimits = psContainer.resourceLimits
         val currentImage = psContainer.image
+        val currentConfiguration = psContainer.configuration
         val updatedResourceLimits = try {
             psContainer.updateResourceLimits()
         } catch (e: UserMistake) {
@@ -76,12 +77,21 @@ class ContainerHealthcheckHandler(
             logger.warn { "Unable to fetch current image for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
             false
         }
-        val chainsToTerminate = if (updatedResourceLimits || updatedImage) {
+        val updatedConfiguration = try {
+            psContainer.updateConfiguration()
+        } catch (e: UserMistake) {
+            logger.warn { "Unable to fetch current configuration for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
+            false
+        }
+        val chainsToTerminate = if (updatedResourceLimits || updatedImage || updatedConfiguration) {
             if (updatedResourceLimits) {
                 logger.info { "Resource limits for container ${cname.dockerContainer} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}, container will be restarted" }
             }
             if (updatedImage) {
                 logger.info { "Image for container ${cname.dockerContainer} has been changed from $currentImage to ${psContainer.image}, container will be restarted" }
+            }
+            if (updatedConfiguration) {
+                logger.info { "Configuration for container ${cname.dockerContainer} has been changed from $currentConfiguration to ${psContainer.configuration}, container will be restarted" }
             }
             fixedContainers.add(cname)
             psContainer.reset()

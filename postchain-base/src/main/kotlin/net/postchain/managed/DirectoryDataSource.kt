@@ -4,6 +4,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.gtv.GtvDictionary
 import java.time.Instant
 
 interface DirectoryDataSource : ManagedNodeDataSource {
@@ -61,4 +62,9 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * If there are no rate limits for anything for a container, the returned map will be empty.
      */
     fun getContainerRateLimits(container: String): Map<String, ContainerRateLimit>
+
+    /**
+     * Retrieve any container-specific configurations set by the container owner
+     */
+    fun getContainerConfiguration(container: String): GtvDictionary
 }
