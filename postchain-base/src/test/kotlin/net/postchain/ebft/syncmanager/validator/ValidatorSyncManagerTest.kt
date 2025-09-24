@@ -12,6 +12,9 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.NodeRid
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionFactory
+import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.BlockManager
@@ -27,6 +30,8 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
 import net.postchain.network.ReceivedPacket
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -35,7 +40,9 @@ import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.isA
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.spy
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
@@ -116,6 +123,106 @@ class ValidatorSyncManagerTest {
 
     @Nested
     inner class dispatchMessages {
+
+        @Test
+        fun `Tx from peer should be enqueued`() {
+            // setup
+            val txData = "txdata".toByteArray()
+            val rid = "rid123".toByteArray()
+
+            val coreTx: Transaction = mock {
+                on { isSpecial() } doReturn false
+                on { getRID() } doReturn rid
+            }
+            val txFactory: TransactionFactory = mock {
+                on { decodeTransaction(txData) } doReturn coreTx
+            }
+            doReturn(txFactory).whenever(blockchainConfiguration).getTransactionFactory()
+            whenever(blockQueries.isTransactionConfirmed(rid)).thenReturn(CompletableFuture.completedStage(false))
+
+            // Mock transaction queue and engine behavior
+            val txQueue: TransactionQueue = mock()
+            doReturn(txQueue).whenever(blockchainEngine).getTransactionQueue()
+
+            // Add incoming Transaction message from validator peer
+            addMessage(nodeRid1, 2, net.postchain.ebft.message.Transaction(txData))
+
+            // execute
+            sut.dispatchMessages()
+
+            // since execution is async, we need to wait for it to finish
+            Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
+                // verify: enqueue is called once
+                verify(txQueue, times(1)).enqueue(coreTx)
+            }
+        }
+
+        @Test
+        fun `Special tx should be ignored`() {
+            // setup
+            val txData = "txdata".toByteArray()
+            val rid = "rid123".toByteArray()
+
+            // tx is special
+            val coreTx: Transaction = mock {
+                on { isSpecial() } doReturn true
+                on { getRID() } doReturn rid
+            }
+            val txFactory: TransactionFactory = mock {
+                on { decodeTransaction(txData) } doReturn coreTx
+            }
+            doReturn(txFactory).whenever(blockchainConfiguration).getTransactionFactory()
+            whenever(blockQueries.isTransactionConfirmed(rid)).thenReturn(CompletableFuture.completedStage(false))
+
+            // Mock transaction queue and engine behavior
+            val txQueue: TransactionQueue = mock()
+            doReturn(txQueue).whenever(blockchainEngine).getTransactionQueue()
+
+            // Add incoming Transaction message from validator peer
+            addMessage(nodeRid1, 2, net.postchain.ebft.message.Transaction(txData))
+
+            // execute
+            sut.dispatchMessages()
+
+            Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
+                // verify: enqueue is NOT called
+                verify(txQueue, never()).enqueue(coreTx)
+            }
+        }
+
+        @Test
+        fun `Already confirmed tx should be ignored`() {
+            // setup
+            val txData = "txdata".toByteArray()
+            val rid = "rid123".toByteArray()
+
+            val coreTx: Transaction = mock {
+                on { isSpecial() } doReturn false
+                on { getRID() } doReturn rid
+            }
+            val txFactory: TransactionFactory = mock {
+                on { decodeTransaction(txData) } doReturn coreTx
+            }
+            doReturn(txFactory).whenever(blockchainConfiguration).getTransactionFactory()
+
+            // BlockQueries reports transaction is already confirmed
+            whenever(blockQueries.isTransactionConfirmed(rid)).thenReturn(CompletableFuture.completedStage(true))
+
+            // Mock transaction queue and engine behavior
+            val txQueue: TransactionQueue = mock()
+            doReturn(txQueue).whenever(blockchainEngine).getTransactionQueue()
+
+            // Add incoming Transaction message from validator peer
+            addMessage(nodeRid1, 2, net.postchain.ebft.message.Transaction(txData))
+
+            // execute
+            sut.dispatchMessages()
+
+            Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
+                // verify: enqueue is NOT called
+                verify(txQueue, never()).enqueue(coreTx)
+            }
+        }
 
         @Test
         fun `with version 1 should ensure AppliedConfigSender`() {

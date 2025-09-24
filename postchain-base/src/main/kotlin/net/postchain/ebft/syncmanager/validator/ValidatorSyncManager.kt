@@ -290,15 +290,19 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * @param message message including the transaction
      */
     private fun handleTransaction(xPeerId: NodeRid, message: Transaction) {
-        // TODO: reject if queue is full
         CompletableFuture.runAsync {
             withLoggingContext(loggingContext) {
                 val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
                 if (tx.isSpecial()) {
-                    logger.warn("Got special transaction with RID ${tx.getRID()} from peer $xPeerId, ignoring")
-                } else {
-                    workerContext.engine.getTransactionQueue().enqueue(tx)
+                    logger.warn("Got special transaction with RID ${tx.getRID().toHex()} from peer $xPeerId, ignoring")
+                    return@runAsync
                 }
+                if (blockQueries.isTransactionConfirmed(tx.getRID()).get()) {
+                    logger.debug {"Got transaction with RID ${tx.getRID().toHex()} that is already in database from peer $xPeerId, ignoring"}
+                    return@runAsync
+                }
+
+                workerContext.engine.getTransactionQueue().enqueue(tx)
             }
         }
     }
