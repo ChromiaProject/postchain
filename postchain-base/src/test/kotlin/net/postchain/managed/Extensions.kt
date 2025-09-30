@@ -19,7 +19,7 @@ class AnyBlockchainConfigFactory : BlockchainConfigurationFactory {
             cryptoSystem: CryptoSystem,
             blockchainConfigurationOptions: BlockchainConfigurationOptions
     ): BlockchainConfiguration {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 }
 

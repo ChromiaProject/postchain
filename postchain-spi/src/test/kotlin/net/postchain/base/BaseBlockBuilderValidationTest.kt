@@ -66,7 +66,7 @@ class BaseBlockBuilderValidationTest {
 
     val dummyEventSink = object : TxEventSink {
         override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
     }
 

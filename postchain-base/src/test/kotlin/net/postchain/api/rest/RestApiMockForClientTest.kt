@@ -165,7 +165,7 @@ class RestApiMockForClientManual {
                 listOf(ApiRejectedTransaction(TxRid(statusRejected.hexStringToByteArray()), "some reason", 1574849700))
 
         override fun checkQueryCorrectness(query: GtxQuery) {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun query(query: GtxQuery): Gtv {
@@ -191,11 +191,11 @@ class RestApiMockForClientManual {
         }
 
         override fun enqueueQuery(query: GtxQuery) {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun nodeStatusQuery(): StateNodeStatus = TODO()
@@ -207,11 +207,11 @@ class RestApiMockForClientManual {
         }
 
         override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
@@ -225,11 +225,11 @@ class RestApiMockForClientManual {
                 }.subList(0, limit), false)
 
         override fun getCurrentBlockHeight(): BlockHeight {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getBlockchainNodeState(): BlockchainNodeState {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean): TransactionInfoExt {
@@ -252,39 +252,39 @@ class RestApiMockForClientManual {
         }
 
         override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getLastTransactionNumber(): TransactionsCount {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getBlockchainConfiguration(height: Long): ByteArray? {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun validateBlockchainConfiguration(configuration: Gtv) {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getVersion(): Version {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getInfrastructureVersion(): InfraVersion {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getMetadata(): ApiMetadata {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
 
         override fun getBlockSigMaker(): SigMaker {
-            TODO("Not yet implemented")
+            throw NotImplementedError("not used in mock")
         }
     }
 }

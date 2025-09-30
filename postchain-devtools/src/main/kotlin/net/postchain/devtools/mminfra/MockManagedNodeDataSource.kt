@@ -42,7 +42,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override val nmApiVersion: Int
-        get() = TODO("Not yet implemented")
+        get() = throw NotImplementedError("not used in mock")
 
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
         return myNode.chainsToRead.union(myNode.chainsToSign)
@@ -115,11 +115,11 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? = null
 
     override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun query(name: String, args: Gtv): Gtv {
-        TODO("Not yet implemented")
+        throw NotImplementedError("not used in mock")
     }
 
     override fun getPeerInfos(): Array<PeerInfo> {
