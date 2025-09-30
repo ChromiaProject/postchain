@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
@@ -23,6 +24,8 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetLatestSnapshotBlock
+import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
@@ -51,7 +54,7 @@ class SlowSynchronizer(
         rateLimitConfiguration: RateLimitConfiguration,
         val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
-        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params) },
+        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params.syncPeerParameters) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
         reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
@@ -160,6 +163,9 @@ class SlowSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage, workerContext.appConfig.cryptoSystem)
+                    is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
+                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {

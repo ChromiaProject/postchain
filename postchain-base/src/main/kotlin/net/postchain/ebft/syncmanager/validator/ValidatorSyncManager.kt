@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -26,6 +27,7 @@ import net.postchain.ebft.FetchUnfinishedBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
@@ -38,6 +40,8 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetLatestSnapshotBlock
+import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
@@ -50,6 +54,7 @@ import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.PeerStatuses
+import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
@@ -77,6 +82,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            startInFastSync: Boolean,
                            private val ensureAppliedConfigSenderStarted: () -> Boolean,
                            rateLimitConfiguration: RateLimitConfiguration,
+                           persistOnlyBlockWriter: PersistOnlyBlockWriter,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker, rateLimitConfiguration) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -89,10 +95,22 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private val messageDurationTracker = workerContext.messageDurationTracker
     private var appliedConfigSenderEnsured = false
     private var hasRunInitialSync: Boolean
+    private val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
+        it.mustSyncUntilHeight = workerContext.nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
+    }
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
+
+    private val snapshotSynchronizer = SnapshotSynchronizer(
+            workerContext,
+            persistOnlyBlockWriter,
+            params,
+            PeerStatuses(params.snapshotSyncPeerParameters),
+            isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
+    )
 
     companion object : KLogging() {
         const val MAX_STATUS_INTERVAL = 1_000
@@ -103,15 +121,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.currentTimeout = defaultTimeout
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
-        val nodeConfig = workerContext.nodeConfig
-        val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
-            it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
-        }
         fastSynchronizer = FastSynchronizer(
                 workerContext,
                 blockDatabase,
                 params,
-                PeerStatuses(params),
+                PeerStatuses(params.syncPeerParameters),
                 isProcessRunning,
                 rateLimitConfiguration
         )
@@ -151,6 +165,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
                             this.statusManager.myStatus.height - 1)
+
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage, workerContext.appConfig.cryptoSystem)
+
+                    is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
+                            message.height, message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
 
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection
@@ -530,6 +549,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
+            // TODO: Maybe we need to check latest rather than current config?
+            val snapshotSyncEnabled = BlockchainConfigurationData.snapshotSyncEnabled(workerContext.blockchainConfiguration.rawConfig)
+            if (snapshotSyncEnabled) {
+                snapshotSynchronizer.trySnapshotSync()
+            }
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

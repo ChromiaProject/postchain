@@ -38,9 +38,12 @@ class NodeStatus(var height: Long, var serial: Long) {
     constructor () : this(0, -1)
 }
 
-interface BlockDatabase {
-    fun getQueuedBlockCount(): Int
+interface BlockWriter {
     fun addBlock(block: BlockDataWithWitness, dependsOn: CompletableFuture<Unit>?, existingBTrace: BlockTrace?): CompletableFuture<Unit> // add a complete block after the current one
+}
+
+interface BlockDatabase : BlockWriter {
+    fun getQueuedBlockCount(): Int
     fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> // returns block signature if successful
     fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit>
     fun buildBlock(): CompletionStage<Pair<BlockData, Signature>>

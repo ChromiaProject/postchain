@@ -1,5 +1,6 @@
 package net.postchain.base
 
+import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.Storage
 import net.postchain.core.block.BlockStore
@@ -14,8 +15,9 @@ class TestBlockQueries(
         blockStore: BlockStore,
         chainId: Long,
         mySubjectId: ByteArray,
-        val merkleHashCalculator: GtvMerkleHashCalculatorBase
-) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId) {
+        val merkleHashCalculator: GtvMerkleHashCalculatorBase,
+        snapshotDatumRepository: SnapshotDatumRepository
+) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId, snapshotDatumRepository) {
     override fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =
             BaseBlockHeader(headerData, merkleHashCalculator)
 

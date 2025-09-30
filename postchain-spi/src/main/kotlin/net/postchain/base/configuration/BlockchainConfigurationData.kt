@@ -71,6 +71,9 @@ data class BlockchainConfigurationData(
         @Name(KEY_FEATURES)
         @DefaultEmpty
         val features: Map<String, Gtv>,
+        @Name(KEY_SNAPSHOT)
+        @Nullable
+        val snapshot: Gtv?
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()
@@ -82,6 +85,7 @@ data class BlockchainConfigurationData(
     val configHash by lazy {
         rawConfig.merkleHash(merkleHashCalculator)
     }
+    val snapshotsEnabled: Boolean = merkleHashVersion >= 2 && features[BlockchainFeatures.snapshot_enabled.name]?.asBoolean() ?: false
 
     companion object {
         @JvmStatic
@@ -103,6 +107,12 @@ data class BlockchainConfigurationData(
         fun merkleHashVersion(configuration: Gtv): Long {
             val features = configuration[KEY_FEATURES]?.asDict()
             return features?.get(BlockchainFeatures.merkle_hash_version.name)?.asInteger() ?: 1L
+        }
+
+        @JvmStatic
+        fun snapshotSyncEnabled(configuration: Gtv): Boolean {
+            val features = configuration[KEY_FEATURES]?.asDict()
+            return features?.get(BlockchainFeatures.snapshot_enabled.name)?.asBoolean() ?: false
         }
     }
 }

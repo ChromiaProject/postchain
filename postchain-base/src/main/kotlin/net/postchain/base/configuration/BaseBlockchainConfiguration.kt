@@ -17,6 +17,7 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.PersistOnlyBlockBuilder
 import net.postchain.base.data.TestBlockBuilder
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.common.exception.ProgrammerMistake
@@ -41,6 +42,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.SnapshotAware
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.reflect.InvocationTargetException
@@ -211,6 +213,14 @@ abstract class BaseBlockchainConfiguration(
         )
     }
 
+    override fun makePersistOnlyBlockBuilder(ctx: EContext): BlockBuilder = PersistOnlyBlockBuilder(
+            ctx,
+            effectiveBlockchainRID,
+            blockStore,
+            blockWitnessProvider,
+            configHash
+    )
+
     /**
      * Will add ChainID to the dependency list, if needed.
      */
@@ -246,6 +256,8 @@ abstract class BaseBlockchainConfiguration(
     override fun initializeModules(postchainContext: PostchainContext) {}
 
     override fun shutdownModules() {}
+
+    override fun getSnapshotAwareModules(): List<SnapshotAware> = emptyList()
 
     private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> =
             if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {

@@ -14,7 +14,7 @@ import kotlin.time.Duration
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 12
+    private const val DB_VERSION = 13
 
     /**
      * This is to be used by dependent projects to determine current version

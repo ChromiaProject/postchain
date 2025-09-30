@@ -3,6 +3,7 @@
 package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.block.BlockDataWithWitness
@@ -12,6 +13,7 @@ import net.postchain.ebft.message.NullableGtv.nullableByteArrayToGtv
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 
 class Transaction(val data: ByteArray) : EbftMessage(MessageTopic.TX) {
 
@@ -265,6 +267,131 @@ class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION)
         return gtv(topic.toGtv(), gtv(ebftVersion))
     }
 
+}
+
+class GetLatestSnapshotBlock : EbftMessage(MessageTopic.GETLATESTSNAPSHOT) {
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv())
+    }
+}
+
+class SnapshotBlockHeader(val header: ByteArray, val witness: ByteArray, val contextData: List<SnapshotBlockHeaderContextData>)
+    : EbftMessage(MessageTopic.SNAPSHOTBLOCKHEADER) {
+
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotBlockHeader {
+            return SnapshotBlockHeader(
+                    data[0 + arrOffset].asByteArray(),
+                    data[1 + arrOffset].asByteArray(),
+                    data[2 + arrOffset].asArray().map { SnapshotBlockHeaderContextData.buildFromGtv(it) },
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(header), gtv(witness), gtv(contextData.map { it.toGtv() }))
+    }
+}
+
+class SnapshotBlockHeaderContextData(val contextId: Long, val rootHash: Hash, val datumIdMax: Long?) {
+    companion object {
+        fun buildFromGtv(data: Gtv): SnapshotBlockHeaderContextData {
+            return SnapshotBlockHeaderContextData(
+                    data[0].asInteger(),
+                    data[1].asByteArray(),
+                    data[2].asInteger(),
+            )
+        }
+    }
+
+    fun toGtv(): Gtv {
+        return gtv(
+                gtv(contextId),
+                gtv(rootHash),
+                if (datumIdMax == null) GtvNull else gtv(datumIdMax),
+        )
+    }
+}
+
+/**
+ * Request snapshot data from a node at offset "datumIdFrom".
+ */
+class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long) : EbftMessage(MessageTopic.GETSNAPSHOTDATA) {
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): GetSnapshotData {
+            return GetSnapshotData(
+                    data[0 + arrOffset].asInteger(),
+                    data[1 + arrOffset].asInteger(),
+                    data[2 + arrOffset].asInteger()
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(height), gtv(contextId), gtv(datumIdFrom))
+    }
+}
+
+/**
+ * Reply for a [GetSnapshotData] message with the actual snapshot data.
+ *
+ * @param datumIdFrom is the offset we requested the data from
+ * @param data List of datums data and their permanent flag, or null if this snapshot data isn't available on this node.
+ * @param proof Proof that the data is correct.
+ */
+class SnapshotData(
+        val height: Long,
+        val contextId: Long,
+        val datumIdFrom: Long,
+        val data: List<SnapshotDatumData>,
+        val proof: SnapshotRangeProof?
+) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotData {
+            return SnapshotData(
+                    data[0 + arrOffset].asInteger(),
+                    data[1 + arrOffset].asInteger(),
+                    data[2 + arrOffset].asInteger(),
+                    data[3 + arrOffset].asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) },
+                    data[4 + arrOffset].let { gtv -> if (gtv.isNull()) null else SnapshotRangeProof.buildFromGtv(gtv) }
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(),
+                gtv(height),
+                gtv(contextId),
+                gtv(datumIdFrom),
+                gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
+                proof?.toGtv() ?: GtvNull)
+    }
+}
+
+data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
+
+class SnapshotRangeProof(
+        val leftBoundaryHashes: List<Hash>,
+        val rightBoundaryHashes: List<Hash>,
+        val commonPath: List<Hash>
+) {
+    companion object {
+        fun buildFromGtv(data: Gtv): SnapshotRangeProof {
+            return SnapshotRangeProof(
+                    data[0].asArray().map { it.asByteArray() },
+                    data[1].asArray().map { it.asByteArray() },
+                    data[2].asArray().map { it.asByteArray() },
+            )
+        }
+    }
+
+    fun toGtv(): Gtv {
+        return gtv(
+                gtv(leftBoundaryHashes.map { gtv(it) }),
+                gtv(rightBoundaryHashes.map { gtv(it) }),
+                gtv(commonPath.map { gtv(it) }),
+        )
+    }
 }
 
 /**

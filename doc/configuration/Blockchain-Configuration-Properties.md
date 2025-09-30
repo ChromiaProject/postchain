@@ -60,12 +60,22 @@ Configuration under the key `revolt`.
 | `fast_revolt_status_timeout`     | Timeout in milliseconds since last received status message before considering a node disconnected and revolting immediately. -1 to disable this functionality | int     | -1      |
 | `revolt_when_should_build_block` | Only start counting revolt timeout after we ourselves consider it possible to actually build a block                                                          | boolean | false   |
 
+## Snapshot
+
+Configuration under the key `snapshot`.
+
+| Name              | Description                                            | Type    | Default |
+|-------------------|--------------------------------------------------------|---------|---------|
+| `interval`        | The block interval of creating a snapshot.             | int     | 100     |
+| `levels_per_page` | Levels per page to be used in the snapshot page store. | int     | 2       |
+
 ## Features
 
 Configuration under the key `features`. This will contain feature flags to toggle behavior. Unknown feature flags will
 not be accepted by a node. This is to prevent old versions of Postchain from running blockchains with features that
 it actually does not support.
 
-| Name                  | Description                                 | Type    | Default |
-|-----------------------|---------------------------------------------|---------|---------|
-| `merkle_hash_version` | The version of merkle hash algorithm to use | int     | 1       |
+| Name                  | Description                                                                                  | Type    | Default |
+|-----------------------|----------------------------------------------------------------------------------------------|---------|---------|
+| `merkle_hash_version` | The version of merkle hash algorithm to use                                                  | int     | 1       |
+| `snapshot_enabled`    | If snapshot is enabled or not for this chain. If can only be enabled on first configuration. | int     | 0       |

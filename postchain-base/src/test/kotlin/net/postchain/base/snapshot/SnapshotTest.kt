@@ -7,6 +7,7 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -47,7 +48,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states.forEach { (n, data) -> db.insertState(ctx, PREFIX, height1, n, data) }
             // Verify initial states
             states.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height1, n)
+                val accountState = db.getState(ctx, PREFIX, height1, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -75,7 +76,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states2.forEach { (n, data) -> db.insertState(ctx, PREFIX, height2, n, data) }
             // Verify updates
             states2.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height2, n)
+                val accountState = db.getState(ctx, PREFIX, height2, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -98,7 +99,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states3.forEach { (n, data) -> db.insertState(ctx, PREFIX, height3, n, data) }
             // Verify updates
             states3.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height3, n)
+                val accountState = db.getState(ctx, PREFIX, height3, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -120,7 +121,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states4.forEach { (n, data) -> db.insertState(ctx, PREFIX, height4, n, data) }
             // Verify updates
             states4.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height4, n)
+                val accountState = db.getState(ctx, PREFIX, height4, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -141,7 +142,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states5.forEach { (n, data) -> db.insertState(ctx, PREFIX, height5, n, data) }
             // Verify updates
             states5.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height5, n)
+                val accountState = db.getState(ctx, PREFIX, height5, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -204,6 +205,7 @@ class SnapshotTest : SnapshotBaseIT() {
         val random = Random(1234) // Fixed seed for reproducibility
         val prefix2 = "prefix2"
         val protocolV2 = 2
+        val rangeProofVerifier = VerifyRangeProof(ds)
 
         runStorageCommand(appConfig, 0L) { ctx ->
             val db = DatabaseAccess.of(ctx).apply {
@@ -243,15 +245,27 @@ class SnapshotTest : SnapshotBaseIT() {
 
                 val rightmost = states.keys.maxOrNull() ?: 0
 
+                val allLeafHashesFromTree = snapshot.getAllLeafHashes(blockHeight)
                 for (pos in 0L..rightmost) {
+                    val stateAtPos = states[pos] ?: EMPTY_HASH
+                    assertEquals(stateAtPos.wrap(), allLeafHashesFromTree[pos.toInt()].wrap())
+
                     val proof = snapshot.getMerkleProof(blockHeight, pos)
-                    val merkleRoot = calculateMerkleRoot(proof, pos, states[pos] ?: EMPTY_HASH)
+                    val merkleRoot = calculateMerkleRoot(proof, pos, stateAtPos)
 
                     if (stateRootHash.toHex() != merkleRoot.toHex()) {
                         // TODO: we can also try building tree afresh to see what went wrong
-                        analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, states[pos] ?: EMPTY_HASH)
+                        analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, stateAtPos)
                     }
                     assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
+
+                    val allLeavesWithValues = allLeafHashesFromTree.subList(0, rightmost.toInt() + 1)
+                    val proofBuiltFromLeaves = rangeProofVerifier.calculateMerkleRoot(allLeavesWithValues, levelsPerPage)
+                    assertEquals(merkleRoot.wrap(), proofBuiltFromLeaves.wrap())
+                }
+                // Verify that trailing leaves are all empty
+                for (pos in rightmost + 1 until allLeafHashesFromTree.size) {
+                    assertEquals(EMPTY_HASH.wrap(), allLeafHashesFromTree[pos.toInt()].wrap())
                 }
             }
 

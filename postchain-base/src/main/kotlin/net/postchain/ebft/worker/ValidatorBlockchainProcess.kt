@@ -9,6 +9,7 @@ import net.postchain.base.configuration.KEY_REVOLT
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
+import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
@@ -21,6 +22,7 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
@@ -52,6 +54,7 @@ class ValidatorBlockchainProcess(
     companion object : KLogging()
 
     private val blockDatabase: BaseBlockDatabase
+    private val persistOnlyBlockWriter: PersistOnlyBlockWriter
     private val blockManager: BaseBlockManager
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
@@ -104,6 +107,12 @@ class ValidatorBlockchainProcess(
             }
         }
 
+        persistOnlyBlockWriter = PersistOnlyBlockWriter(
+                loggingContext,
+                NODE_ID_READ_ONLY,
+                blockchainEngine
+        )
+
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
         syncManager = ValidatorSyncManager(
@@ -118,7 +127,8 @@ class ValidatorBlockchainProcess(
                 ::isProcessRunning,
                 startWithFastSync,
                 ensureAppliedConfigSender,
-                RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
+                RateLimitConfiguration.fromAppConfig(workerContext.appConfig),
+                persistOnlyBlockWriter
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
@@ -145,6 +155,7 @@ class ValidatorBlockchainProcess(
         withLoggingContext(loggingContext) {
             appliedConfigSender.shutdown()
             blockDatabase.stop()
+            persistOnlyBlockWriter.stop()
             workerContext.shutdown()
         }
     }

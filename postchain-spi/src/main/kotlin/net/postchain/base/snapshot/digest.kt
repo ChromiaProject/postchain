@@ -5,20 +5,20 @@ package net.postchain.base.snapshot
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
+import net.postchain.crypto.Digester
 import java.security.InvalidParameterException
 import java.security.MessageDigest
 
 /* these are specific to the sparse Merkle tree implementation */
 
 interface DigestSystem {
-    val messageDigest: MessageDigest
-
     fun hash(left: Hash, right: Hash): Hash
     fun digest(data: ByteArray): Hash
 }
 
+class SimpleDigestSystem(private val digester: Digester) : DigestSystem {
 
-class SimpleDigestSystem(override val messageDigest: MessageDigest) : DigestSystem {
+    constructor(messageDigest: MessageDigest) : this(messageDigest::digest)
 
     override fun hash(left: Hash, right: Hash): Hash {
         if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
@@ -32,7 +32,6 @@ class SimpleDigestSystem(override val messageDigest: MessageDigest) : DigestSyst
     }
 
     override fun digest(data: ByteArray): Hash {
-        return messageDigest.digest(data)
+        return digester.digest(data)
     }
-
 }

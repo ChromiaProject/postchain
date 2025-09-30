@@ -6,16 +6,26 @@ import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.OperationMetadata
 import net.postchain.api.rest.model.QueryMetadata
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.DatumInfo
+import net.postchain.base.snapshot.RootSnapshotBlockBuilderExtension
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean)
-    : GTXModule, PostchainContextAware, MetadataProvider {
+class CompositeGTXModule(
+        val modules: Array<GTXModule>,
+        val allowOverrides: Boolean,
+        val snapshotsEnabled: Boolean,
+        val snapshotInterval: Long,
+        val snapshotLevelsPerPage: Int
+) : GTXModule, PostchainContextAware, MetadataProvider {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -33,6 +43,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         for (m in modules) {
             l.addAll(m.makeBlockBuilderExtensions())
         }
+        if (snapshotsEnabled) l.add(RootSnapshotBlockBuilderExtension(snapshotInterval, snapshotLevelsPerPage))
         return l
     }
 
@@ -114,10 +125,37 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                     metadata.queries.mapValues { QueryMetadata(moduleName, it.value.args, it.value.returnType) }
                 }.fold(mapOf()) { acc, map -> acc + map }
         )
+
+        if (snapshotsEnabled) {
+            DatabaseAccess.of(ctx).apply {
+                createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
+                modules.filterIsInstance<SnapshotAware>().forEach {
+                    val contextId = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
+                    createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_${contextId}_snapshot")
+                    createStateLeafTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_$contextId")
+                }
+            }
+        }
     }
 
     override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
-        modules.filterIsInstance<PostchainContextAware>().forEach { it.initializeContext(configuration, postchainContext) }
+        modules.filterIsInstance<PostchainContextAware>()
+                .forEach { it.initializeContext(configuration, postchainContext) }
+
+        // Initialize snapshot contexts
+        if (snapshotsEnabled) {
+            modules.filterIsInstance<SnapshotAware>()
+                    .forEach { module -> module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
+                            DatabaseAccess.of(ctx).apply {
+                                val contextId = getSnapshotContextId(ctx, module::class.java.canonicalName)
+                                insertUpdatedDatum(ctx, contextId, DatumInfo(
+                                        datumId,
+                                        datum.merkleHash(configuration.merkleHashCalculator),
+                                        if (isPermanent) null else GtvEncoder.encodeGtv(datum)
+                                ))
+                            }
+                    })}
+        }
     }
 
     override fun shutdown() {

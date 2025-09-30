@@ -5,6 +5,7 @@ import mu.withLoggingContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
@@ -35,10 +36,15 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
 
         fun extraConfigurationValidation(configurationData: BlockchainConfigurationData, eContext: EContext) {
-            val currentMerkleHashVersion = DatabaseAccess.of(eContext).getCurrentMerkleHashVersion(eContext)
+            val dba = DatabaseAccess.of(eContext)
+            val currentMerkleHashVersion = dba.getCurrentMerkleHashVersion(eContext)
             val newMerkleHashVersion = configurationData.merkleHashVersion
             if (newMerkleHashVersion < currentMerkleHashVersion) {
                 throw UserMistake("Cannot downgrade merkle hash version from $currentMerkleHashVersion to $newMerkleHashVersion")
+            }
+
+            if (configurationData.snapshotsEnabled && !dba.isSnapshotEnabled(eContext)) {
+                throw UserMistake("Snapshots can only be enabled on height 0")
             }
         }
 
@@ -73,7 +79,10 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 }
             }
 
-            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides)
+            val snapshotConfig = data.snapshot?.toObject<SnapshotBlockchainConfigurationData>()
+                    ?: SnapshotBlockchainConfigurationData.default
+            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides,
+                    data.snapshotsEnabled, snapshotConfig.snapshotInterval, snapshotConfig.levelsPerPage)
         }
     }
 

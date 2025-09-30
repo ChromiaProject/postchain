@@ -16,7 +16,8 @@ class StateNodeStatus(
         val round: Long? = null,
         val blockRid: String? = null,
         val revolting: Boolean? = null,
-        val error: String? = null
+        val error: String? = null,
+        val snapshotSyncContextStatus: List<SnapshotSyncContextStatus>? = null
 )
 
 fun NodeStatus.toStateNodeStatus(pubKey: String, errorQueue: DiagnosticQueue? = null): StateNodeStatus =
@@ -32,3 +33,4 @@ fun NodeStatus.toStateNodeStatus(pubKey: String, errorQueue: DiagnosticQueue? = 
                 error = errorQueue?.value.toString()
         )
 
+data class SnapshotSyncContextStatus(val contextId: Long, val latestId: Long?, val maxId: Long?)

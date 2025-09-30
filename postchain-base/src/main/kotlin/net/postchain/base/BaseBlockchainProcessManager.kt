@@ -183,7 +183,8 @@ open class BaseBlockchainProcessManager(
                         }
 
                         // Initial configuration will be committed immediately
-                        if (DatabaseAccess.of(initialEContext).getLastBlockHeight(initialEContext) == -1L) {
+                        val db = DatabaseAccess.of(initialEContext)
+                        if (db.getLastBlockHeight(initialEContext) == -1L || db.getSnapshotSyncState(initialEContext) != null) {
                             blockBuilderStorage.closeWriteConnection(initialEContext, true)
                         } else {
                             blockBuilderStorage.createSharedContext(initialEContext)

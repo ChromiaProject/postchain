@@ -625,7 +625,7 @@ class PruneSnapshotsTest : SnapshotBaseIT() {
             // verify page
             assertPageIsNotNull(ctx, db, height, 0, left)
             // verify account state
-            val state = db.getAccountState(ctx, PREFIX, height, account)
+            val state = db.getState(ctx, PREFIX, height, account)
             assertThat(state?.blockHeight).isEqualTo(height)
             assertThat(state?.data?.toHex()).isEqualTo(expectedState.toHex())
         }
@@ -635,7 +635,7 @@ class PruneSnapshotsTest : SnapshotBaseIT() {
             // verify page
             assertPageIsNull(ctx, db, height, 0, left)
             // verify account state
-            val state = db.getAccountState(ctx, PREFIX, height, account)
+            val state = db.getState(ctx, PREFIX, height, account)
             assertTrue(state == null || state.blockHeight < height)
         }
     }

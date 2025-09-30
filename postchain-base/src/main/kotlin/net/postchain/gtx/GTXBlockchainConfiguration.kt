@@ -9,6 +9,8 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.configuration.snapshot
+import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.core.BlockchainContext
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
@@ -59,8 +61,22 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         return specTxHandler // NOTE: not the same as "specialTransactionHandler" in Base
     }
 
-    override fun makeBlockQueries(storage: Storage): BlockQueries =
-            GTXBlockQueries(this, storage, blockStore, chainID, blockchainContext.nodeRID, module)
+    override fun makeBlockQueries(storage: Storage): BlockQueries {
+        val snapshotAwareModules = getSnapshotAwareModules()
+        val snapshotDatumRepository = BaseSnapshotDatumRepository(snapshotAwareModules, snapshot.levelsPerPage, cryptoSystem)
+        return GTXBlockQueries(this, storage, blockStore, chainID, blockchainContext.nodeRID, module, snapshotDatumRepository)
+    }
+
+    override fun getSnapshotAwareModules(): List<SnapshotAware> =
+            when (module) {
+                is CompositeGTXModule -> {
+                    module.modules.filterIsInstance<SnapshotAware>()
+                }
+                is SnapshotAware -> {
+                    listOf(module)
+                }
+                else -> emptyList()
+            }
 
     override fun hasQuery(name: String): Boolean = module.getQueries().contains(name)
 

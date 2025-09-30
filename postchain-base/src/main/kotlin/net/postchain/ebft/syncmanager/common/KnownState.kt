@@ -20,7 +20,7 @@ import java.time.Clock
  * height + 1). They also serve as a discovery mechanism, in which we become
  * aware of our neighborhood.
  */
-class KnownState(val params: SyncParameters, val clock: Clock = Clock.systemUTC()) {
+class KnownState(val params: SyncPeerParameters, val clock: Clock = Clock.systemUTC()) {
 
     companion object : KLogging()
 

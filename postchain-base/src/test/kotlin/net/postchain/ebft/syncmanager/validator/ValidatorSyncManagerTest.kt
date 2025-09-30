@@ -20,6 +20,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.BlockManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.EbftMessage
@@ -86,7 +87,9 @@ class ValidatorSyncManagerTest {
         on { getBlockQueries() } doReturn blockQueries
         on { getConfiguration() } doReturn blockchainConfiguration
     }
-    private val appConfig: AppConfig = mock()
+    private val appConfig = mock<AppConfig> {
+        on { cryptoSystem } doReturn mock()
+    }
     private val nodeConfig: NodeConfig = mock()
     private val networkNodes: NetworkNodes = mock {
         on { getPeerIds() } doReturn peerIds
@@ -107,6 +110,7 @@ class ValidatorSyncManagerTest {
     private val statusManager: StatusManager = mock()
     private val blockManager: BlockManager = mock()
     private val blockDatabase: BlockDatabase = mock()
+    private val persistOnlyBlockWriter: PersistOnlyBlockWriter = mock()
     private val nodeStateTracker: NodeStateTracker = mock()
     private val revoltTracker: RevoltTracker = mock()
     private val syncMetrics: SyncMetrics = mock()
@@ -118,7 +122,7 @@ class ValidatorSyncManagerTest {
     fun beforeEach() {
         ensureAppliedConfigSenderCalled = false
         sut = spy(ValidatorSyncManager(workerContext, loggingContext, statusManager, blockManager, blockDatabase,
-                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, RateLimitConfiguration.fromAppConfig(appConfig), clock))
+                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, RateLimitConfiguration.fromAppConfig(appConfig), persistOnlyBlockWriter, clock))
     }
 
     @Nested

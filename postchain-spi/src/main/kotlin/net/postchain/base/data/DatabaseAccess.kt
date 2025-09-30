@@ -52,6 +52,12 @@ interface DatabaseAccess {
             val stateN: Long,
             val data: ByteArray)
 
+    class StateData(
+            val blockHeight: Long,
+            val stateN: Long,
+            val data: ByteArray
+    )
+
     class BlockWithTransactions(
             val blockHeight: Long,
             val blockHeader: ByteArray,
@@ -169,7 +175,10 @@ interface DatabaseAccess {
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, stateN: Long, data: ByteArray)
+    @Deprecated("Use getState()", ReplaceWith("getState(ctx, prefix, height, stateN)"))
     fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
+    fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
+    fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
     fun insertPage(ctx: EContext, pageStoreName: String, page: Page)
@@ -181,6 +190,17 @@ interface DatabaseAccess {
     fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int
     fun getPrunablePages(ctx: EContext, pageStoreName: String, lowestHeightToKeep: Long): List<Long>
     fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
+
+    // Snapshots
+    fun isSnapshotEnabled(ctx: EContext): Boolean
+    fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long?
+    fun getSnapshotSyncState(ctx: EContext): SnapshotSyncState?
+    fun setSnapshotSyncState(ctx: EContext, state: SnapshotSyncState)
+    fun setSnapshotSyncContextState(ctx: EContext, state: SnapshotSyncContextState)
+    fun getAllSnapshotSyncContexts(ctx: EContext): List<SnapshotSyncContextState>
+    fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, offset: Long)
+    fun removeSnapshotSyncContextState(ctx: EContext, contextId: Long)
+    fun pruneSnapshotSyncState(ctx: EContext)
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
@@ -209,6 +229,15 @@ interface DatabaseAccess {
     fun createPageTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
+
+    fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long
+    fun getSnapshotContextId(ctx: EContext, moduleName: String): Long
+    fun getSnapshotModuleContextIds(ctx: EContext): List<Long>
+    fun getSnapshotContextModule(ctx: EContext, contextId: Long): String
+    fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfo: DatumInfo)
+    fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfoList: List<DatumInfo>)
+    fun getUpdatedDatumsByContext(ctx: EContext): Map<Long, List<DatumInfo>>
+    fun clearUpdatedDatums(ctx: EContext)
 
     fun getDatabaseServerVersion(connection: Connection): String
 

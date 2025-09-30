@@ -18,7 +18,7 @@ import java.time.Clock
 class KnownStateTest {
 
     private val clock: Clock = mock()
-    private val params: SyncParameters = mock()
+    private val params: SyncPeerParameters = mock()
 
     private lateinit var sut: KnownState
 

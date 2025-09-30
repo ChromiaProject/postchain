@@ -1,11 +1,14 @@
 package net.postchain.devtools.mminfra
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.wrap
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
+import net.postchain.core.EContext
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.devtools.awaitDebug
@@ -13,6 +16,7 @@ import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.InactiveBlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
@@ -22,8 +26,8 @@ import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
-    val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
-    val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
+    val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<(ctx: EContext) -> BlockchainConfiguration, ByteArray>>> = mutableMapOf()
+    val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<(ctx: EContext) -> BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
     val faultyConfigHashes: MutableMap<BlockchainRid, MutableMap<Long, ByteArray>> = mutableMapOf()
     val bridState: MutableMap<BlockchainRid, BlockchainState> = mutableMapOf()
     val historicStates: MutableMap<Long, MutableList<Pair<BlockchainRid, BlockchainState>>> = sortedMapOf()
@@ -75,7 +79,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): List<PendingBlockchainConfiguration> {
         val allPendingConfigs = pendingBridToConfigs[blockchainRid] ?: return listOf()
         return allPendingConfigs.lowerEntry(height + 1)?.let { (height, configs) ->
-            configs.map { PendingBlockchainConfiguration.fromBlockchainConfiguration(it.first, height) }
+            configs.map { pendingConfigFromRawConfig(it.second, height) }
         } ?: listOf()
     }
 
@@ -136,8 +140,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
-        val (latestConfig, _) = bridToConfigs[blockchainRid]?.maxBy { it.key }?.value ?: return listOf()
-        return latestConfig.signers.map { NodeRid(it) }
+        val (_, latestRawConfig) = bridToConfigs[blockchainRid]?.maxBy { it.key }?.value ?: return listOf()
+        return GtvDecoder.decodeGtv(latestRawConfig)["signers"]!!.asArray().map { NodeRid(it.asByteArray()) }
     }
 
     override fun getBlockchainApiUrls(brid: BlockchainRid): List<String> {
@@ -162,25 +166,25 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }
 
-    open fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray): BlockchainConfiguration {
+    open fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray, ctx: EContext): BlockchainConfiguration {
         val brid = ChainUtil.ridOf(chainId)
         val configs = bridToConfigs[brid]!!
         val config = configs.values.firstOrNull { cfgToRaw ->
             cfgToRaw.second.contentEquals(rawConfigurationData)
         }
         return if (config != null) {
-            config.first
+            config.first(ctx)
         } else {
             val pendingConfigs = pendingBridToConfigs[brid]!!
             pendingConfigs.values.flatten().first { cfgToRaw ->
                 cfgToRaw.second.contentEquals(rawConfigurationData)
-            }.first
+            }.first(ctx)
         }
     }
 
-    fun addConf(chainId: Long, rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, rawBcConf: ByteArray) {
+    fun addConf(chainId: Long, rid: BlockchainRid, height: Long, confFactory: (ctx: EContext) -> BlockchainConfiguration, rawBcConf: ByteArray) {
         val configs = bridToConfigs.computeIfAbsent(rid) { sortedMapOf() }
-        if (configs.put(height, Pair(conf, rawBcConf)) != null) {
+        if (configs.put(height, Pair(confFactory, rawBcConf)) != null) {
             throw IllegalArgumentException("Setting blockchain configuration for height that already has a configuration")
         } else {
             awaitDebug("### NEW BC CONFIG for chain: $chainId (bc rid: ${rid.toShortHex()}) at height: $height")
@@ -188,9 +192,9 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         }
     }
 
-    fun addPendingConf(chainId: Long, rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, rawBcConf: ByteArray) {
+    fun addPendingConf(chainId: Long, rid: BlockchainRid, height: Long, confFactory: (ctx: EContext) -> BlockchainConfiguration, rawBcConf: ByteArray) {
         val configs = pendingBridToConfigs.computeIfAbsent(rid) { TreeMap() }
-        configs.computeIfAbsent(height) { mutableListOf() }.add(conf to rawBcConf)
+        configs.computeIfAbsent(height) { mutableListOf() }.add(confFactory to rawBcConf)
         awaitDebug("### NEW PENDING BC CONFIG for chain: $chainId (bc rid: ${rid.toShortHex()}) at height: $height")
     }
 
@@ -198,7 +202,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         val brid = ChainUtil.ridOf(chainId)
         val config = pendingBridToConfigs[ChainUtil.ridOf(chainId)]!![height]!!.removeFirstOrNull()
         if (config != null) {
-            faultyConfigHashes.computeIfAbsent(brid) { mutableMapOf() }[height] = config.first.configHash
+            faultyConfigHashes.computeIfAbsent(brid) { mutableMapOf() }[height] = BlockchainConfigurationData.merkleHash(GtvDecoder.decodeGtv(config.second))
         }
     }
 
@@ -211,5 +215,15 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         val chainId = ChainUtil.iidOf(rid).toInt()
         myNode.removeChainToSign(chainId)
         myNode.removeChainToRead(chainId)
+    }
+
+    private fun pendingConfigFromRawConfig(rawConfig: ByteArray, minimumHeight: Long): PendingBlockchainConfiguration {
+        val gtvConfig = GtvDecoder.decodeGtv(rawConfig)
+        return PendingBlockchainConfiguration(
+                gtvConfig,
+                BlockchainConfigurationData.merkleHash(gtvConfig).wrap(),
+                gtvConfig["signers"]!!.asArray().map { PubKey(it.asByteArray()) },
+                minimumHeight
+        )
     }
 }
