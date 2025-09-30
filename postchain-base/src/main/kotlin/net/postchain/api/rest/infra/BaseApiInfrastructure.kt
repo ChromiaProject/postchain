@@ -19,7 +19,7 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import java.lang.Integer.min
 
 open class BaseApiInfrastructure(
-        restApiConfig: RestApiConfig,
+        val restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
         private val postchainContext: PostchainContext,
 ) : ApiInfrastructure {

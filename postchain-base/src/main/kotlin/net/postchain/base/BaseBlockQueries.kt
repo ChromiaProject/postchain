@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
@@ -11,6 +12,7 @@ import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
+import net.postchain.core.ExecutionContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
@@ -29,10 +31,15 @@ import net.postchain.core.block.SimpleBlockHeader
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
+import org.postgresql.PGConnection
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -52,7 +59,8 @@ abstract class BaseBlockQueries(
         val blockStore: BlockStore,
         private val chainId: Long,
         private val mySubjectId: ByteArray,
-        private val snapshotDatumRepository: SnapshotDatumRepository
+        private val snapshotDatumRepository: SnapshotDatumRepository,
+        private val queryTimeoutMs: Long = 60000L
 ) : BlockQueries {
 
     companion object : KLogging()
@@ -63,6 +71,9 @@ abstract class BaseBlockQueries(
     private var activeExecutions: Int = 0
     private val lock = ReentrantLock()
     private val shutdownComplete: Condition = lock.newCondition()
+    private val timeouter: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactoryBuilder().setNameFormat("Query-timeout").setDaemon(true).build()
+    )
 
     protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> {
         lock.withLock {
@@ -92,7 +103,7 @@ abstract class BaseBlockQueries(
         }
 
         val result = try {
-            operation(ctx)
+            runOpWithTimeout(ctx, queryTimeoutMs, operation)
         } catch (e: Exception) {
             logger.trace(e) { "An error occurred" }
             return CompletableFuture.failedStage(e)
@@ -101,6 +112,38 @@ abstract class BaseBlockQueries(
         }
 
         return CompletableFuture.completedStage(result)
+    }
+
+    private fun <T> runOpWithTimeout(ctx: ExecutionContext, queryTimeoutMs: Long, operation: (EContext) -> T): T {
+        val timedOut = AtomicBoolean(false)
+        val timeoutTask = if (queryTimeoutMs > 0) {
+            val opThread = Thread.currentThread()
+            timeouter.schedule({
+                logger.warn("Query timed out after $queryTimeoutMs ms, attempting to cancel")
+
+                timedOut.set(true)
+                opThread.interrupt()
+
+                if (ctx.conn.isWrapperFor(PGConnection::class.java)) {
+                    val postgresConnection = ctx.conn.unwrap(PGConnection::class.java)
+                    try {
+                        postgresConnection.cancelQuery()
+                    } catch (e: SQLException) {
+                        logger.warn { "Failed to cancel query on chain ${ctx.chainID}: $e" }
+                    }
+                }
+            }, queryTimeoutMs, TimeUnit.MILLISECONDS)
+        } else null
+
+        try {
+            return operation(ctx)
+        } finally {
+            timeoutTask?.cancel(false)
+            if (timedOut.get()) {
+                logger.info { "Query timed out after $queryTimeoutMs ms" }
+                throw TimeoutException("Query timed out after $queryTimeoutMs ms")
+            }
+        }
     }
 
     override fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature> = runOpRegardless { ctx ->

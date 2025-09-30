@@ -17,7 +17,8 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
                       mySubjectId: ByteArray,
                       private val module: GTXModule,
                       snapshotDatumRepository: BaseSnapshotDatumRepository
-) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId, snapshotDatumRepository) {
+) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId, snapshotDatumRepository,
+        blockchainConfiguration.configData.queryTimeout) {
 
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
         module.query(it, name, args)

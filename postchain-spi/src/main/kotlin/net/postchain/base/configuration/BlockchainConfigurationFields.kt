@@ -56,6 +56,7 @@ const val KEY_QUERY_CACHE_TTL_SECONDS = "query_cache_ttl_seconds"
 const val KEY_ASYNC_QUERY_QUEUE_CAPACITY = "async_query_queue_capacity"
 const val KEY_ASYNC_QUERY_TIMEOUT_SECONDS = "async_query_timeout_seconds"
 const val KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS = "async_query_result_retention_seconds"
+const val KEY_QUERY_TIMEOUT = "query_timeout"
 
 const val KEY_FEATURES = "features"
 
