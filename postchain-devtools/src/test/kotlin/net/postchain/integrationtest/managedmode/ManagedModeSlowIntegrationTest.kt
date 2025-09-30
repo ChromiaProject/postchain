@@ -5,6 +5,8 @@ package net.postchain.integrationtest.managedmode
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import net.postchain.base.BaseBlockchainProcessManager
@@ -19,7 +21,6 @@ import net.postchain.devtools.getModules
 import org.apache.logging.log4j.Level
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -75,49 +76,58 @@ class ManagedModeSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
         }
 
         // Asserting chain 0 is started and chain 1 and 2 are not
-        nodes[0].assertChainStarted(0L)
-        nodes[0].assertChainNotStarted(100L)
-        nodes[0].assertChainNotStarted(101L)
+        node.assertChainStarted(0L)
+        node.assertChainNotStarted(100L)
+        node.assertChainNotStarted(101L)
 
         // Asserting chain 0, 100 are started and chain 101 is not
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            nodes[0].assertChainStarted(0L)
-            nodes[0].assertChainStarted(100L)
-            nodes[0].assertChainNotStarted(101L)
+            node.assertChainStarted(0L)
+            node.assertChainStarted(100L)
+            node.assertChainNotStarted(101L)
         }
 
         // Asserting chain 0, 100, 101 are started
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            nodes[0].assertChainStarted(0L)
-            nodes[0].assertChainStarted(100L)
-            nodes[0].assertChainStarted(101L)
+            node.assertChainStarted(0L)
+            node.assertChainStarted(100L)
+            node.assertChainStarted(101L)
         }
 
         // Asserting chain 0, 101 are started and chain 100 is not
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            nodes[0].assertChainStarted(0L)
-            nodes[0].assertChainNotStarted(100L)
-            nodes[0].assertChainStarted(101L)
+            node.assertChainStarted(0L)
+            node.assertChainNotStarted(100L)
+            node.assertChainStarted(101L)
 
             // Asserting stage of blockchain:0 is stage3 (15 < height < 20)
-            assertThat(nodes[0].getModules(0L)).isNotEmpty()
-            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(
+            assertThat(node.getModules(0L)).isNotEmpty()
+            assertThat(node.getModules(0L).first()).isInstanceOf(
                     ManagedTestModuleSinglePeerLaunchesAndStopsChains3::class)
         }
 
-        // Asserting that chain 101 reconfigures to bad config at height 9L and stops
+        // Asserting that chain 101 runs fine
         val appender = createLogCaptor(BaseBlockchainProcessManager::class.java, "List")
+        assertThat(appender.events
+                .filter { it.level == Level.ERROR }
+                .map { it.message.toString() }
+                .filter { it.contains("GTX module class not found: net.postchain.gtx.UnknownGTXModule") })
+                .isEmpty()
+        assertThat(getLastBlockHeight(node.appConfig, 101L)).isGreaterThan(1)
+
+        // Asserting that chain 101 reconfigures to bad config and stops
+        ManagedTestModuleSinglePeerLaunchesAndStopsChains.chain101ProvideValidConfig.set(false)
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertEquals(9L, getLastBlockHeight(node.appConfig, 101L))
             val logs = appender.events.filter { it.level == Level.ERROR }.map { it.message.toString() }
             assertThat(logs).contains("GTX module class not found: net.postchain.gtx.UnknownGTXModule")
+            node.assertChainNotStarted(101L)
         }
 
         // Asserting that chain 101 recovers and can build blocks
+        ManagedTestModuleSinglePeerLaunchesAndStopsChains.chain101ProvideValidConfig.set(true)
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertTrue(ManagedTestModuleSinglePeerLaunchesAndStopsChains.chain101RecoveringCounter > 5)
-            nodes[0].assertChainStarted(101L)
-            assertEquals(15L, getLastBlockHeight(node.appConfig, 101L))
+            assertTrue(ManagedTestModuleSinglePeerLaunchesAndStopsChains.chain101RecoveringCounter >= 2)
+            node.assertChainStarted(101L)
         }
     }
 

@@ -19,6 +19,7 @@ import net.postchain.integrationtest.managedmode.TestModulesHelper.argHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
 import net.postchain.util.TestKLogging
+import java.util.concurrent.atomic.AtomicBoolean
 
 open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : SimpleGTXModule<Unit>(
         Unit,
@@ -49,6 +50,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
         private val stage2 = 10 until 15
         private val stage3 = 15 until 20
 
+        var chain101ProvideValidConfig = AtomicBoolean(true)
         var chain101RecoveringCounter = 0
 
         @Suppress("UNUSED_PARAMETER")
@@ -110,15 +112,11 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                 }
 
                 BLOCKCHAIN_RIDS[101L] -> {
-                    when (argHeight(args)) {
-                        10L -> {
-                            if (chain101RecoveringCounter++ < 5) { // bad config
-                                "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2_bad.xml"
-                            } else { // recovering config
-                                "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
-                            }
-                        }
-                        else -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
+                    if (chain101ProvideValidConfig.get())
+                        "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
+                    else {
+                        chain101RecoveringCounter++
+                        "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2_bad.xml"
                     }
                 }
                 else -> null
