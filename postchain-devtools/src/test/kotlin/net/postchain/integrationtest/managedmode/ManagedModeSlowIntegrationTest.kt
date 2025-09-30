@@ -107,7 +107,7 @@ class ManagedModeSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
         }
 
         // Asserting that chain 101 runs fine
-        val appender = createLogCaptor(BaseBlockchainProcessManager::class.java, "List")
+        val appender = createLogCaptor(BaseBlockchainProcessManager::class.java, this::class.simpleName!!)
         assertThat(appender.events
                 .filter { it.level == Level.ERROR }
                 .map { it.message.toString() }

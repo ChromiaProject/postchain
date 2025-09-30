@@ -50,7 +50,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
         private val stage2 = 10 until 15
         private val stage3 = 15 until 20
 
-        var chain101ProvideValidConfig = AtomicBoolean(true)
+        val chain101ProvideValidConfig = AtomicBoolean(true)
         var chain101RecoveringCounter = 0
 
         @Suppress("UNUSED_PARAMETER")
