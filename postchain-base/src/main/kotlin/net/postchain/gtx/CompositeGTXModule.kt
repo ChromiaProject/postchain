@@ -9,6 +9,7 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.snapshot.RootSnapshotBlockBuilderExtension
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
@@ -35,6 +36,8 @@ class CompositeGTXModule(
     lateinit var _specialTxExtensions: List<GTXSpecialTxExtension>
     lateinit var _metadata: GTXModuleMetadata
     lateinit var _compositeMetadata: ApiMetadata
+
+    private val moduleContextIds = mutableMapOf<String, Long>()
 
     companion object : KLogging()
 
@@ -131,6 +134,7 @@ class CompositeGTXModule(
                 createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
                 modules.filterIsInstance<SnapshotAware>().forEach {
                     val contextId = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
+                    moduleContextIds[it::class.java.canonicalName] = contextId
                     createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_${contextId}_snapshot")
                     createStateLeafTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_$contextId")
                 }
@@ -145,9 +149,12 @@ class CompositeGTXModule(
         // Initialize snapshot contexts
         if (snapshotsEnabled) {
             modules.filterIsInstance<SnapshotAware>()
-                    .forEach { module -> module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
+                    .forEach { module ->
+                        val contextId = moduleContextIds[module::class.java.canonicalName]
+                                ?: throw ProgrammerMistake("Module ${module::class.java.canonicalName} is snapshot aware but has no cached context id")
+
+                        module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
                             DatabaseAccess.of(ctx).apply {
-                                val contextId = getSnapshotContextId(ctx, module::class.java.canonicalName)
                                 insertUpdatedDatum(ctx, contextId, DatumInfo(
                                         datumId,
                                         datum.merkleHash(configuration.merkleHashCalculator),
