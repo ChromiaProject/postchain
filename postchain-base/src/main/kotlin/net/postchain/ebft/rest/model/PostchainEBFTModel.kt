@@ -47,8 +47,6 @@ class PostchainEBFTModel(
 
         val decodedTransaction = transactionFactory.decodeAndValidateTransaction(tx)
 
-        decodedTransaction.checkCorrectness()
-
         if (decodedTransaction.isSpecial()) {
             sample.stop(metrics.invalidTransactions)
             throw InvalidTnxException("Cannot post special transaction")

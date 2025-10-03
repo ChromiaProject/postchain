@@ -435,11 +435,8 @@ object ImporterExporter : KLogging() {
         blockBuilder.commit(blockWitness)
     }
 
-    private fun decodeTransaction(blockchainConfiguration: BlockchainConfiguration, txData: ByteArray): Transaction {
-        val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        tx.checkCorrectnessWhileSyncing()
-        return tx
-    }
+    private fun decodeTransaction(blockchainConfiguration: BlockchainConfiguration, txData: ByteArray): Transaction =
+            blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
 
     private fun encodeBlockEntry(block: DatabaseAccess.BlockWithTransactions): Gtv = GtvFactory.gtv(
             GtvFactory.gtv(block.blockHeader),
