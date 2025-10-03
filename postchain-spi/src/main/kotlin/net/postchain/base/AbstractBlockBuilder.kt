@@ -107,7 +107,6 @@ abstract class AbstractBlockBuilder(
         withLoggingContext(TRANSACTION_RID_TAG to tx.getRID().toHex()) {
             logger.trace(APPEND_TRANSACTION, "Begin")
             if (finalized) throw ProgrammerMistake("Block is already finalized")
-            if (isSyncing) tx.checkCorrectnessWhileSyncing() else tx.checkCorrectness()
             val txctx: TxEContext
             try {
                 txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
@@ -115,6 +114,7 @@ abstract class AbstractBlockBuilder(
                 throw UserMistake("Failed to save tx ${tx.getRID().toHex()} to database: $e", e)
             }
 
+            if (isSyncing) tx.checkCorrectnessWhileSyncing(txctx) else tx.checkCorrectness(txctx)
             // In case of errors, tx.apply may either return false or throw UserMistake
             val applied = if (isSyncing) tx.applyWhileSyncing(txctx) else tx.apply(txctx)
             if (applied) {

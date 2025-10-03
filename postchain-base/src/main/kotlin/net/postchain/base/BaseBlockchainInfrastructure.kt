@@ -116,12 +116,14 @@ open class BaseBlockchainInfrastructure(
                 configuration.transactionQueueSize,
                 recheckThreadInterval = 1.minutes,
                 recheckTxInterval = configuration.transactionQueueRecheckInterval,
+                sharedStorage,
+                configuration.chainID,
                 if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V2))
                     BaseTransactionPrioritizerV2(blockQueries)
                 else if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V1))
                     BaseTransactionPrioritizerV1(blockQueries)
                 else
-                    null
+                    null,
         )
         val metrics = BaseBlockchainEngineMetrics(configuration.chainID, configuration.blockchainRid, transactionQueue)
         val strategy: BlockBuildingStrategy = configuration.getBlockBuildingStrategy(blockQueries, transactionQueue)

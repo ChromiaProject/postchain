@@ -9,6 +9,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.core.EContext
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -62,23 +63,27 @@ class GTXTransaction(
         }
     }
 
-    override fun checkCorrectnessWhileSyncing() {
+    override fun checkCorrectnessWhileSyncing() = throw NotImplementedError("call checkCorrectnessWhileSyncing(EContext) instead")
+
+    override fun checkCorrectnessWhileSyncing(ctxt: EContext) {
         if (isChecked || isCheckedWhileSyncing) return
 
         checkSignatures(parallel = false)
-        checkOperations(true)
+        checkOperations(true, ctxt)
 
         isCheckedWhileSyncing = true
     }
 
-    override fun checkCorrectness() {
+    override fun checkCorrectness() = throw NotImplementedError("call checkCorrectness(EContext) instead")
+
+    override fun checkCorrectness(ctxt: EContext) {
         if (isChecked) return
 
         if (!isCheckedWhileSyncing) {
             checkSignatures(parallel = true)
         }
 
-        checkOperations(false)
+        checkOperations(false, ctxt)
 
         isChecked = true
     }
@@ -123,7 +128,7 @@ class GTXTransaction(
      * We still have one attack vector where the Dapp developer creates custom operation where no signer check is
      * included, b/c this opens up to anonymous attacks.
      */
-    private fun checkOperations(isSyncing: Boolean) {
+    private fun checkOperations(isSyncing: Boolean, ctxt: EContext) {
         val hasNormalOperation = ops.any { !it.isCompound() }
         var totalOps = 0
         var specialOps = 0
@@ -141,7 +146,7 @@ class GTXTransaction(
             }
 
             try {
-                if (isSyncing) op.checkCorrectnessWhileSyncing() else op.checkCorrectness()
+                if (isSyncing) op.checkCorrectnessWhileSyncing(ctxt) else op.checkCorrectness(ctxt)
             } catch (e: UserMistake) {
                 throw TransactionIncorrect(myRID, e.message)
             }
@@ -165,7 +170,7 @@ class GTXTransaction(
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        checkCorrectness()
+        checkCorrectness(ctx)
         for (op in ops) {
             val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
             val opTimeNanos = measureNanoTime {
@@ -178,7 +183,7 @@ class GTXTransaction(
     }
 
     override fun applyWhileSyncing(ctx: TxEContext): Boolean {
-        checkCorrectnessWhileSyncing()
+        checkCorrectnessWhileSyncing(ctx)
         for (op in ops) {
             val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
             val opTimeNanos = measureNanoTime {

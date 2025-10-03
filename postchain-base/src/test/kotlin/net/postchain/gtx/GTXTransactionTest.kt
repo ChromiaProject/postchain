@@ -22,11 +22,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.mock
 
 class GTXTransactionTest {
 
     private val cs = Secp256K1CryptoSystem()
     private val hashCalculator = GtvMerkleHashCalculatorV2(cs)
+    private val ctxt: EContext = mock()
 
     @Test
     fun `tx with only compound nop op is invalid while building and valid while syncing`() {
@@ -43,11 +45,11 @@ class GTXTransactionTest {
 
         // Since we are not allowed to just use nop.
         assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
 
         assertDoesNotThrow {
-            tx.checkCorrectnessWhileSyncing()
+            tx.checkCorrectnessWhileSyncing(ctxt)
         }
     }
 
@@ -69,7 +71,7 @@ class GTXTransactionTest {
         )
 
         assertDoesNotThrow {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -90,12 +92,12 @@ class GTXTransactionTest {
         )
 
         val e = assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
         assertThat(e.message).contains("contains more than one 'nop'")
 
         assertDoesNotThrow {
-            tx.checkCorrectnessWhileSyncing()
+            tx.checkCorrectnessWhileSyncing(ctxt)
         }
     }
 
@@ -108,7 +110,7 @@ class GTXTransactionTest {
                 listOf()).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -122,7 +124,7 @@ class GTXTransactionTest {
                 listOf(signature)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -136,7 +138,7 @@ class GTXTransactionTest {
                 listOf(signature)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -151,7 +153,7 @@ class GTXTransactionTest {
                 listOf(signature1, signature2)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -166,7 +168,7 @@ class GTXTransactionTest {
                 listOf(signature1, signature2)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -180,7 +182,7 @@ class GTXTransactionTest {
                 listOf(signature, signature)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertThrows<TransactionIncorrect> {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -194,7 +196,7 @@ class GTXTransactionTest {
                 listOf(signature)).encode()
         val tx = factory.decodeAndValidateTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
-            tx.checkCorrectness()
+            tx.checkCorrectness(ctxt)
         }
     }
 
@@ -214,7 +216,7 @@ class GTXTransactionTest {
 
     @Test
     fun `compound op - valid with a additional normal op`() {
-        val dummyModule = object: SimpleGTXModule<Unit>(
+        val dummyModule = object : SimpleGTXModule<Unit>(
                 Unit,
                 mapOf(GtxTimeB.OP_NAME to ::GtxTimeB, DummyTestOp.OP_NAME to ::DummyTestOp),
                 mapOf()
@@ -232,8 +234,8 @@ class GTXTransactionTest {
                 listOf(signature)).encode()
         val tx = factory.decodeTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
-            tx.checkCorrectness()
-            tx.checkCorrectnessWhileSyncing()
+            tx.checkCorrectness(ctxt)
+            tx.checkCorrectnessWhileSyncing(ctxt)
         }
     }
 

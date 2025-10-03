@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
@@ -33,10 +32,29 @@ interface Transactor {
      * Check if correct given that transactor is applied during syncing.
      * This check should be less restrictive than `checkCorrectness`.
      *
+     * @param ctxt read-only database context
+     * @return if correct
+     * @throws UserMistake if not correct
+     */
+    fun checkCorrectnessWhileSyncing(ctxt: EContext) = checkCorrectnessWhileSyncing()
+
+    /**
+     * Check if correct given that transactor is applied during syncing.
+     * This check should be less restrictive than `checkCorrectness`.
+     *
      * @return if correct
      * @throws UserMistake if not correct
      */
     fun checkCorrectnessWhileSyncing() = checkCorrectness()
+
+    /**
+     * Check if correct.
+     *
+     * @param ctxt read-only database context
+     * @return if correct
+     * @throws UserMistake if not correct
+     */
+    fun checkCorrectness(ctxt: EContext) = checkCorrectness()
 
     /**
      * Check if correct.
@@ -50,7 +68,7 @@ interface Transactor {
     }
 
     @Deprecated(message = "Use checkCorrectness() instead to be able to get error message")
-    fun isCorrect(): Boolean = throw NotImplementedError("isCorrect() is no longer supported, use checkCorrectness() instead")
+    fun isCorrect(): Boolean = true
 
     fun apply(ctx: TxEContext): Boolean
 
@@ -61,13 +79,6 @@ interface Transaction : Transactor {
     fun getRawData(): ByteArray
     fun getRID(): ByteArray  // transaction unique identifier which is used as a reference to it
     fun getHash(): ByteArray // hash of transaction content
-
-    override fun checkCorrectness() {
-        @Suppress("DEPRECATION")
-        if (!isCorrect()) {
-            throw TransactionIncorrect(getRID())
-        }
-    }
 }
 
 interface SignableTransaction : Transaction {

@@ -6,6 +6,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.base.TransactionPrioritizer
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
@@ -13,6 +14,7 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.core.RejectedTransaction
+import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
 import net.postchain.gtx.GTXTransaction
@@ -68,6 +70,8 @@ const val MAX_REJECTED = 1000
 class BaseTransactionQueue(private val queueCapacity: Int,
                            recheckThreadInterval: Duration,
                            private val recheckTxInterval: Duration,
+                           private val storage: Storage,
+                           private val chainIID: Long,
                            private val prioritizer: TransactionPrioritizer?,
                            private val clock: Clock = Clock.systemUTC()) : TransactionQueue, Closeable {
 
@@ -151,7 +155,9 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
         try {
             // 1. We do is_correct() check before anything else
-            tx.checkCorrectness()
+            withReadConnection(storage, chainIID) { ctxt ->
+                tx.checkCorrectness(ctxt)
+            }
 
             val transactionPriority = try {
                 prioritizer?.prioritize(tx as GTXTransaction, txEnter, clock.instant())
