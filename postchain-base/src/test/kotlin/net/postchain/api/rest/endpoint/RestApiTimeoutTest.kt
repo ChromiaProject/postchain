@@ -30,6 +30,7 @@ import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.lang.Thread.sleep
+import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -103,7 +104,7 @@ class RestApiTimeoutTest {
         }
 
         val masterModel = HttpExternalModel(basePath, "http://localhost:${subRestApi.actualPort()}$basePath",
-                1L, "", requestTimeoutMs = 100)
+                1L, "", requestTimeoutMs = 1)
         masterRestApi.attachModel(blockchainRID, masterModel)
 
         RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
@@ -170,7 +171,8 @@ class RestApiTimeoutTest {
         val storage = mock<Storage> {
             on { openReadConnection(anyLong()) } doReturn mock()
         }
-        return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(), mock(), queryTimeoutMs) {
+        return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(),
+                mock(), Duration.ofMillis(queryTimeoutMs)) {
             override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
                 queryFunction(name, args)
             }

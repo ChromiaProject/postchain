@@ -8,6 +8,7 @@ import net.postchain.core.Transaction
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.gtv.Gtv
+import java.time.Duration
 import java.util.concurrent.CompletionStage
 
 class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfiguration,
@@ -18,7 +19,7 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
                       private val module: GTXModule,
                       snapshotDatumRepository: BaseSnapshotDatumRepository
 ) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId, snapshotDatumRepository,
-        blockchainConfiguration.configData.queryTimeout) {
+        Duration.ofSeconds(blockchainConfiguration.configData.queryTimeoutSeconds)) {
 
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
         module.query(it, name, args)

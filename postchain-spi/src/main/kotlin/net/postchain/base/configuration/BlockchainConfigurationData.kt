@@ -74,9 +74,9 @@ data class BlockchainConfigurationData(
         @Name(KEY_SNAPSHOT)
         @Nullable
         val snapshot: Gtv?,
-        @Name(KEY_QUERY_TIMEOUT)
-        @DefaultValue(defaultLong = 60000)
-        val queryTimeout: Long,
+        @Name(KEY_QUERY_TIMEOUT_SECONDS)
+        @DefaultValue(defaultLong = 60)
+        val queryTimeoutSeconds: Long,
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

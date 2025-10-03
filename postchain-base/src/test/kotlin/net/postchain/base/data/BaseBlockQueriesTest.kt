@@ -35,6 +35,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -270,7 +271,8 @@ class BaseBlockQueriesTest {
         val storage = mock<Storage> {
             on { openReadConnection(anyLong()) } doReturn mock()
         }
-        return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(), mock(), queryTimeoutMs) {
+        return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(), mock(),
+                Duration.ofMillis(queryTimeoutMs)) {
             override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
                 queryFunction(name, args)
             }

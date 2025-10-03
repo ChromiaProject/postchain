@@ -33,6 +33,7 @@ import net.postchain.crypto.Signature
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import org.postgresql.PGConnection
 import java.sql.SQLException
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.Executors
@@ -60,7 +61,7 @@ abstract class BaseBlockQueries(
         private val chainId: Long,
         private val mySubjectId: ByteArray,
         private val snapshotDatumRepository: SnapshotDatumRepository,
-        private val queryTimeoutMs: Long = 60000L
+        private val queryTimeout: Duration = Duration.ofMinutes(1)
 ) : BlockQueries {
 
     companion object : KLogging()
@@ -103,7 +104,7 @@ abstract class BaseBlockQueries(
         }
 
         val result = try {
-            runOpWithTimeout(ctx, queryTimeoutMs, operation)
+            runOpWithTimeout(ctx, queryTimeout.toMillis(), operation)
         } catch (e: Exception) {
             logger.trace(e) { "An error occurred" }
             return CompletableFuture.failedStage(e)

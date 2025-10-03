@@ -36,7 +36,7 @@ data class HttpExternalModel(
             .setDefaultRequestConfig(RequestConfig.custom()
                     .setRedirectsEnabled(false)
                     .setCookieSpec(StandardCookieSpec.IGNORE)
-                    .setConnectionRequestTimeout(Timeout.ofMilliseconds(requestTimeoutMs))
+                    .setConnectionRequestTimeout(Timeout.ofSeconds(60))
                     .setResponseTimeout(Timeout.ofMilliseconds(requestTimeoutMs))
                     .build()
             )
