@@ -165,7 +165,13 @@ import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.Timer
+import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.timer
+import kotlin.concurrent.timerTask
 
 const val BLOCKCHAIN_RID = "blockchainRid"
 
@@ -981,6 +987,11 @@ class RestApi(
             is UnavailableException -> {
                 logger.info { "Unavailable: ${error.message}" }
                 transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error.message ?: "Unknown error")
+            }
+
+            is TimeoutException -> {
+                logger.info { "Timeout: ${error.message}" }
+                transformErrorResponseFromDiagnostics(request, INTERNAL_SERVER_ERROR, error.message ?: "Unknown timeout")
             }
 
             else -> {

@@ -7,7 +7,9 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import net.postchain.PostchainNode.Companion.logger
 import net.postchain.StorageBuilder
+import net.postchain.base.BaseBlockQueries
 import net.postchain.base.TestBlockQueries
 import net.postchain.base.TestBlockchainBuilder
 import net.postchain.common.hexStringToByteArray
@@ -17,18 +19,28 @@ import net.postchain.core.Storage
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.GTXBlockQueries
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Duration
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.measureTimeMillis
 
 class BaseBlockQueriesTest {
@@ -189,6 +201,42 @@ class BaseBlockQueriesTest {
     }
 
     @Test
+    fun `timeout - interrupt too long query and get TimeoutException`() {
+        val interrupted = AtomicBoolean(false)
+        val bbq = buildBaseBlockQueriesMock(10) { _, _ ->
+            try {
+                Thread.sleep(10000L)
+            } catch (e: InterruptedException) {
+                interrupted.set(true)
+                throw e
+            }
+            gtv(false)
+        }
+        val e = assertThrows<TimeoutException> { bbq.query("dummy", GtvNull).get() }
+        assertThat(e.message).isEqualTo("Query timed out after 10 ms")
+        assertThat(interrupted.get()).isTrue()
+    }
+
+    /** This will attempt to interrupt the query, which will ignore the interrupt and still return a result. We will
+     *  ignore the response and treat it as a timeout anyway. */
+    @Test
+    fun `timeout - attempt to interrupt too long query but it ignores interrupts`() {
+        val interrupted = AtomicBoolean(false)
+        val bbq = buildBaseBlockQueriesMock(10) { _, _ ->
+            try {
+                Thread.sleep(10000L)
+            } catch (_: InterruptedException) {
+                logger.info { "Interrupted, but ignored..." }
+                interrupted.set(true)
+            }
+            gtv(false)
+        }
+        val e = assertThrows<TimeoutException> { bbq.query("dummy", GtvNull).get() }
+        assertThat(e.message).isEqualTo("Query timed out after 10 ms")
+        assertThat(interrupted.get()).isTrue()
+    }
+
+    @Test
     fun testWaitOnShutdown() {
         val countDownLatch = CountDownLatch(1)
         val mockDelayModule: GTXModule = mock()
@@ -200,8 +248,10 @@ class BaseBlockQueriesTest {
         val mockStorage: Storage = mock {
             on { openReadConnection(0) } doReturn mock()
         }
-
-        val blockQueries = GTXBlockQueries(mock(), mockStorage, mock(), 0, ByteArray(0), mockDelayModule, mock())
+        val blockchainConfiguration = mock<GTXBlockchainConfiguration> {
+            on { configData } doReturn mock()
+        }
+        val blockQueries = GTXBlockQueries(blockchainConfiguration, mockStorage, mock(), 0, ByteArray(0), mockDelayModule, mock())
 
         val executorService = Executors.newSingleThreadExecutor()
 
@@ -215,5 +265,24 @@ class BaseBlockQueriesTest {
         }
 
         assertThat(timeInMillis).isBetween(400, 600)
+    }
+
+    private fun buildBaseBlockQueriesMock(queryTimeoutMs: Long, queryFunction: (name: String, args: Gtv) -> GtvInteger): BaseBlockQueries {
+        val storage = mock<Storage> {
+            on { openReadConnection(anyLong()) } doReturn mock()
+        }
+        return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(), mock(),
+                Duration.ofMillis(queryTimeoutMs)) {
+            override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
+                queryFunction(name, args)
+            }
+
+            override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>>
+                    = throw NotImplementedError()
+
+            override fun decodeBlockHeader(headerData: ByteArray) = throw NotImplementedError()
+
+            override fun decodeWitness(witnessData: ByteArray) = throw NotImplementedError()
+        }
     }
 }

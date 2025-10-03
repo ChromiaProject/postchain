@@ -75,7 +75,7 @@ class DefaultMasterApiInfra(
             val maxConnections =
                     max(max(dynamicContainerRequestConcurrency, dynamicRequestConcurrencyExternal), dynamicRequestConcurrency)
             val model = HttpExternalModel(restApi.basePath, process.restApiUrl, process.chainId,
-                    process.directoryContainer, maxConnections)
+                    process.directoryContainer, maxConnections, restApiConfig.containerRequestTimeoutMs)
             restApi.attachModel(process.blockchainRid, model, process.directoryContainer)
         }
     }

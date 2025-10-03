@@ -1,6 +1,7 @@
 package net.postchain.api.rest.controller
 
 import mu.KLogging
+import net.postchain.api.rest.infra.RestApiConfig
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.cookie.StandardCookieSpec
 import org.apache.hc.client5.http.impl.classic.HttpClients
@@ -18,7 +19,8 @@ data class HttpExternalModel(
         override val path: String,
         override val chainIID: Long,
         override val directoryContainer: String,
-        val maxConnections: Int = 100
+        val maxConnections: Int = 100,
+        private val requestTimeoutMs: Long = RestApiConfig.DEFAULT_CONTAINER_REQUEST_TIMEOUT_MS,
 ) : ExternalModel {
 
     companion object : KLogging()
@@ -35,7 +37,7 @@ data class HttpExternalModel(
                     .setRedirectsEnabled(false)
                     .setCookieSpec(StandardCookieSpec.IGNORE)
                     .setConnectionRequestTimeout(Timeout.ofSeconds(60))
-                    .setResponseTimeout(Timeout.ofSeconds(60))
+                    .setResponseTimeout(Timeout.ofMilliseconds(requestTimeoutMs))
                     .build()
             )
             .evictIdleConnections(TimeValue.ofSeconds(60))
