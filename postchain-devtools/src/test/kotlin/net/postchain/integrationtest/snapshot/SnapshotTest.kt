@@ -329,11 +329,11 @@ open class SnapshotTestModule(
         }
     }
 
-    override fun initializeImport() {
+    override fun initializeImport(ctx: EContext) {
         initializeImportCalled = true
     }
 
-    override fun finalizeImport() {
+    override fun finalizeImport(ctx: EContext) {
         finalizeImportCalled = true
     }
 }

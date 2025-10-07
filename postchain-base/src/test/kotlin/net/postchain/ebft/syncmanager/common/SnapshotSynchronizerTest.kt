@@ -416,11 +416,11 @@ class SnapshotSynchronizerTest {
             datumList.forEach(constructDatumInvocations::add)
         }
 
-        override fun initializeImport() {
+        override fun initializeImport(ctx: EContext) {
             initializeImportCalled = true
         }
 
-        override fun finalizeImport() {
+        override fun finalizeImport(ctx: EContext) {
             finalizeImportCalled = true
         }
     }

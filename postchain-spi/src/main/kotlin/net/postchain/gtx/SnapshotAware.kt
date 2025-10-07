@@ -24,11 +24,11 @@ interface SnapshotAware {
     fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean)
 
     /** Called before the start of the snapshot import process */
-    fun initializeImport() {}
+    fun initializeImport(ctx: EContext) {}
 
     /** Let the module rebuild its table data from snapshot datum data  */
     fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>)
 
     /** Called after the snapshot import process */
-    fun finalizeImport() {}
+    fun finalizeImport(ctx: EContext) {}
 }

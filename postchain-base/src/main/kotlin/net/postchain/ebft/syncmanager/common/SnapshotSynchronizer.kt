@@ -23,6 +23,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
+import net.postchain.core.EContext
 import net.postchain.core.NodeRid
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
@@ -230,12 +231,11 @@ class SnapshotSynchronizer(
                             setSnapshotSyncContextState(ctx, contextState)
                         }
                     }
+                    snapshotModuleByContextMap.values.forEach { it.initializeImport(ctx) }
                     true
                 }
 
                 setInitialNodeStates(candidate)
-
-                snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
 
                 logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
                 return true
@@ -354,27 +354,26 @@ class SnapshotSynchronizer(
             }
 
             if (isProcessRunning() && contextSyncRequests.isEmpty()) {
-                snapshotModuleByContextMap.values.forEach(SnapshotAware::finalizeImport)
-                buildAndVerifySnapshot()
+                withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
+                    snapshotModuleByContextMap.values.forEach { it.finalizeImport(ctx) }
+                    buildAndVerifySnapshot(ctx)
+                    true
+                }
             }
         }
     }
 
-    private fun buildAndVerifySnapshot() {
-        withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
-            val localSnapshotRootHash = RootSnapshotBlockBuilder(ctx, syncState.height,
-                    workerContext.blockchainConfiguration.snapshot.levelsPerPage,
-                    workerContext.appConfig.cryptoSystem).build()
+    private fun buildAndVerifySnapshot(ctx: EContext) {
+        val localSnapshotRootHash = RootSnapshotBlockBuilder(ctx, syncState.height,
+                workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                workerContext.appConfig.cryptoSystem).build()
 
-            if (syncState.rootHash.contentEquals(localSnapshotRootHash)) {
-                DatabaseAccess.of(ctx).pruneSnapshotSyncState(ctx)
-                logger.info("Finished snapshot syncing successfully")
-            } else {
-                logger.warn("Finished snapshot syncing, but root hashes do not match")
-                throw ProgrammerMistake("Snapshot root hashes do not match")
-            }
-
-            true
+        if (syncState.rootHash.contentEquals(localSnapshotRootHash)) {
+            DatabaseAccess.of(ctx).pruneSnapshotSyncState(ctx)
+            logger.info("Finished snapshot syncing successfully")
+        } else {
+            logger.warn("Finished snapshot syncing, but root hashes do not match")
+            throw ProgrammerMistake("Snapshot root hashes do not match")
         }
     }
 
