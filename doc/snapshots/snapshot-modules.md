@@ -43,9 +43,9 @@ and is empty.
 
 The `SnapshotAware` lifecycle during import:
 
-1. `initializeImport(context)` — Called once before any `constructDatum()`. Prepare caches or temp tables if needed.
-2. `constructDatum(context, datums)` — Called zero or more times with batches of one or more datums; order is unspecified. Insert/update your tables accordingly.
-3. `finalizeImport(context)` — Called once after all datums are processed. Perform integrity checks, index builds, or cleanup.
+1. `initializeImport(ctx)` — Called once before any `constructDatum()`. Prepare caches or temp tables if needed.
+2. `constructDatum(ctx, datumList)` — Called zero or more times with batches of one or more datums; order is unspecified. Insert/update your tables accordingly.
+3. `finalizeImport(ctx)` — Called once after all datums are processed. Perform integrity checks, index builds, or cleanup.
 
 
 ## Examples
