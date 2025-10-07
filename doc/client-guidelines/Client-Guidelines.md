@@ -28,8 +28,12 @@ nodes.
 
 ### Transactions
 
-If a transaction is reported as `REJECTED` or `UNKNOWN` when status is checked it may be resubmitted. A transaction can
-only be included once on the blockchain so a resubmission is always safe.
+There are two ways to determine that the submission of a transaction failed, apart from being immediately rejected. One
+is if a transaction is reported as `REJECTED` by enough nodes that it cannot achieve the BFT consensus required for
+acceptance into a block. Another is if a transaction is no longer reported as `WAITING` by any honest and healthy node,
+since it indicates that they are no longer tracking that transaction (it's no longer in their transaction queues) and
+therefore won't include it in any future blocks. In any case, a transaction can only be included once on the blockchain
+so a resubmission is always safe.
 
 There is one potential pitfall for cases where a `nop` or other type of nonce is added to create transaction uniqueness.
 If the transaction is resubmitted with new nonce and is not idempotent it can be good to use timeout mechanisms such as
