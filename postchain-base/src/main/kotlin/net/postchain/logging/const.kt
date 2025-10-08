@@ -16,3 +16,9 @@ const val NODE_BLOCK_STATE_TAG = "nodeBlockState"
 
 const val SUCCESS_RESULT = "success"
 const val FAILURE_RESULT = "failure"
+
+const val OPERATIONS_METRIC_NAME = "operations"
+const val OPERATIONS_METRIC_DESCRIPTION = "Operation execution times"
+const val OPERATION_CORRECTNESS_METRIC_NAME = "operationCorrectness"
+const val OPERATION_CORRECTNESS_METRIC_DESCRIPTION = "Operation correctness check execution times"
+const val OPERATIONS_NAME_TAG = "operationName"
