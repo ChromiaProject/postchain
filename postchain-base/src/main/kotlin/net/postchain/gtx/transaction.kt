@@ -2,6 +2,8 @@
 
 package net.postchain.gtx
 
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
@@ -16,7 +18,16 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import kotlin.system.measureNanoTime
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.FAILURE_RESULT
+import net.postchain.logging.OPERATIONS_METRIC_DESCRIPTION
+import net.postchain.logging.OPERATIONS_METRIC_NAME
+import net.postchain.logging.OPERATIONS_NAME_TAG
+import net.postchain.logging.OPERATION_CORRECTNESS_METRIC_DESCRIPTION
+import net.postchain.logging.OPERATION_CORRECTNESS_METRIC_NAME
+import net.postchain.logging.RESULT_TAG
+import net.postchain.logging.SUCCESS_RESULT
 import kotlin.time.Duration
 
 /**
@@ -145,8 +156,21 @@ class GTXTransaction(
                 }
             }
 
+            val opName = (op as? GTXOperation)?.data?.opName ?: "<unknown>"
+            val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
+
             try {
-                if (isSyncing) op.checkCorrectnessWhileSyncing(ctxt) else op.checkCorrectness(ctxt)
+                measureOperation(
+                    opName = opName,
+                    opSignature = opSignature,
+                    chainId = ctxt.chainID,
+                    metricName = OPERATION_CORRECTNESS_METRIC_NAME,
+                    metricDescription = OPERATION_CORRECTNESS_METRIC_DESCRIPTION,
+                    successMsg = "check correctness",
+                    failureMsg = "fail correctness check",
+                ) {
+                    if (isSyncing) op.checkCorrectnessWhileSyncing(ctxt) else op.checkCorrectness(ctxt)
+                }
             } catch (e: UserMistake) {
                 throw TransactionIncorrect(myRID, e.message)
             }
@@ -172,12 +196,22 @@ class GTXTransaction(
     override fun apply(ctx: TxEContext): Boolean {
         checkCorrectness(ctx)
         for (op in ops) {
+            val opName = (op as? GTXOperation)?.data?.opName ?: "<unknown>"
             val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
-            val opTimeNanos = measureNanoTime {
-                if (!op.apply(ctx))
+
+            measureOperation(
+                opName = opName,
+                opSignature = opSignature,
+                chainId = ctx.chainID,
+                metricName = OPERATIONS_METRIC_NAME,
+                metricDescription = OPERATIONS_METRIC_DESCRIPTION,
+                successMsg = "apply",
+                failureMsg = "fail to be applied",
+            ) {
+                if (!op.apply(ctx)) {
                     throw UserMistake("Operation $opSignature failed")
+                }
             }
-            maybeLogSlowOp(opTimeNanos, opSignature, "apply")
         }
         return true
     }
@@ -185,14 +219,55 @@ class GTXTransaction(
     override fun applyWhileSyncing(ctx: TxEContext): Boolean {
         checkCorrectnessWhileSyncing(ctx)
         for (op in ops) {
+            val opName = (op as? GTXOperation)?.data?.opName ?: "<unknown>"
             val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
-            val opTimeNanos = measureNanoTime {
-                if (!op.applyWhileSyncing(ctx))
+
+            measureOperation(
+                opName = opName,
+                opSignature = opSignature,
+                chainId = ctx.chainID,
+                metricName = OPERATIONS_METRIC_NAME,
+                metricDescription = OPERATIONS_METRIC_DESCRIPTION,
+                successMsg = "apply while syncing",
+                failureMsg = "fail to be applied while syncing",
+            ) {
+                if (!op.applyWhileSyncing(ctx)) {
                     throw UserMistake("Operation $opSignature failed")
+                }
             }
-            maybeLogSlowOp(opTimeNanos, opSignature, "apply while syncing")
         }
         return true
+    }
+
+    private fun measureOperation(
+            opName: String,
+            opSignature: String,
+            chainId: Long,
+            metricName: String,
+            metricDescription: String,
+            successMsg: String,
+            failureMsg: String,
+            operationExecution: () -> Unit,
+    ) {
+        val timerBuilder = Timer.builder(metricName)
+                .description(metricDescription)
+                .tag(CHAIN_IID_TAG, chainId.toString())
+                .tag(BLOCKCHAIN_RID_TAG, gtxData.gtxBody.blockchainRid.toHex())
+                .tag(OPERATIONS_NAME_TAG, opName)
+        val sample = Timer.start(Metrics.globalRegistry)
+        return try {
+            operationExecution()
+            val opTimeNanos = sample.stop(
+                    timerBuilder.tag(RESULT_TAG, SUCCESS_RESULT).register(Metrics.globalRegistry)
+            )
+            maybeLogSlowOp(opTimeNanos, opSignature, successMsg)
+        } catch (e: Exception) {
+            val opTimeNanos = sample.stop(
+                    timerBuilder.tag(RESULT_TAG, FAILURE_RESULT).register(Metrics.globalRegistry)
+            )
+            maybeLogSlowOp(opTimeNanos, opSignature, failureMsg)
+            throw e
+        }
     }
 
     private fun maybeLogSlowOp(opTimeNanos: Long, opSignature: String, msg: String) {
