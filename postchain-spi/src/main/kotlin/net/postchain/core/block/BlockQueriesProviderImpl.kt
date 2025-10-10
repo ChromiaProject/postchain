@@ -8,4 +8,5 @@ class BlockQueriesProviderImpl : BlockQueriesProvider {
 
     override fun getBlockQueries(blockchainRid: BlockchainRid): BlockQueries? =
             processManager.retrieveBlockchain(blockchainRid)?.blockchainEngine?.getBlockQueries()
+                    ?.let { ForeignBlockQueries(it) }
 }

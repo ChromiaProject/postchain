@@ -14,6 +14,7 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
+import java.time.Duration
 import java.util.concurrent.CompletionStage
 
 interface BlockWitnessBuilder {
@@ -56,6 +57,7 @@ interface BlockQueries : Shutdownable {
     fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>>
+    fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>
 }
 

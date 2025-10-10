@@ -280,6 +280,9 @@ class BaseBlockQueriesTest {
             override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>>
                     = throw NotImplementedError()
 
+            override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv>
+                    = throw NotImplementedError()
+
             override fun decodeBlockHeader(headerData: ByteArray) = throw NotImplementedError()
 
             override fun decodeWitness(witnessData: ByteArray) = throw NotImplementedError()

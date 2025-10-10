@@ -7,6 +7,7 @@ import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -28,5 +29,8 @@ class TestBlockQueries(
             CompletableFuture.failedStage(UserMistake("Queries are not supported"))
 
     override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> =
+            CompletableFuture.failedStage(UserMistake("Queries are not supported"))
+
+    override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv> =
             CompletableFuture.failedStage(UserMistake("Queries are not supported"))
 }

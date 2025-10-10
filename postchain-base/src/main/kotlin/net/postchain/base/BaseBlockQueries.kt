@@ -61,7 +61,7 @@ abstract class BaseBlockQueries(
         private val chainId: Long,
         private val mySubjectId: ByteArray,
         private val snapshotDatumRepository: SnapshotDatumRepository,
-        private val queryTimeout: Duration = Duration.ofMinutes(1)
+        private val defaultQueryTimeout: Duration = Duration.ofMinutes(1)
 ) : BlockQueries {
 
     companion object : KLogging()
@@ -76,14 +76,14 @@ abstract class BaseBlockQueries(
             ThreadFactoryBuilder().setNameFormat("Query-timeout").setDaemon(true).build()
     )
 
-    protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> {
+    protected fun <T> runOp(queryTimeout: Duration = defaultQueryTimeout, operation: (EContext) -> T): CompletionStage<T> {
         lock.withLock {
             if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", chainId))
             activeExecutions++
         }
 
         return try {
-            runOpInternal(operation)
+            runOpInternal(queryTimeout, operation)
         } finally {
             lock.withLock {
                 if (--activeExecutions == 0 && isShutdown) {
@@ -93,9 +93,9 @@ abstract class BaseBlockQueries(
         }
     }
 
-    private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation)
+    private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(defaultQueryTimeout, operation)
 
-    private fun <T> runOpInternal(operation: (EContext) -> T): CompletionStage<T> {
+    private fun <T> runOpInternal(queryTimeout: Duration, operation: (EContext) -> T): CompletionStage<T> {
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {

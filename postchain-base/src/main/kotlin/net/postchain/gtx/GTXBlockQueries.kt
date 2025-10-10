@@ -2,6 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockQueries
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
@@ -27,6 +28,16 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
 
     override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> = runOp {
         module.query(it, name, args) to blockStore.getLastBlockHeight(it)
+    }
+
+    override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv> = runOp(queryTimeout) {
+        val db = DatabaseAccess.of(it)
+        db.setLocalLockTimeout(it, lockTimeout.toMillis())
+        try {
+            module.query(it, name, args)
+        } finally {
+            db.resetLocalLockTimeout(it)
+        }
     }
 
     override fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?> = runOp {

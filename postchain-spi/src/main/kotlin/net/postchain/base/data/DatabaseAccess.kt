@@ -241,6 +241,9 @@ interface DatabaseAccess {
 
     fun getDatabaseServerVersion(connection: Connection): String
 
+    fun setLocalLockTimeout(ctx: EContext, timeoutMs: Long)
+    fun resetLocalLockTimeout(ctx: EContext)
+
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {
             return ctx.getInterface(DatabaseAccess::class.java)
