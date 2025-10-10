@@ -1770,13 +1770,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long {
+    override fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Pair<Long, Boolean> {
         // Do an insert or simply return context id if exists
         val sql = "INSERT INTO ${tableSnapshotContexts(ctx.chainID)} (context_name)" +
                 " VALUES (?)" +
                 " ON CONFLICT (context_name) DO UPDATE SET context_name = EXCLUDED.context_name" +
-                " RETURNING context_id"
-        return queryRunner.query(ctx.conn, sql, longRes, moduleName).toLong()
+                " RETURNING context_id, (xmax = 0) AS inserted"
+        val result = queryRunner.query(ctx.conn, sql, mapListHandler, moduleName)
+        return result[0]["context_id"] as Long to result[0]["inserted"] as Boolean
     }
 
     override fun getSnapshotContextId(ctx: EContext, moduleName: String): Long {

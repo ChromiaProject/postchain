@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -36,6 +37,10 @@ class RootSnapshotBlockBuilder(
             val updatedDataByContext = getUpdatedDatumsByContext(bctx)
             val contextRootHashes = updatedDataByContext.map { (contextId, updatedData) ->
                 val snapshotPageStore = SnapshotPageStore(bctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
+
+                if (snapshotPageStore.getLastSnapshotHeight() == null && updatedData.none { it.id == 0L }) {
+                    throw UserMistake("Snapshot datum IDs must start at 0")
+                }
 
                 for (datumInfo in updatedData) {
                     if (datumInfo.rawValue != null) {

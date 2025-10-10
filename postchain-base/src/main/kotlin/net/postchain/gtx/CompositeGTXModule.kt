@@ -16,6 +16,7 @@ import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -25,7 +26,8 @@ class CompositeGTXModule(
         val allowOverrides: Boolean,
         val snapshotsEnabled: Boolean,
         val snapshotInterval: Long,
-        val snapshotLevelsPerPage: Int
+        val snapshotLevelsPerPage: Int,
+        val merkleHashCalculator: GtvMerkleHashCalculatorBase
 ) : GTXModule, PostchainContextAware, MetadataProvider {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
@@ -133,10 +135,16 @@ class CompositeGTXModule(
             DatabaseAccess.of(ctx).apply {
                 createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
                 modules.filterIsInstance<SnapshotAware>().forEach {
-                    val contextId = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
+                    val (contextId, created) = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
                     moduleContextIds[it::class.java.canonicalName] = contextId
                     createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_${contextId}_snapshot")
                     createStateLeafTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_$contextId")
+                    if (created) {
+                        it.getInitialDatums(ctx).forEach { datum ->
+                            updateDatum(ctx, merkleHashCalculator, contextId, datum.id,
+                                    datum.data, datum.isPermanent)
+                        }
+                    }
                 }
             }
         }
@@ -155,13 +163,21 @@ class CompositeGTXModule(
 
                         module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
                             DatabaseAccess.of(ctx).apply {
-                                insertUpdatedDatum(ctx, contextId, DatumInfo(
-                                        datumId,
-                                        datum.merkleHash(configuration.merkleHashCalculator),
-                                        if (isPermanent) null else GtvEncoder.encodeGtv(datum)
-                                ))
+                                updateDatum(ctx, configuration.merkleHashCalculator, contextId, datumId, datum, isPermanent)
                             }
-                    })}
+                        })
+                    }
+        }
+    }
+
+    private fun updateDatum(ctx: EContext, merkleHashCalculator: GtvMerkleHashCalculatorBase, contextId: Long,
+                            datumId: Long, datum: Gtv, isPermanent: Boolean) {
+        DatabaseAccess.of(ctx).apply {
+            insertUpdatedDatum(ctx, contextId, DatumInfo(
+                    datumId,
+                    datum.merkleHash(merkleHashCalculator),
+                    if (isPermanent) null else GtvEncoder.encodeGtv(datum)
+            ))
         }
     }
 
