@@ -688,7 +688,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getLowestSnapshotHeightToKeep (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
 	public abstract fun getMerkleHashVersionForHeight (Lnet/postchain/core/ExecutionContext;J)J
 	public abstract fun getMustSyncUntil (Lnet/postchain/core/AppContext;)Ljava/util/Map;
-	public abstract fun getOrGenerateSnapshotContextId (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)J
+	public abstract fun getOrGenerateSnapshotContextId (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)Lkotlin/Pair;
 	public abstract fun getPageAtHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPageEqualOrLowerThanHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPeerInfoCollection (Lnet/postchain/core/AppContext;)[Lnet/postchain/base/PeerInfo;
@@ -2514,6 +2514,7 @@ public final class net/postchain/gtx/SimpleGTXOperation : net/postchain/gtx/GTXO
 public abstract interface class net/postchain/gtx/SnapshotAware {
 	public abstract fun constructDatum (Lnet/postchain/core/ExecutionContext;Ljava/util/List;)V
 	public abstract fun finalizeImport (Lnet/postchain/core/ExecutionContext;)V
+	public abstract fun getInitialDatums (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;)Ljava/lang/Long;
 	public abstract fun getPermanentDatums (Lnet/postchain/core/ExecutionContext;JLkotlin/jvm/functions/Function1;)V
 	public abstract fun initializeImport (Lnet/postchain/core/ExecutionContext;)V
@@ -2522,6 +2523,7 @@ public abstract interface class net/postchain/gtx/SnapshotAware {
 
 public final class net/postchain/gtx/SnapshotAware$DefaultImpls {
 	public static fun finalizeImport (Lnet/postchain/gtx/SnapshotAware;Lnet/postchain/core/ExecutionContext;)V
+	public static fun getInitialDatums (Lnet/postchain/gtx/SnapshotAware;Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public static fun initializeImport (Lnet/postchain/gtx/SnapshotAware;Lnet/postchain/core/ExecutionContext;)V
 }
 

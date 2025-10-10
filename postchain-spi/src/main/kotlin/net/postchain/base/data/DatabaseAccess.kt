@@ -230,7 +230,7 @@ interface DatabaseAccess {
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
 
-    fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long
+    fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Pair<Long, Boolean>
     fun getSnapshotContextId(ctx: EContext, moduleName: String): Long
     fun getSnapshotModuleContextIds(ctx: EContext): List<Long>
     fun getSnapshotContextModule(ctx: EContext, contextId: Long): String

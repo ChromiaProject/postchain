@@ -13,6 +13,10 @@ interface SnapshotAware {
     /** Called at startup to provide the module with the [SnapshotContext] */
     fun initializeSnapshotContext(context: SnapshotContext)
 
+    /** Provides the initial state of datums. These will be added once when the module snapshot context is created for
+     *  the module. */
+    fun getInitialDatums(ctx: EContext): List<SnapshotDatum> = emptyList()
+
     /** Returns the maximum datum ID of this modules permanent data, or null if no data exists  */
     fun getPermanentDatumIdMax(ctx: EContext): Long?
 

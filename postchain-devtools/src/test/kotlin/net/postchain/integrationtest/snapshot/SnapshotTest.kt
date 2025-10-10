@@ -340,6 +340,17 @@ open class SnapshotTestModule(
 
 class SnapshotModuleA : SnapshotTestModule("a")
 
+class SnapshotModuleAInitState : SnapshotTestModule("a") {
+    override fun getInitialDatums(ctx: EContext): List<SnapshotDatum> {
+        val datums = listOf(
+                SnapshotDatum(0, gtv("a_datum_0"), false),
+                SnapshotDatum(1, gtv("a_datum_1"), true),
+        )
+        constructDatum(ctx, datums)
+        return datums
+    }
+}
+
 class SnapshotModuleB : SnapshotTestModule("b")
 
 class EmitDatumOp(private val conf: SnapshotTestModuleConf, opData: ExtOpData) : GTXOperation(opData) {
