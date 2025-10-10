@@ -383,4 +383,16 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     override fun getDatabaseServerVersion(connection: Connection): String =
             queryRunner.query(connection, "SELECT current_setting('server_version')", ScalarHandler<String>())
                     .split(' ').first()
+
+    override fun setLocalLockTimeout(ctx: EContext, timeoutMs: Long) {
+        ctx.conn.createStatement().use {
+            it.execute("SET LOCAL lock_timeout = '${timeoutMs}ms'")
+        }
+    }
+
+    override fun resetLocalLockTimeout(ctx: EContext) {
+        ctx.conn.createStatement().use {
+            it.execute("SET LOCAL lock_timeout = DEFAULT")
+        }
+    }
 }
