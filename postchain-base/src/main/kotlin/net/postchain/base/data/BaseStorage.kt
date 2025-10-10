@@ -145,6 +145,12 @@ class BaseStorage(
     }
 
     private fun closeReadConnection(connection: Connection) {
+        if (connection.isClosed) {
+            // Is this our cached connection, if so get rid of it, if not and it is closed, we should anyway get rid of it
+            if (cachedConnection.get()?.connection?.isClosed == true) cachedConnection.set(null)
+            throw ProgrammerMistake("trying to close a connection that is already closed")
+        }
+
         if (!connection.isReadOnly) {
             throw ProgrammerMistake("trying to close a writable connection as a read-only connection")
         }
