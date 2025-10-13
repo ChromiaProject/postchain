@@ -661,7 +661,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             }
         }
 
-        if (toHeight != null && nodes[0].blockQueries().getLastBlockHeight().get() < toHeight) {
+        if (toHeight != null) {
             buildBlock(DEFAULT_CHAIN_IID, toHeight)
         }
     }
@@ -680,7 +680,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             }
         }
 
-        if (toHeight != null && nodes[0].blockQueries().getLastBlockHeight().get() < toHeight) {
+        if (toHeight != null) {
             buildBlock(DEFAULT_CHAIN_IID, toHeight)
         }
     }
