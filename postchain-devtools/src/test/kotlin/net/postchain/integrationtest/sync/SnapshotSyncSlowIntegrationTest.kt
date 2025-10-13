@@ -78,12 +78,12 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         // Load new config at height 5
         val newConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_updated_4.xml")!!.readText())
         addDappBlockchainConfiguration(c1, GtvEncoder.encodeGtv(newConfig), 5)
-        buildBlockNoWait(nodes.subList(0, 3), c1, 4)
+        buildBlockNoWait(nodes, c1, 4)
         val nodeSetups = getChainNodeSetups(c1)
-        nodeSetups.subList(0, 3).forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, c1, 4) }
+        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, c1, 4) }
 
         // Build some more blocks
-        buildBlock(nodes.subList(0, 3), c1, 9)
+        buildBlock(c1, 9)
         // Emit something here so we get some snapshot data
         val moduleDatums = mapOf(
                 "a" to 3L,
@@ -121,7 +121,6 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                         SnapshotDatum(3, gtv("a_datum_3-update"), false),
                         SnapshotDatum(4, gtv("a_datum_5-update"), true),
                 )),
-                nodes.subList(0, 3),
                 toHeight = 13
         )
 
@@ -150,7 +149,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Build some more blocks
         var height = 2L
-        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID, height)
+        buildBlock(DEFAULT_CHAIN_IID, height)
 
         // Assert that our initial state is persisted to snapshot
         withDatumRepository(nodes[0], getLevelsPerPage(config)) { ctx, datumRepository ->
@@ -369,7 +368,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         // Load new config at height 5 that remove two signers (these blocks wont be possible to load with initial config)
         val newConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_updated_2.xml")!!.readText())
         addDappBlockchainConfiguration(c1, GtvEncoder.encodeGtv(newConfig), 4, pending = pendingConfig)
-        buildBlockNoWait(nodes.subList(0, 3), c1, 3)
+        buildBlockNoWait(nodes, c1, 3)
         val nodeSetups = getChainNodeSetups(c1)
         nodeSetups.subList(0, 3).forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, c1, 3) }
 
@@ -433,7 +432,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         )
         buildInitialDatumBlocks(moduleDatums)
 
-        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID, 3)
+        buildBlock(DEFAULT_CHAIN_IID, 3)
 
         restartNodeClean(4, c1, -1)
         val replicaNode = nodes[4]
@@ -456,14 +455,14 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
 
-        buildBlock(nodes.subList(0, 3), c1, 1)
+        buildBlock(c1, 1)
         val moduleDatums = mapOf(
                 "a" to 5L,
                 "b" to 4L,
         )
         buildInitialDatumBlocks(moduleDatums)
 
-        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        buildBlock(DEFAULT_CHAIN_IID)
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
         val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, config)
@@ -530,7 +529,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
 
-        buildBlock(nodes.subList(0, 3), c1, 1)
+        buildBlock(c1, 1)
         // Emit something here so we get some snapshot data
         buildDatumBlocks(
                 mapOf(
@@ -541,7 +540,6 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                             SnapshotDatum(index.toLong(), gtv(pair.first), pair.second)
                         }
                 ),
-                nodes.subList(0, 3),
         )
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
@@ -616,7 +614,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4_lpp_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
 
-        buildBlock(nodes.subList(0, 3), c1, 9)
+        buildBlock(c1, 9)
 
         val moduleDatums = mapOf(
                 "a" to 25_000L,
@@ -624,7 +622,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         )
         buildInitialDatumBlocks(moduleDatums, 5000, 200)
 
-        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        buildBlock(DEFAULT_CHAIN_IID)
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
         val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, config)
@@ -681,7 +679,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         }
 
         if (toHeight != null) {
-            buildBlock(DEFAULT_CHAIN_IID, toHeight)
+            buildBlock(nodes, DEFAULT_CHAIN_IID, toHeight)
         }
     }
 
@@ -693,7 +691,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
         val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
 
-        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID,
+        buildBlock(nodes, DEFAULT_CHAIN_IID,
                 transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(),
                         cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem)).apply(builder).finish().buildGtx().encode()))
     }
