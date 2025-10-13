@@ -9,7 +9,7 @@ Configuration:
     - name: logfile
       value: "ci"
     - name: logpattern
-      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%replace{%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}%notEmpty{, block-rid=%.-2X{blockRID}:%.4X{blockRID}}]:}}{\\[, }{[} %msg%n"
+      value:  "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%notEmpty{ [%notEmpty{node=%.-8X{node.pubkey}}%notEmpty{, bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}]:} %msg%n"
 
   Appenders:
     Console:
@@ -18,7 +18,7 @@ Configuration:
           pattern: ${logpattern}
       - name: SimpleConsoleAppender
         PatternLayout:
-          pattern: "+++ %msg +++%n"
+          pattern: "+++ %d{yyyy-MM-dd HH:mm:ss.SSS} %msg +++%n"
     RollingFile:
       - name: FileAppender
         fileName: "${logs}/${logfile}.log"
@@ -39,7 +39,7 @@ Configuration:
         DefaultRollOverStrategy:
           max: 10
         PatternLayout:
-          pattern: "+++ %msg +++%n"
+          pattern: "+++ %d{yyyy-MM-dd HH:mm:ss.SSS} %msg +++%n"
 
 
   Loggers:
