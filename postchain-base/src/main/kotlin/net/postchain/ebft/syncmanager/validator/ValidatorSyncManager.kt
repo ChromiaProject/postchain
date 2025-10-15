@@ -654,6 +654,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         nodeStateTracker.myStatus?.height?.let { it - 1 }
 
     fun getSnapshotSyncEvents(): SnapshotSyncEvents {
-        return snapshotSynchronizer.getSnapshotSyncEvents()
+        return snapshotSynchronizer.snapshotSyncEvents
     }
 }

@@ -239,6 +239,6 @@ class ReadOnlyBlockchainProcess(
     }
 
     fun getSnapshotSyncEvents(): SnapshotSyncEvents {
-        return snapshotSynchronizer.getSnapshotSyncEvents()
+        return snapshotSynchronizer.snapshotSyncEvents
     }
 }

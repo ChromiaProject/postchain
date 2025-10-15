@@ -91,7 +91,7 @@ class SnapshotSynchronizer(
     }
 
     /** This is used for testing, to verify stages */
-    private val snapshotSyncEvents = SnapshotSyncEvents()
+    val snapshotSyncEvents = SnapshotSyncEvents()
 
     fun trySnapshotSync() {
         if (shouldDoSnapshotSync()) {
@@ -524,10 +524,6 @@ class SnapshotSynchronizer(
             configuredPeers.forEach { peerStatuses.addPeer(it) }
             true
         }
-    }
-
-    fun getSnapshotSyncEvents(): SnapshotSyncEvents {
-        return snapshotSyncEvents
     }
 }
 
