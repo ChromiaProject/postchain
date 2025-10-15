@@ -90,6 +90,9 @@ class SnapshotSynchronizer(
         }
     }
 
+    /** This is used for testing, to verify stages */
+    private val snapshotSyncEvents = SnapshotSyncEvents()
+
     fun trySnapshotSync() {
         if (shouldDoSnapshotSync()) {
             // Start with blocks, we have a blockdb that simply saves the block without applying txs (after checking signature)
@@ -116,9 +119,11 @@ class SnapshotSynchronizer(
 
         if (loadOngoingSyncState()) {
             logger.info("Continuing snapshot sync for height ${syncState.height} with context offsets: ${contextStates.values.map { it.contextId to it.datumIdOffset }}")
+            snapshotSyncEvents.add(SnapshotSyncEvent.WILL_CONTINUING_SYNC)
             return true
         } else if (blockQueries.getLastBlockHeight().get() > 0) {
             logger.info("Last block height for this node is greater than 0. Not syncing snapshot")
+            snapshotSyncEvents.add(SnapshotSyncEvent.NO_SYNC_DUE_TO_HEIGHT_NOT_0)
             return false
         }
 
@@ -208,6 +213,7 @@ class SnapshotSynchronizer(
                 logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
 
                 if (candidateHeaderHeight <= params.snapshotSyncThreshold) {
+                    snapshotSyncEvents.add(SnapshotSyncEvent.NO_SYNC_DUE_TO_BELOW_THRESHOLD)
                     logger.info("Snapshot height $candidateHeaderHeight is below threshold ${params.snapshotSyncThreshold}. Not syncing snapshot.")
                     return false
                 }
@@ -237,6 +243,7 @@ class SnapshotSynchronizer(
 
                 setInitialNodeStates(candidate)
 
+                snapshotSyncEvents.add(SnapshotSyncEvent.WILL_SYNC_FROM_NODES)
                 logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
                 return true
             } catch (e: Exception) {
@@ -344,6 +351,8 @@ class SnapshotSynchronizer(
 
     private fun syncSnapshotUntil() {
 
+        snapshotSyncEvents.add(SnapshotSyncEvent.SYNCING)
+
         if (isProcessRunning()) {
             sendInitialSnapshotDataRequest()
 
@@ -370,6 +379,7 @@ class SnapshotSynchronizer(
 
         if (syncState.rootHash.contentEquals(localSnapshotRootHash)) {
             DatabaseAccess.of(ctx).pruneSnapshotSyncState(ctx)
+            snapshotSyncEvents.add(SnapshotSyncEvent.FINISHED_SUCCESSFULLY)
             logger.info("Finished snapshot syncing successfully")
         } else {
             logger.warn("Finished snapshot syncing, but root hashes do not match")
@@ -515,6 +525,10 @@ class SnapshotSynchronizer(
             true
         }
     }
+
+    fun getSnapshotSyncEvents(): SnapshotSyncEvents {
+        return snapshotSyncEvents
+    }
 }
 
 /** Track active requests */
@@ -549,4 +563,21 @@ data class FullSnapshotDatumData(val datumId: Long, val data: Gtv, val hash: Has
         result = 31 * result + hash.contentHashCode()
         return result
     }
+}
+
+class SnapshotSyncEvents(
+    val events: MutableList<SnapshotSyncEvent> = mutableListOf()
+) {
+    fun add(event: SnapshotSyncEvent) {
+        events.add(event)
+    }
+}
+
+enum class SnapshotSyncEvent {
+    WILL_CONTINUING_SYNC,
+    NO_SYNC_DUE_TO_HEIGHT_NOT_0,
+    NO_SYNC_DUE_TO_BELOW_THRESHOLD,
+    WILL_SYNC_FROM_NODES,
+    SYNCING,
+    FINISHED_SUCCESSFULLY,
 }
