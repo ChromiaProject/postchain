@@ -1,6 +1,6 @@
 # Client Guidelines
 
-This document is aimed at client users of and developers for the Postchain REST API.
+This document is aimed at users and developers of clients for the Postchain REST API.
 
 ## Node discovery
 
