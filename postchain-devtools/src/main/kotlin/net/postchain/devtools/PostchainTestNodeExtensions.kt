@@ -5,6 +5,9 @@ package net.postchain.devtools
 import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import net.postchain.common.toHex
+import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
@@ -95,7 +98,13 @@ fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolea
     return retrieveBlockchain(chainId)
             ?.let { process ->
                 val txQueue = process.blockchainEngine.getTransactionQueue()
-                txs.forEach { txQueue.enqueue(it) }
+                txs.forEach {
+                    val result = txQueue.enqueue(it)
+                    if (result != EnqueueTransactionResult.OK) {
+                        val msg = if (result == EnqueueTransactionResult.INVALID) txQueue.getRejectionReason(it.getRID().wrap())?.first?.message ?: "INVALID" else result.toString()
+                        PostchainTestNode.logger.warn("Transaction ${it.getRID().toHex()} could not be enqueued: $msg")
+                   }
+                }
                 true
             }
             ?: false

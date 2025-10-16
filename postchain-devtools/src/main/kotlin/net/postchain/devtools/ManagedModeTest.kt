@@ -41,7 +41,9 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
@@ -289,6 +291,11 @@ open class ManagedModeTest : AbstractSyncTest() {
         nodes[nodeId].postchainContext.blockBuilderStorage.withWriteConnection {
             DatabaseAccess.of(it).addBlockchainReplica(it, blockchainRid, replicaNodePubKey)
         }
+    }
+
+    override fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
+        val blockchainRid = ChainUtil.ridOf(chainId)
+        enqueueTx(chainId, blockchainRid, merkleHashCalculator, *ops)
     }
 }
 
