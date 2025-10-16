@@ -5,32 +5,24 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEqualTo
-import assertk.assertions.isTrue
 import assertk.assertions.support.expected
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.data.SnapshotSyncContextState
 import net.postchain.base.data.SnapshotSyncState
-import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.base.snapshot.SnapshotDatum
-import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
-import net.postchain.common.createLogCaptor
-import net.postchain.common.data.Hash
-import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
-import net.postchain.core.EContext
-import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
-import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.devtools.snapshot.SnapshotTestBase
+import net.postchain.devtools.snapshot.hasSnapshotSyncEvent
 import net.postchain.ebft.message.SnapshotBlockHeaderContextData
-import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
+import net.postchain.ebft.syncmanager.common.SnapshotSyncEvent
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -42,35 +34,22 @@ import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.integrationtest.snapshot.SnapshotTestModule
 import org.apache.commons.dbutils.QueryRunner
-import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
+import kotlin.collections.component1
+import kotlin.collections.component2
 
-class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
-
-    private val nodeConfigurationOverrides = mutableMapOf<String, Any>()
-    private val appender = createLogCaptor(SnapshotSynchronizer::class.java, "List")
-
-    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
-        super.addNodeConfigurationOverrides(nodeSetup)
-        nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.threshold", 0) // Always sync by default
-        nodeConfigurationOverrides.forEach { (key, value) -> nodeSetup.nodeSpecificConfigs.setProperty(key, value) }
-    }
-
-    @BeforeEach
-    fun beforeEach() {
-        appender.clear()
-    }
+class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
 
     @Test
     @Timeout(value = 10, unit = TimeUnit.MINUTES)
     fun syncFromSnapshot() {
         startManagedSystem(4, 1, restApi = true)
+        val restartNodeIdx = 4
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -84,29 +63,18 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Build some more blocks
         buildBlock(c1, 9)
+
         // Emit something here so we get some snapshot data
-        val moduleDatums = mapOf(
+        buildInitialDatumBlocks(datumLength = 20, moduleDatums = mapOf(
                 "a" to 3L,
                 "b" to 3L,
-        )
-        buildInitialDatumBlocks(moduleDatums)
+        ))
 
         // Assert that we could snapshot sync the chain on the replica node
-        restartNodeClean(4, c1, -1)
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-            val height = nodes[4].blockQueries().getLastBlockHeight().get()
-            assertThat(height).isEqualTo(10)
+        restartAndAwaitSnapshotSync(4, 10)
 
-            // Snapshot sync must finish
-            assertThat(nodes[4]).hasFinalizedImportInTestModules()
-
-            // Assert snapshot data is identical
-            assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
-                    .isEqualTo(listOf(3L, 3L))
-
-            val node0RootHash = getSnapshotRootHash(nodes[0], c1, height, initialConfig)
-            assertThat(getSnapshotRootHash(nodes[4], c1, height, initialConfig)).isEqualTo(node0RootHash)
-        }
+        assertThat(nodes).hasSameSnapshotRootHash(10)
+        val node0RootHash = getSnapshotRootHash(nodes[0], c1, 10, newConfig)
 
         // Build enough blocks for a new snapshot with updated and new datums
         buildDatumBlocks(
@@ -116,27 +84,40 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                         SnapshotDatum(4, gtv("a_datum_4-update"), true),
                         SnapshotDatum(5, gtv("a_datum_5"), false),
                 ), "b" to listOf(
-                        SnapshotDatum(0, gtv("a_datum_0-update"), true),
-                        SnapshotDatum(1, gtv("a_datum_1-update"), true),
-                        SnapshotDatum(3, gtv("a_datum_3-update"), false),
-                        SnapshotDatum(4, gtv("a_datum_5-update"), true),
+                        SnapshotDatum(0, gtv("b_datum_0-update"), true),
+                        SnapshotDatum(1, gtv("b_datum_1-update"), true),
+                        SnapshotDatum(3, gtv("b_datum_3-update"), false),
+                        SnapshotDatum(4, gtv("b_datum_4-update"), true),
                 )),
                 toHeight = 13
         )
 
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-
-            val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
-            assertThat(node0Height).isEqualTo(13)
-            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(node0Height)
-
-            // Assert snapshot data is identical
-            assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(14).get().values.filterNotNull())
-                    .isEqualTo(listOf(5L, 4L))
-
-            val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, initialConfig)
-            assertThat(getSnapshotRootHash(nodes[4], c1, node0Height, initialConfig)).isEqualTo(node0RootHash)
-        }
+        // Verify all nodes content are identical
+        assertThat(nodes).hasSameSnapshotRootHash(13)
+        assertThat(getSnapshotRootHash(nodes[0], c1, 13, newConfig))
+                .isNotEqualTo(node0RootHash)
+        assertThat(nodes).hasAllContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_datum_0-update"), true),
+                SnapshotDatum(1, gtv("a_1xxxxxxxxxxxxxxxxxxxx"), false),
+                SnapshotDatum(2, gtv("a_2xxxxxxxxxxxxxxxxxxxx"), true),
+                SnapshotDatum(3, gtv("a_datum_3-update"), false),
+                SnapshotDatum(4, gtv("a_datum_4-update"), true),
+                SnapshotDatum(5, gtv("a_datum_5"), false),
+        ))
+        assertThat(nodes).hasAllContextSnapshotData(1, listOf(
+                SnapshotDatum(0, gtv("b_datum_0-update"), true),
+                SnapshotDatum(1, gtv("b_1xxxxxxxxxxxxxxxxxxxx"), false),
+                SnapshotDatum(2, gtv("b_2xxxxxxxxxxxxxxxxxxxx"), true),
+                SnapshotDatum(3, gtv("b_datum_3-update"), false),
+                SnapshotDatum(4, gtv("b_datum_4-update"), true),
+        ))
+        assertThat(nodes[restartNodeIdx]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
     }
 
     @Test
@@ -152,13 +133,10 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         buildBlock(DEFAULT_CHAIN_IID, height)
 
         // Assert that our initial state is persisted to snapshot
-        withDatumRepository(nodes[0], getLevelsPerPage(config)) { ctx, datumRepository ->
-            val datums = datumRepository.getDatums(ctx, height, 0, 0, Long.MAX_VALUE, Long.MAX_VALUE)
-            assertThat(datums).isEqualTo(listOf(
-                    SnapshotDatum(0, gtv("a_datum_0"), false),
-                    SnapshotDatum(1, gtv("a_datum_1"), true)
-            ))
-        }
+        assertThat(nodes).hasAllContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_datum_0"), false),
+                SnapshotDatum(1, gtv("a_datum_1"), true)
+        ))
 
         // Build a few more blocks with some additional data
         height += 2
@@ -172,38 +150,25 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         )
 
         // Verify snapshot content
-        withDatumRepository(nodes[0], getLevelsPerPage(config)) { ctx, datumRepository ->
-            val datums = datumRepository.getDatums(ctx, height, 0, 0, Long.MAX_VALUE, Long.MAX_VALUE)
-            assertThat(datums).isEqualTo(listOf(
-                    SnapshotDatum(0, gtv("a_datum_0-update"), false),
-                    SnapshotDatum(1, gtv("a_datum_1"), true),
-                    SnapshotDatum(2, gtv("a_datum_2"), false)
-            ))
-        }
+        assertThat(nodes).hasAllContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_datum_0-update"), false),
+                SnapshotDatum(1, gtv("a_datum_1"), true),
+                SnapshotDatum(2, gtv("a_datum_2"), false)
+        ))
 
         val node0RootHash = getSnapshotRootHash(nodes[0], DEFAULT_CHAIN_IID, height, config)
 
         // Assert that we could snapshot sync the chain on the replica node
-        restartNodeClean(4, DEFAULT_CHAIN_IID, -1)
+        restartAndAwaitSnapshotSync(4, height)
 
-        // Wait for it to sync successfully
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(height)
+        assertThat(nodes[4]).hasSnapshotRootHash(height, config, node0RootHash)
+        assertThat(nodes[4]).hasFinalizedImportInTestModules()
 
-            // Snapshot sync must finish
-            assertThat(nodes[4]).hasFinalizedImportInTestModules()
-
-            withDatumRepository(nodes[4], getLevelsPerPage(config)) { ctx, datumRepository ->
-                val datums = datumRepository.getDatums(ctx, height, 0, 0, Long.MAX_VALUE, Long.MAX_VALUE)
-                assertThat(datums).isEqualTo(listOf(
-                        SnapshotDatum(0, gtv("a_datum_0-update"), false),
-                        SnapshotDatum(1, gtv("a_datum_1"), true),
-                        SnapshotDatum(2, gtv("a_datum_2"), false)
-                ))
-            }
-
-            assertThat(getSnapshotRootHash(nodes[4], DEFAULT_CHAIN_IID, height, config)).isEqualTo(node0RootHash)
-        }
+        assertThat(nodes[4]).hasContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_datum_0-update"), false),
+                SnapshotDatum(1, gtv("a_datum_1"), true),
+                SnapshotDatum(2, gtv("a_datum_2"), false)
+        ))
 
         // Build a few more bocks with updated datums
         height += 2
@@ -216,26 +181,24 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                 toHeight = height
         )
 
-        // Verify all nodes are in the same state
-        val rootHashes = mutableSetOf<WrappedByteArray>()
-        nodes.forEach { node ->
-            assertThat(node.blockQueries().getLastBlockHeight().get()).isEqualTo(height)
+        // Verify all nodes has the same state and root hash
+        assertThat(nodes).hasSameSnapshotRootHash(height)
 
-            withDatumRepository(node, getLevelsPerPage(config)) { ctx, datumRepository ->
-                val datums = datumRepository.getDatums(ctx, height, 0, 0, Long.MAX_VALUE, Long.MAX_VALUE)
-                assertThat(datums).isEqualTo(listOf(
-                        SnapshotDatum(0, gtv("a_datum_0-update-2"), false),
-                        SnapshotDatum(1, gtv("a_datum_1"), true),
-                        SnapshotDatum(2, gtv("a_datum_2"), false),
-                        SnapshotDatum(3, gtv("a_datum_3"), true)
-                ))
+        // Verify snapshot content - should match since root hash does
+        assertThat(nodes).hasAllContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_datum_0-update-2"), false),
+                SnapshotDatum(1, gtv("a_datum_1"), true),
+                SnapshotDatum(2, gtv("a_datum_2"), false),
+                SnapshotDatum(3, gtv("a_datum_3"), true)
+        ))
 
-                rootHashes.add(getSnapshotRootHash(node, DEFAULT_CHAIN_IID, height, config).wrap())
-            }
-        }
+        // Root hash should have changed since last time
+        assertThat(getSnapshotRootHash(nodes[0], DEFAULT_CHAIN_IID, height, config).wrap())
+                .isNotEqualTo(node0RootHash.wrap())
 
-        assertThat(rootHashes.size).isEqualTo(1)
-        assertThat(rootHashes.first()).isNotEqualTo(node0RootHash.wrap())
+        assertThat(nodes[4]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf("snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a")))
     }
 
     /** With 4 validators:
@@ -250,12 +213,12 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
     fun syncFromSnapshotAsValidator() {
         val datumLength = 100
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1500 // Enforce about 10 datums per message
-        nodeConfigurationOverrides["snapshotsync.threshold"] = 0 // Always sync
 
         startManagedSystem(4, 0, restApi = true)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+        val restartNodeIdx = 3
 
         // Emit something here so we get some snapshot data
         val moduleDatums = mapOf(
@@ -267,23 +230,11 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, config)
 
         // Assert that we could snapshot sync the chain on a validator node
-        restartNodeClean(3, c1, -1)
-
-        Awaitility.await().atMost(2, TimeUnit.MINUTES).untilAsserted {
-
-            // Snapshot sync must finish
-            assertThat(nodes[3]).hasFinalizedImportInTestModules()
-
-            // Verify same height
-            assertThat(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(node0Height)
-        }
+        restartAndAwaitSnapshotSync(restartNodeIdx, 2)
 
         // Basic snapshot verification
-        assertThat(nodes[3].blockQueries().getSnapshotContextMaxIds(node0Height).get())
+        assertThat(nodes[restartNodeIdx].blockQueries().getSnapshotContextMaxIds(node0Height).get())
                 .isEqualTo(mapOf(0L to 50L, 1L to 30L))
-
-        // Verify root hash
-        assertThat(getSnapshotRootHash(nodes[3], c1, node0Height, config)).isEqualTo(node0RootHash)
 
         // Build a few new blocks with updated and new datums
         buildDatumBlocks(
@@ -308,14 +259,17 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         assertThat(secondNode0Height).isGreaterThan(node0Height)
         assertThat(secondNode0RootHash).isNotEqualTo(node0RootHash)
 
-        (1..3).forEach {
-            Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted {
-                assertThat(nodes[it].blockQueries().getLastBlockHeight().get()).isEqualTo(secondNode0Height)
-                assertThat(nodes[it].blockQueries().getSnapshotContextMaxIds(secondNode0Height).get())
-                        .isEqualTo(mapOf(0L to 52L, 1L to 32L))
-                assertThat(getSnapshotRootHash(nodes[it], c1, secondNode0Height, config)).isEqualTo(secondNode0RootHash)
-            }
-        }
+        assertThat(nodes).hasSameSnapshotRootHash(secondNode0Height)
+        assertThat(nodes[restartNodeIdx]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
+        assertThat(nodes[restartNodeIdx].blockQueries().getLastBlockHeight().get()).isEqualTo(secondNode0Height)
+        assertThat(nodes[restartNodeIdx].blockQueries().getSnapshotContextMaxIds(secondNode0Height).get())
+                .isEqualTo(mapOf(0L to 52L, 1L to 32L))
     }
 
     /** With 4 validators build some blocks and snapshot, stop node 3, let node 0-2 build a few more blocks and then
@@ -328,6 +282,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = (datumLength + 5) * 10 // Enforce about 10 datums per message
 
         startManagedSystem(4, 0, restApi = true)
+        val restartNodeIdx = 3
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -335,15 +290,15 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         // Emit something here so we get some snapshot data
         buildInitialDatumBlocks(mapOf("a" to 10L, "b" to 3L), datumLength = datumLength, toHeight = 2)
 
-        nodes[3].stopBlockchain(c1)
+        nodes[restartNodeIdx].stopBlockchain(c1)
 
         buildBlock(nodes.subList(0, 2), c1, 6)
 
-        nodes[3].startBlockchain(c1)
+        nodes[restartNodeIdx].startBlockchain(c1)
 
         Awaitility.await().atMost(2, TimeUnit.MINUTES).untilAsserted {
-            // Snapshot sync must start
-            assertThat(appender.eventsForNodeContains(nodes[3], "Last block height for this node is greater than 0. Not syncing snapshot")).isTrue()
+            // Snapshot sync must not start
+            assertThat(nodes[restartNodeIdx]).hasSnapshotSyncEvent(SnapshotSyncEvent.NO_SYNC_DUE_TO_HEIGHT_NOT_0)
         }
     }
 
@@ -361,6 +316,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
     private fun syncWithNewConfigTest(pendingConfig: Boolean = false) {
         startManagedSystem(4, 1)
+        val restartNodeIdx = 4
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -392,26 +348,18 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         )
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
-        val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, newConfig)
 
         // Assert that we could snapshot sync the chain on the replica node
-        restartNodeClean(4, c1, -1)
-        val replicaNode = nodes[4]
+        restartAndAwaitSnapshotSync(4, node0Height)
 
-        Awaitility.await().atMost(Duration.FIVE_MINUTES).untilAsserted {
-
-            // Snapshot sync must finish
-            assertThat(nodes[4]).hasFinalizedImportInTestModules()
-
-            val height = replicaNode.blockQueries().getLastBlockHeight().get()
-            assertThat(height).isEqualTo(7)
-
-            // Assert snapshot data is identical
-            assertThat(replicaNode.blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
-                    .isEqualTo(listOf(3L, 3L))
-
-            assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, newConfig)).isEqualTo(node0RootHash)
-        }
+        // Assert snapshot data is identical
+        assertThat(nodes[restartNodeIdx]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
     }
 
     @Test
@@ -426,11 +374,10 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
 
-        val moduleDatums = mapOf(
+        buildInitialDatumBlocks(mapOf(
                 "a" to 5L,
                 "b" to 4L,
-        )
-        buildInitialDatumBlocks(moduleDatums)
+        ))
 
         buildBlock(DEFAULT_CHAIN_IID, 3)
 
@@ -439,7 +386,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Snapshot sync must start
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted {
-            assertThat(appender.eventsForNodeContains(replicaNode, "Snapshot height 3 is below threshold 5. Not syncing snapshot."))
+            assertThat(replicaNode).hasSnapshotSyncEvent(SnapshotSyncEvent.NO_SYNC_DUE_TO_BELOW_THRESHOLD)
         }
     }
 
@@ -448,7 +395,6 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
     fun `resumed syncing - from start`() {
 
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce 1 datum per message
-        nodeConfigurationOverrides["snapshotsync.threshold"] = 0
 
         startManagedSystem(4, 1, restApi = true)
 
@@ -456,11 +402,10 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
 
         buildBlock(c1, 1)
-        val moduleDatums = mapOf(
+        buildInitialDatumBlocks(mapOf(
                 "a" to 5L,
                 "b" to 4L,
-        )
-        buildInitialDatumBlocks(moduleDatums)
+        ))
 
         buildBlock(DEFAULT_CHAIN_IID)
 
@@ -499,24 +444,29 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             true
         }
 
-        appender.clear()
         replicaNode.startBlockchain(c1)
 
         // Check that the node starts to sync and completes it with a correct root hash
         Awaitility.await().atMost(2, TimeUnit.MINUTES).untilAsserted {
-            assertThat(appender.eventsForNodeContains(replicaNode, "Continuing snapshot sync for height $node0Height with context offsets: [(0, 0), (1, 0)]")).isTrue()
-            // Snapshot sync must finish
+            assertThat(replicaNode).hasSnapshotSyncEvent(SnapshotSyncEvent.WILL_CONTINUING_SYNC)
+            assertThat(replicaNode).hasSyncedSnapshotSuccessfully()
             assertThat(replicaNode).hasFinalizedImportInTestModules()
-            assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
         }
+
+        assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
+        assertThat(nodes[4]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
     }
 
     @Test
     @Timeout(value = 10, unit = TimeUnit.MINUTES)
     fun `simulate resumed syncing - with partial data`() {
-
-        nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce 1 datum per message
-        nodeConfigurationOverrides["snapshotsync.threshold"] = 0
+        nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce sending 1 datum per message
 
         val moduleAPart1DatumList = listOf("a_0" to false, "a_1" to false)
         val moduleBPart1DatumList = listOf("b_0" to false, "b_1" to true)
@@ -541,6 +491,18 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                         }
                 ),
         )
+
+        assertThat(nodes).hasAllContextSnapshotData(0, listOf(
+                SnapshotDatum(0, gtv("a_0"), false),
+                SnapshotDatum(1, gtv("a_1"), false),
+                SnapshotDatum(2, gtv("a_2"), false),
+                SnapshotDatum(3, gtv("a_3"), true),
+        ))
+        assertThat(nodes).hasAllContextSnapshotData(1, listOf(
+                SnapshotDatum(0, gtv("b_0"), false),
+                SnapshotDatum(1, gtv("b_1"), true),
+                SnapshotDatum(2, gtv("b_2"), true),
+        ))
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
         val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, config)
@@ -591,14 +553,23 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             true
         }
 
-        appender.clear()
         replicaNode.startBlockchain(c1)
 
         // Check that the node starts to sync and the root hash matches
         Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted {
-            assertThat(appender.eventsForNodeContains(replicaNode, "Continuing snapshot sync for height $node0Height with context offsets: [(0, 2), (1, 2)]")).isTrue()
-            assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
+            assertThat(replicaNode).hasSnapshotSyncEvent(SnapshotSyncEvent.WILL_CONTINUING_SYNC)
+            assertThat(replicaNode).hasSyncedSnapshotSuccessfully()
         }
+
+        assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
+
+        assertThat(replicaNode).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
     }
 
     /** For manual testing */
@@ -616,28 +587,25 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         buildBlock(c1, 9)
 
-        val moduleDatums = mapOf(
+        buildInitialDatumBlocks(datumLength = 200, chunksPerBlock = 5000, moduleDatums = mapOf(
                 "a" to 25_000L,
                 "b" to 5_000L
-        )
-        buildInitialDatumBlocks(moduleDatums, 5000, 200)
+        ))
 
         buildBlock(DEFAULT_CHAIN_IID)
 
         val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
-        val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, config)
 
         // Assert that we could snapshot sync the chain on the replica node
-        restartNodeClean(4, c1, -1)
-        val replicaNode = nodes[4]
+        restartAndAwaitSnapshotSync(4, node0Height)
 
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-            // Snapshot sync must finish
-            assertThat(replicaNode).hasFinalizedImportInTestModules()
-            val replicaHeight = replicaNode.blockQueries().getLastBlockHeight().get()
-            assertThat(replicaHeight).isEqualTo(node0Height)
-            assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
-        }
+        assertThat(nodes[4]).hasIdenticalTableContentAs(nodes[0],
+                basicTableContentProvider(listOf(
+                        "snapshot_test_datums_module_a",
+                        "snapshot_test_permanent_datums_module_a",
+                        "snapshot_test_datums_module_b",
+                        "snapshot_test_permanent_datums_module_b"
+                )))
     }
 
     /** Generate datums and blocks based on input config */
@@ -652,7 +620,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                 range.forEach {
                     moduleDatums.forEach { (module, count) ->
                         if (it <= count) {
-                            txBuilder.addOperation("emit_datum_$module", gtv(it), gtv("a_$it" + "x".repeat(datumLength)), gtv(it % 2 == 0L))
+                            txBuilder.addOperation("emit_datum_$module", gtv(it), gtv("${module}_$it" + "x".repeat(datumLength)), gtv(it % 2 == 0L))
                         }
                     }
                 }
@@ -696,43 +664,14 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                         cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem)).apply(builder).finish().buildGtx().encode()))
     }
 
-    private fun getSnapshotRootHash(node: PostchainTestNode, chainId: Long, node0Height: Long, config: Gtv): Hash {
-        val replicaRootHash = withReadConnection(node.postchainContext.blockBuilderStorage, chainId) { ctx ->
-            SnapshotPageStore(ctx, getLevelsPerPage(config), 0, SimpleDigestSystem(node.appConfig.cryptoSystem),
-                    "${SNAPSHOT_TABLE_PREFIX}_root")
-                    .getRootHashAtHeight(node0Height)
-        }
-        return replicaRootHash
-    }
-
-    private fun getLevelsPerPage(config: Gtv) =
-            config["snapshot"]?.get("levels_per_page")?.asInteger()?.toInt()
-                    ?: SnapshotBlockchainConfigurationData.default.levelsPerPage
-
-    private fun ListAppender.eventsForNode(node: PostchainTestNode) =
-            events.filter { it.contextData.getValue<String>("node.pubkey") == node.appConfig.pubKey  }
-
-    private fun ListAppender.eventsForNodeContains(node: PostchainTestNode, message: String) =
-            eventsForNode(node).any { it.message.toString().contains(message) }
-
     private fun getContextData(chainId: Long, config: Gtv, height: Long): List<SnapshotBlockHeaderContextData> {
         return withReadConnection(nodes[0].postchainContext.blockBuilderStorage, chainId) { ctx ->
-            val rootSnapshotStore = SnapshotPageStore(ctx, getLevelsPerPage(config), 0,
+            val rootSnapshotStore = SnapshotPageStore(ctx, getBCCLevelsPerPage(config), 0,
                     SimpleDigestSystem(cryptoSystem), "${SNAPSHOT_TABLE_PREFIX}_root")
             val contextRootHashes = rootSnapshotStore.getAllLeafHashes(height)
             nodes[0].blockQueries(chainId).getSnapshotContextMaxIds(height).get().map {
                 SnapshotBlockHeaderContextData(it.key, contextRootHashes[it.key.toInt()], it.value)
             }
-        }
-    }
-
-    fun withDatumRepository(node: PostchainTestNode, levelsPerPage: Int, action: (ctx: EContext, datumRepository: SnapshotDatumRepository) -> Unit) {
-        val node0Modules = node.getBlockchainInstance(DEFAULT_CHAIN_IID)
-                .blockchainEngine.getConfiguration().getSnapshotAwareModules()
-        val datumRepository = BaseSnapshotDatumRepository(node0Modules, levelsPerPage, node.postchainContext.cryptoSystem)
-
-        withReadWriteConnection(node.postchainContext.blockBuilderStorage, DEFAULT_CHAIN_IID) { ctx ->
-            action(ctx, datumRepository)
         }
     }
 }

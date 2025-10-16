@@ -54,6 +54,7 @@ import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.PeerStatuses
+import net.postchain.ebft.syncmanager.common.SnapshotSyncEvents
 import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
@@ -651,4 +652,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         fastSynchronizer.blockHeight.get()
     else
         nodeStateTracker.myStatus?.height?.let { it - 1 }
+
+    fun getSnapshotSyncEvents(): SnapshotSyncEvents {
+        return snapshotSynchronizer.snapshotSyncEvents
+    }
 }
