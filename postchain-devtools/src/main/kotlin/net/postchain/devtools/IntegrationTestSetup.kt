@@ -5,6 +5,10 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
+import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
@@ -131,8 +135,12 @@ open class IntegrationTestSetup : AbstractIntegration() {
         return tx
     }
 
-    fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
+    open fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
         val blockchainRid = getChainNodes(chainId).first().getBlockchainRid(chainId)!!
+        enqueueTx(chainId, blockchainRid, merkleHashCalculator, *ops)
+    }
+
+    fun enqueueTx(chainId: Long, blockchainRid: BlockchainRid, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
         val builder = GtxBuilder(blockchainRid, emptyList(), cryptoSystem, merkleHashCalculator)
         ops.forEach { builder.addOperation(it.opName, *it.args) }
         val txData = builder
@@ -150,7 +158,12 @@ open class IntegrationTestSetup : AbstractIntegration() {
     fun enqueueTx(node: PostchainTestNode, chainId: Long, txData: ByteArray): Transaction {
         val blockchainEngine = node.getBlockchainInstance(chainId).blockchainEngine
         val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(txData)
-        blockchainEngine.getTransactionQueue().enqueue(tx)
+        val transactionQueue = blockchainEngine.getTransactionQueue()
+        val result = transactionQueue.enqueue(tx)
+        if (result != EnqueueTransactionResult.OK) {
+            val msg = if (result == EnqueueTransactionResult.INVALID) transactionQueue.getRejectionReason(tx.getRID().wrap())?.first?.message ?: "INVALID" else result.toString()
+            logger.warn("Transaction ${tx.getRID().toHex()} could not be enqueued: $msg")
+        }
         return tx
     }
 
