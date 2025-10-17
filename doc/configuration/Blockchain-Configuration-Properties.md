@@ -65,10 +65,11 @@ Configuration under the key `revolt`.
 
 Configuration under the key `snapshot`.
 
-| Name              | Description                                            | Type    | Default |
-|-------------------|--------------------------------------------------------|---------|---------|
-| `interval`        | The block interval of creating a snapshot.             | int     | 100     |
-| `levels_per_page` | Levels per page to be used in the snapshot page store. | int     | 2       |
+| Name                | Description                                                                                                                                                                               | Type    | Default |
+|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| `interval`          | The block interval of creating a snapshot.                                                                                                                                                | int     | 100     |
+| `levels_per_page`   | Levels per page to be used in the snapshot page store.                                                                                                                                    | int     | 2       |
+| `snapshots_to_keep` | The number of snapshots to keep. A lower number will reduce storage usage, but it also needs to be high enough for new nodes to have time to sync the snapshot data before it is removed. | int     | 10      |
 
 ## Features
 

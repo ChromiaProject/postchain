@@ -3,6 +3,7 @@ package net.postchain.base.snapshot
 import mu.KLogging
 import net.postchain.base.configuration.KEY_SNAPSHOT_INTERVAL
 import net.postchain.base.configuration.KEY_SNAPSHOT_LEVELS_PER_PAGE
+import net.postchain.base.configuration.KEY_SNAPSHOT_TO_KEEP
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.mapper.DefaultValue
@@ -19,11 +20,18 @@ data class SnapshotBlockchainConfigurationData(
     val snapshotInterval: Long,
 
     @Name(KEY_SNAPSHOT_LEVELS_PER_PAGE)
-    @DefaultValue(defaultLong = 2) // TODO: What is reasonable? Skip default to make owners decide?
-    private val _levelsPerPage: Long
+    @DefaultValue(defaultLong = 2)
+    private val _levelsPerPage: Long,
+
+    @Name(KEY_SNAPSHOT_TO_KEEP)
+    @DefaultValue(defaultLong = 10)
+    private val _snapshotsToKeep: Long
 ) {
     val levelsPerPage: Int
         get() = _levelsPerPage.toInt()
+
+    val snapshotsToKeep: Int
+        get() = _snapshotsToKeep.toInt()
 
     companion object : KLogging() {
         @JvmStatic

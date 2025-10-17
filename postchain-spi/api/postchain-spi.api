@@ -480,6 +480,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_SNAPSHOT Ljava/lang/String;
 	public static final field KEY_SNAPSHOT_INTERVAL Ljava/lang/String;
 	public static final field KEY_SNAPSHOT_LEVELS_PER_PAGE Ljava/lang/String;
+	public static final field KEY_SNAPSHOT_TO_KEEP Ljava/lang/String;
 	public static final field KEY_SYNC Ljava/lang/String;
 	public static final field KEY_SYNC_EXT Ljava/lang/String;
 	public static final fun getAsyncQueryQueueCapacity (Lnet/postchain/core/BlockchainConfiguration;)J
@@ -707,6 +708,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getTxRIDsAtHeight (Lnet/postchain/core/ExecutionContext;J)[[B
 	public abstract fun getUpdatedDatumsByContext (Lnet/postchain/core/ExecutionContext;)Ljava/util/Map;
 	public abstract fun getWitnessData (Lnet/postchain/core/ExecutionContext;[B)[B
+	public abstract fun hasStates (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)Z
 	public abstract fun initializeApp (Ljava/sql/Connection;I)V
 	public abstract fun initializeApp (Ljava/sql/Connection;IZ)V
 	public abstract fun initializeAppWithCurrentDbVersion (Ljava/sql/Connection;Z)V
@@ -861,18 +863,18 @@ public final class net/postchain/base/data/PersistOnlyBlockBuilder : net/postcha
 }
 
 public final class net/postchain/base/data/SnapshotSyncContextState {
-	public fun <init> (J[BJJ)V
+	public fun <init> (J[BJLjava/lang/Long;)V
 	public final fun component1 ()J
 	public final fun component2 ()[B
 	public final fun component3 ()J
-	public final fun component4 ()J
-	public final fun copy (J[BJJ)Lnet/postchain/base/data/SnapshotSyncContextState;
-	public static synthetic fun copy$default (Lnet/postchain/base/data/SnapshotSyncContextState;J[BJJILjava/lang/Object;)Lnet/postchain/base/data/SnapshotSyncContextState;
+	public final fun component4 ()Ljava/lang/Long;
+	public final fun copy (J[BJLjava/lang/Long;)Lnet/postchain/base/data/SnapshotSyncContextState;
+	public static synthetic fun copy$default (Lnet/postchain/base/data/SnapshotSyncContextState;J[BJLjava/lang/Long;ILjava/lang/Object;)Lnet/postchain/base/data/SnapshotSyncContextState;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getContextId ()J
 	public final fun getContextRootHash ()[B
 	public final fun getDatumIdOffset ()J
-	public final fun getMaxDatumId ()J
+	public final fun getMaxDatumId ()Ljava/lang/Long;
 	public fun hashCode ()I
 	public final fun setDatumIdOffset (J)V
 	public fun toString ()Ljava/lang/String;
@@ -1044,10 +1046,12 @@ public final class net/postchain/base/snapshot/RangeProof {
 
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilder {
 	public static final field Companion Lnet/postchain/base/snapshot/RootSnapshotBlockBuilder$Companion;
-	public fun <init> (Lnet/postchain/core/BlockEContext;ILnet/postchain/crypto/CryptoSystem;)V
-	public fun <init> (Lnet/postchain/core/ExecutionContext;JILnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/core/BlockEContext;IILnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/core/ExecutionContext;JIILnet/postchain/crypto/CryptoSystem;)V
 	public final fun build ()[B
 	public final fun getLastSnapshotHeight ()Ljava/lang/Long;
+	public final fun getLevelsPerPage ()I
+	public final fun getSnapshotsToKeep ()I
 }
 
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilder$Companion : mu/KLogging {
@@ -1055,7 +1059,7 @@ public final class net/postchain/base/snapshot/RootSnapshotBlockBuilder$Companio
 
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
 	public static final field Companion Lnet/postchain/base/snapshot/RootSnapshotBlockBuilderExtension$Companion;
-	public fun <init> (JI)V
+	public fun <init> (JII)V
 	public fun finalize ()Ljava/util/Map;
 	public fun init (Lnet/postchain/core/BlockEContext;Lnet/postchain/base/data/BaseBlockBuilder;)V
 }
@@ -1076,16 +1080,17 @@ public final class net/postchain/base/snapshot/SimpleDigestSystem : net/postchai
 
 public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationData {
 	public static final field Companion Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData$Companion;
-	public fun <init> (Lnet/postchain/gtv/Gtv;JJ)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;JJJ)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component2 ()J
-	public final fun copy (Lnet/postchain/gtv/Gtv;JJ)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;Lnet/postchain/gtv/Gtv;JJILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;JJJ)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;Lnet/postchain/gtv/Gtv;JJJILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun getDefault ()Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
 	public final fun getLevelsPerPage ()I
 	public final fun getRawGtv ()Lnet/postchain/gtv/Gtv;
 	public final fun getSnapshotInterval ()J
+	public final fun getSnapshotsToKeep ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

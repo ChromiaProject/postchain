@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
@@ -20,6 +21,8 @@ abstract class GTXModuleWithMetadata : GTXModule, MetadataProvider
 
 class CompositeGTXModuleTest {
 
+    val snapshotConfig = mock<SnapshotBlockchainConfigurationData>()
+
     @Test
     fun `test makeBlockBuilderExtensions aggregates extensions from all modules`() {
         val module1: GTXModule = mock()
@@ -30,7 +33,7 @@ class CompositeGTXModuleTest {
         whenever(module1.makeBlockBuilderExtensions()).thenReturn(listOf(extension1))
         whenever(module2.makeBlockBuilderExtensions()).thenReturn(listOf(extension2))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, snapshotConfig, mock())
 
         val result = compositeModule.makeBlockBuilderExtensions()
 
@@ -47,7 +50,7 @@ class CompositeGTXModuleTest {
         whenever(module.getOperations()).thenReturn(setOf("op1"))
         whenever(module.makeTransactor(extOpData)).thenReturn(transactor)
 
-        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, snapshotConfig, mock())
         compositeModule.initializeDB(mock<EContext>())
 
         val result = compositeModule.makeTransactor(extOpData)
@@ -63,7 +66,7 @@ class CompositeGTXModuleTest {
         whenever(extOpData.opName).thenReturn("unknownOp")
         whenever(module.getOperations()).thenReturn(setOf("op1"))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, snapshotConfig, mock())
         compositeModule.initializeDB(mock<EContext>())
 
         assertThrows(UnknownOperation::class.java) {
@@ -81,7 +84,7 @@ class CompositeGTXModuleTest {
         whenever(module.getQueries()).thenReturn(setOf("query1"))
         whenever(module.query(context, "query1", gtvArgs)).thenReturn(gtvResult)
 
-        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, snapshotConfig, mock())
         compositeModule.initializeDB(context)
 
         val result = compositeModule.query(context, "query1", gtvArgs)
@@ -97,7 +100,7 @@ class CompositeGTXModuleTest {
 
         whenever(module.getQueries()).thenReturn(setOf("query1"))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module), false, false, snapshotConfig, mock())
         compositeModule.initializeDB(context)
 
         assertThrows(UnknownQuery::class.java) {
@@ -111,7 +114,7 @@ class CompositeGTXModuleTest {
         val module2 = mock<GTXModule>()
         val context = mock<EContext>()
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, snapshotConfig, mock())
         compositeModule.initializeDB(context)
 
         verify(module1).initializeDB(context)
@@ -126,7 +129,7 @@ class CompositeGTXModuleTest {
         whenever(module1.getOperations()).thenReturn(setOf("op1"))
         whenever(module2.getOperations()).thenReturn(setOf("op1"))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, snapshotConfig, mock())
 
         assertThrows(UserMistake::class.java) {
             compositeModule.initializeDB(mock<EContext>())
@@ -141,7 +144,7 @@ class CompositeGTXModuleTest {
         whenever(module1.getOperations()).thenReturn(setOf("op1"))
         whenever(module2.getOperations()).thenReturn(setOf("op2"))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), false, false, snapshotConfig, mock())
         compositeModule.initializeDB(mock<EContext>())
 
         val result = compositeModule.getOperations()
@@ -157,7 +160,7 @@ class CompositeGTXModuleTest {
         whenever(module1.getOperations()).thenReturn(setOf("op1", "op2"))
         whenever(module2.getOperations()).thenReturn(setOf("op2", "op3"))
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, snapshotConfig, mock())
         compositeModule.initializeDB(mock<EContext>())
 
         val result = compositeModule.getOperations()
@@ -170,7 +173,7 @@ class CompositeGTXModuleTest {
         val module1 = mock<GTXModule>()
         val module2 = mock<GTXModule>()
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, snapshotConfig, mock())
         compositeModule.shutdown()
 
         verify(module1).shutdown()
@@ -202,7 +205,7 @@ class CompositeGTXModuleTest {
         whenever(module1.getMetadata()).thenReturn(metadata1)
         whenever(module2.getMetadata()).thenReturn(metadata2)
 
-        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, -1, 2, mock())
+        val compositeModule = CompositeGTXModule(arrayOf(module1, module2), true, false, snapshotConfig, mock())
         compositeModule.initializeDB(mock<EContext>())
 
         val metadata = compositeModule.getMetadata()

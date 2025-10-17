@@ -33,6 +33,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.junit.jupiter.api.BeforeEach
 
 /**
  * Base class for integration tests that use snapshot sync with some helpers to help assert results.
@@ -49,9 +50,14 @@ open class SnapshotTestBase() : ManagedModeTest() {
 
     val nodeConfigurationOverrides = mutableMapOf<String, Any>()
 
+    @BeforeEach
+    fun beforeEach() {
+        nodeConfigurationOverrides["snapshotsync.threshold"] = 0 // Always sync by default
+        nodeConfigurationOverrides["fastsync.job_timeout"] = 2000 // Reduce time for detecting peer snapshots
+    }
+
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
-        nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.threshold", 0) // Always sync by default
         nodeConfigurationOverrides.forEach { (key, value) -> nodeSetup.nodeSpecificConfigs.setProperty(key, value) }
     }
 
@@ -74,8 +80,12 @@ open class SnapshotTestBase() : ManagedModeTest() {
                     ?: SnapshotBlockchainConfigurationData.default.snapshotInterval
 
     fun getSnapshotRootHash(node: PostchainTestNode, chainId: Long, height: Long, config: Gtv): Hash {
+        return getSnapshotRootHash(node, chainId, height, getBCCLevelsPerPage(config))
+    }
+
+    fun getSnapshotRootHash(node: PostchainTestNode, chainId: Long, height: Long, levelsPerPage: Int): Hash {
         val replicaRootHash = withReadConnection(node.postchainContext.blockBuilderStorage, chainId) { ctx ->
-            SnapshotPageStore(ctx, getBCCLevelsPerPage(config), 0, SimpleDigestSystem(node.appConfig.cryptoSystem),
+            SnapshotPageStore(ctx, levelsPerPage, 0, SimpleDigestSystem(node.appConfig.cryptoSystem),
                     "${SNAPSHOT_TABLE_PREFIX}_root")
                     .getRootHashAtHeight(height)
         }
@@ -122,13 +132,18 @@ open class SnapshotTestBase() : ManagedModeTest() {
         }
     }
 
-    fun Assert<List<PostchainTestNode>>.hasSameSnapshotRootHash(height: Long) = given { nodes ->
+    fun Assert<List<PostchainTestNode>>.hasSameSnapshotRootHash(height: Long, snapshotRootHash: Hash? = null) = given { nodes ->
         val rootHashes = mutableSetOf<WrappedByteArray>()
         nodes.forEach { node ->
             rootHashes.add(getSnapshotRootHash(node, DEFAULT_CHAIN_IID, height, getChainConfig(node)).wrap())
         }
         if (rootHashes.size > 1) {
             expected("to have the same snapshot root hash")
+        }
+        snapshotRootHash?.apply {
+            if (!rootHashes.contains(this.wrap())) {
+                expected("to have snapshot root hash $snapshotRootHash")
+            }
         }
     }
 

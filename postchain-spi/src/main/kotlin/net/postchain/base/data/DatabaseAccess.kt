@@ -180,6 +180,7 @@ interface DatabaseAccess {
     fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
     fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
+    fun hasStates(ctx: EContext, prefix: String): Boolean
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
     fun insertPage(ctx: EContext, pageStoreName: String, page: Page)
     fun getPageEqualOrLowerThanHeight(ctx: EContext, pageStoreName: String, height: Long, level: Int, left: Long): Page?

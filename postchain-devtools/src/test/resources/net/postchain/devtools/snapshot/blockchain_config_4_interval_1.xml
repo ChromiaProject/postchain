@@ -13,7 +13,7 @@
     </entry>
     <entry key="snapshot">
         <dict>
-            <entry key="interval"><int>2</int></entry> <!-- Write every second block -->
+            <entry key="interval"><int>1</int></entry> <!-- Write every second block -->
             <entry key="snapshots_to_keep"><int>2</int></entry>
         </dict>
     </entry>

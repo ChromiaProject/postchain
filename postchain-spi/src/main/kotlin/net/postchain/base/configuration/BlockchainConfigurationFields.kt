@@ -63,6 +63,7 @@ const val KEY_FEATURES = "features"
 const val KEY_SNAPSHOT = "snapshot"
 const val KEY_SNAPSHOT_INTERVAL = "interval"
 const val KEY_SNAPSHOT_LEVELS_PER_PAGE = "levels_per_page"
+const val KEY_SNAPSHOT_TO_KEEP = "snapshots_to_keep"
 
 val BlockchainConfiguration.queryCacheTtlSeconds: Long
     get() = this.rawConfig[KEY_QUERY_CACHE_TTL_SECONDS]?.asInteger() ?: 0L

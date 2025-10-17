@@ -9,6 +9,7 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.snapshot.RootSnapshotBlockBuilderExtension
+import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
@@ -25,8 +26,7 @@ class CompositeGTXModule(
         val modules: Array<GTXModule>,
         val allowOverrides: Boolean,
         val snapshotsEnabled: Boolean,
-        val snapshotInterval: Long,
-        val snapshotLevelsPerPage: Int,
+        val snapshotConfig: SnapshotBlockchainConfigurationData,
         val merkleHashCalculator: GtvMerkleHashCalculatorBase
 ) : GTXModule, PostchainContextAware, MetadataProvider {
 
@@ -48,7 +48,8 @@ class CompositeGTXModule(
         for (m in modules) {
             l.addAll(m.makeBlockBuilderExtensions())
         }
-        if (snapshotsEnabled) l.add(RootSnapshotBlockBuilderExtension(snapshotInterval, snapshotLevelsPerPage))
+        if (snapshotsEnabled) l.add(RootSnapshotBlockBuilderExtension(snapshotConfig.snapshotInterval,
+                snapshotConfig.levelsPerPage, snapshotConfig.snapshotsToKeep))
         return l
     }
 
@@ -161,11 +162,11 @@ class CompositeGTXModule(
                         val contextId = moduleContextIds[module::class.java.canonicalName]
                                 ?: throw ProgrammerMistake("Module ${module::class.java.canonicalName} is snapshot aware but has no cached context id")
 
-                        module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
+                        module.initializeSnapshotContext{ ctx, datumId, datum, isPermanent ->
                             DatabaseAccess.of(ctx).apply {
                                 updateDatum(ctx, configuration.merkleHashCalculator, contextId, datumId, datum, isPermanent)
                             }
-                        })
+                        }
                     }
         }
     }

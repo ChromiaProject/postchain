@@ -583,6 +583,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun hasStates(ctx: EContext, prefix: String): Boolean {
+        return tableExists(ctx.conn, tableStateLeafs(ctx, prefix))
+    }
+
     /**
      * Deletes prunable account states that are no longer needed at the specified height.
      *
@@ -1680,7 +1684,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                         it["context_id"] as Long,
                         it["root_hash"] as ByteArray,
                         it["datum_id_offset"] as Long,
-                        it["max_datum_id"] as Long,
+                        it["max_datum_id"].let { maxId ->
+                            if (maxId == null) null else maxId as Long
+                        },
                 ) }
     }
 

@@ -9,7 +9,11 @@ import net.postchain.gtv.GtvFactory.gtv
 
 const val SNAPSHOT_ROOT_EXTRA_HEADER = "snapshot_root"
 
-class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long, private val levelsPerPage: Int) : BaseBlockBuilderExtension {
+class RootSnapshotBlockBuilderExtension(
+        private val snapshotInterval: Long,
+        private val levelsPerPage: Int,
+        private val snapshotsToKeep: Int
+) : BaseBlockBuilderExtension {
 
     companion object : KLogging()
 
@@ -18,9 +22,10 @@ class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long, priv
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         bctx = blockEContext
-        snapshotBuilder = RootSnapshotBlockBuilder(blockEContext, levelsPerPage, baseBB.cryptoSystem)
+        snapshotBuilder = RootSnapshotBlockBuilder(blockEContext, levelsPerPage, snapshotsToKeep, baseBB.cryptoSystem)
     }
 
+    @Suppress("removal")
     override fun finalize(): Map<String, Gtv> {
         val lastSnapshotHeight = snapshotBuilder.getLastSnapshotHeight() ?: -1
         if (bctx.height - lastSnapshotHeight < snapshotInterval) return emptyMap()

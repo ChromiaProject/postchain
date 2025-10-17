@@ -175,7 +175,7 @@ open class SnapshotPageStore(
         val lowestHeightToKeep = db.getLowestSnapshotHeightToKeep(ctx, name, blockHeight, snapshotsToKeep)
                 ?: return
         val pageIIDs = db.getPrunablePages(ctx, name, lowestHeightToKeep)
-        if (pageIIDs.isNotEmpty()) {
+        if (pageIIDs.isNotEmpty() && db.hasStates(ctx, tableNamePrefix)) {
             val leftIndexes = db.getLeftIndex(ctx, name, pageIIDs)
             leftIndexes.forEach {
                 db.safePruneAccountStates(
