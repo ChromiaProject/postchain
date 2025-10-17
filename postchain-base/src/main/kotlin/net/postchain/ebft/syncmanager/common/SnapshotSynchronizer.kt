@@ -18,6 +18,7 @@ import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.VerifyRangeProof
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -70,7 +71,7 @@ class SnapshotSynchronizer(
         const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS = 10_000L
     }
 
-    private val receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
+    private val receivedLatestSnapshotHeight = mutableMapOf<NodeRid, Pair<SnapshotBlockHeader, BlockHeaderData>?>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
     private val lastStoredSnapshotDataTime = mutableMapOf<Long, Long>() // <context ID, time in milliseconds> - tracks "waiting time" between writing datums to storage.
 
@@ -129,28 +130,33 @@ class SnapshotSynchronizer(
 
         var lastRequestForSnapshotHeight = 0L
         var numberOfTries = 0
-        while (isProcessRunning()) {
-            val peersLeft = configuredPeers - receivedLatestSnapshotHeight.keys
-            if (peersLeft.isEmpty()) break
+        val latestPeerSnapshotsTime = measureTime {
+            while (isProcessRunning()) {
+                val peersLeft = configuredPeers - receivedLatestSnapshotHeight.keys
+                if (peersLeft.isEmpty()) break
 
-            if (clock.millis() - lastRequestForSnapshotHeight >= params.jobTimeout) {
-                if (numberOfTries > 3) break
+                if (clock.millis() - lastRequestForSnapshotHeight >= params.jobTimeout) {
+                    if (numberOfTries > 3) break
 
-                peersLeft.forEach {
-                    communicationManager.sendPacket(GetLatestSnapshotBlock(), it)
-                    logger.info("Requested latest snapshot block from peer $it")
+                    peersLeft.forEach {
+                        communicationManager.sendPacket(GetLatestSnapshotBlock(), it)
+                        logger.info("Requested latest snapshot block from peer $it")
+                    }
+                    lastRequestForSnapshotHeight = clock.millis()
+                    numberOfTries++
                 }
-                lastRequestForSnapshotHeight = clock.millis()
-                numberOfTries++
+                processMessages(true)
+                sleep(params.loopInterval)
             }
-            processMessages(true)
-            sleep(params.loopInterval)
         }
+
+        logger.debug { "Query peers for latest snapshot heights took: $latestPeerSnapshotsTime" }
+
         // We need to validate the witness of these headers
         val snapshotCandidates = receivedLatestSnapshotHeight
-                .filter { (_, blockHeader) -> blockHeader.header.isNotEmpty() }
-                .map { (peerId, blockHeader) -> peerId to blockHeader }
-                .sortedByDescending { (_, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
+                .filterValues { it != null }
+                .map { Triple(it.key, it.value!!.first, it.value!!.second) }
+                .sortedByDescending { (_, _, blockHeader) -> blockHeader.getHeight() }
 
         if (snapshotCandidates.isEmpty()) {
             logger.debug { "No snapshot candidates found. Not syncing snapshot." }
@@ -158,8 +164,7 @@ class SnapshotSynchronizer(
         }
 
         // We try all but unless peers are malicious or we are lacking config it should be fine
-        for ((peerId, candidate) in snapshotCandidates) {
-            val candidateHeader = BlockHeaderData.fromBinary(candidate.header)
+        for ((peerId, snapshotHeader, candidateHeader) in snapshotCandidates) {
             val candidateHeaderConfig = candidateHeader.getExtra()[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
             val candidateHeaderRid = BlockRid(candidateHeader.toGtv().merkleHash(blockchainConfiguration.merkleHashCalculator))
             val candidateHeaderHeight = candidateHeader.getHeight()
@@ -209,7 +214,7 @@ class SnapshotSynchronizer(
             }
 
             try {
-                validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
+                validator.validateWitness(BaseBlockWitness.fromBytes(snapshotHeader.witness), witnessBuilder)
                 logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
 
                 if (candidateHeaderHeight <= params.snapshotSyncThreshold) {
@@ -221,7 +226,7 @@ class SnapshotSynchronizer(
                 params.syncToExactHeight  = candidateHeaderHeight
                 val rootHash = candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray() ?:
                     throw ProgrammerMistake("Snapshot root hash not found in block header")
-                val blockHeaderContextData = getVerifiedContextData(candidate, rootHash)
+                val blockHeaderContextData = getVerifiedContextData(snapshotHeader, rootHash)
 
                 withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
                     DatabaseAccess.of(ctx).apply {
@@ -232,7 +237,7 @@ class SnapshotSynchronizer(
 
                         blockHeaderContextData.values.forEach {
                             val contextState = SnapshotSyncContextState(it.contextId, it.rootHash,
-                                    0, it.datumIdMax ?: 0)
+                                    0, it.datumIdMax)
                             contextStates[it.contextId] = contextState
                             setSnapshotSyncContextState(ctx, contextState)
                         }
@@ -241,7 +246,7 @@ class SnapshotSynchronizer(
                     true
                 }
 
-                setInitialNodeStates(candidate)
+                setInitialNodeStates(snapshotHeader)
 
                 snapshotSyncEvents.add(SnapshotSyncEvent.WILL_SYNC_FROM_NODES)
                 logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
@@ -282,11 +287,18 @@ class SnapshotSynchronizer(
                             workerContext.appConfig.cryptoSystem)
                     is SnapshotBlockHeader -> {
                         if (awaitsSnapshotHeights) {
-                            receivedLatestSnapshotHeight[peerId] = message
-                            if (message.header.isNotEmpty()) {
+                            receivedLatestSnapshotHeight[peerId] = if (message.header.isNotEmpty()) {
                                 logger.info("Got a snapshot header from $peerId. Adding it to snapshot header candidates.")
+                                try {
+                                    val blockHeader = BlockHeaderData.fromBinary(message.header)
+                                    message to blockHeader
+                                } catch (e: Exception) {
+                                    logger.warn(e) { "Received invalid snapshot header from peer $peerId. Ignoring and continuing" }
+                                    null
+                                }
                             } else {
                                 logger.info("Got no snapshot header from $peerId")
+                                null
                             }
                         }
                     }
@@ -374,7 +386,7 @@ class SnapshotSynchronizer(
 
     private fun buildAndVerifySnapshot(ctx: EContext) {
         val localSnapshotRootHash = RootSnapshotBlockBuilder(ctx, syncState.height,
-                workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                workerContext.blockchainConfiguration.snapshot.levelsPerPage, 0,
                 workerContext.appConfig.cryptoSystem).build()
 
         if (syncState.rootHash.contentEquals(localSnapshotRootHash)) {
@@ -438,11 +450,16 @@ class SnapshotSynchronizer(
     }
 
     private fun sendInitialSnapshotDataRequest() {
-        contextStates.values.forEach {
-            val state = SnapshotContextState(it.contextId, offset = it.datumIdOffset)
-            contextSyncRequests[state.contextId] = state
-            sendGetSnapshotData(state)
-        }
+        contextStates.values
+                .forEach {
+                    if (it.contextRootHash.contentEquals(EMPTY_HASH)) {
+                        logger.info { "No data is available for context ${it.contextId}" }
+                    } else {
+                        val state = SnapshotContextState(it.contextId, offset = it.datumIdOffset)
+                        contextSyncRequests[state.contextId] = state
+                        sendGetSnapshotData(state)
+                    }
+                }
     }
 
     private fun sendGetSnapshotData(contextState: SnapshotContextState) {
@@ -493,20 +510,19 @@ class SnapshotSynchronizer(
         return candidate.contextData.associateBy { it.contextId }
     }
 
-    // Set nodes with candidate heigher syncable, the rest drained or unresponsive
+    // Set nodes with candidate higher syncable, the rest drained or unresponsive
     private fun setInitialNodeStates(candidate: SnapshotBlockHeader) {
         configuredPeers.minus(receivedLatestSnapshotHeight.keys).forEach {
             peerStatuses.unresponsive(it, "Never received LatestSnapshotBlock")
         }
-        val syncableNodes = receivedLatestSnapshotHeight.filterValues { it.header.contentEquals(candidate.header) }
+        val syncableNodes = receivedLatestSnapshotHeight
+                .filterValues { it != null && it.first.header.contentEquals(candidate.header) }
         peerStatuses.getAllPeers()
                 .forEach {
                     if (syncableNodes.containsKey(it)) {
                         peerStatuses.markSyncable(it)
                     } else {
-                        val height = receivedLatestSnapshotHeight[it]?.header?.let { bh ->
-                            BlockHeaderData.fromBinary(bh).getHeight()
-                        } ?: 0
+                        val height = receivedLatestSnapshotHeight[it]?.second?.getHeight() ?: 0
                         peerStatuses.drained(it, height,
                                 drainedTimeout = params.snapshotSyncPeerParameters.resurrectDrainedTime)
                     }

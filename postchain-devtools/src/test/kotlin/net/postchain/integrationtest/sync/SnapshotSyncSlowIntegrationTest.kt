@@ -5,6 +5,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEqualTo
+import assertk.assertions.isNull
 import assertk.assertions.support.expected
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
@@ -40,15 +41,13 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
 
     @Test
     @Timeout(value = 10, unit = TimeUnit.MINUTES)
     fun syncFromSnapshot() {
-        startManagedSystem(4, 1, restApi = true)
+        startManagedSystem(4, 1)
         val restartNodeIdx = 4
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
@@ -120,10 +119,57 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
                 )))
     }
 
+    /** With 4 nodes deploy a dapp with 2 modules. Add data for one of the modules and then restart a node to sync */
     @Test
     @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    fun syncEmptyContext() {
+        startManagedSystem(4, 0)
+
+        val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
+        startNewBlockchain(setOf(0, 1, 2, 3), setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+
+        buildBlock(DEFAULT_CHAIN_IID, 1L)
+
+        // Add data for module A
+        var height = 2L
+        buildDatumBlocks(
+                mapOf("a" to listOf(
+                        SnapshotDatum(0, gtv("a_datum_0"), false),
+                        SnapshotDatum(1, gtv("a_datum_1"), false),
+                )),
+                nodes,
+                height
+        )
+
+        val node0RootHash = getSnapshotRootHash(nodes[0], DEFAULT_CHAIN_IID, height, config)
+
+        assertThat(nodes).hasSameSnapshotRootHash(height, node0RootHash)
+
+        // Restart a node and make sure it syncs successfully
+        restartAndAwaitSnapshotSync(3, height)
+
+        assertThat(nodes).hasSameSnapshotRootHash(height, node0RootHash)
+
+        // Build a few more bocks with updated datums
+        height += 2
+        buildDatumBlocks(
+                mapOf("a" to listOf(
+                        SnapshotDatum(0, gtv("a_datum_0-update"), false),
+                )),
+                nodes,
+                toHeight = height
+        )
+
+        // Verify all nodes has the same state and root hash
+        assertThat(nodes).hasSameSnapshotRootHash(height)
+        assertThat(getSnapshotRootHash(nodes[0], DEFAULT_CHAIN_IID, height, config))
+                .isNotEqualTo(node0RootHash)
+    }
+
+    @Test
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun syncFromSnapshotWithInitialState() {
-        startManagedSystem(4, 1, restApi = true)
+        startManagedSystem(4, 1)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4_init_state.xml")!!.readText())
         startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -209,12 +255,12 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
      * 5. Verify that all nodes are in identical states.
      */
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun syncFromSnapshotAsValidator() {
         val datumLength = 100
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1500 // Enforce about 10 datums per message
 
-        startManagedSystem(4, 0, restApi = true)
+        startManagedSystem(4, 0)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -276,12 +322,12 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
      *  start node 3 and verify it won't attempt to sync snapshot (since it is on height > 0).
      */
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun onlySyncFromHeight0() {
         val datumLength = 100
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = (datumLength + 5) * 10 // Enforce about 10 datums per message
 
-        startManagedSystem(4, 0, restApi = true)
+        startManagedSystem(4, 0)
         val restartNodeIdx = 3
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
@@ -303,13 +349,88 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
+    fun pruneSnapshots() {
+        startManagedSystem(4, 0)
+
+        val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4_interval_1.xml")!!.readText())
+        val levelsPerPage = getBCCLevelsPerPage(config)
+
+        startNewBlockchain(setOf(0, 1, 2, 3), setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+
+        val toHeight = 9L
+        val blocks = 0..toHeight
+        blocks.forEach { block ->
+            buildDatumBlocks(
+                    mapOf("a" to listOf(
+                            SnapshotDatum(0, gtv("a_datum_0-block-$block"), false),
+                    ))
+            )
+        }
+
+        // Verify snapshot datums - only last 3 versions should be available
+        withDatumRepository(nodes.first(), getBCCLevelsPerPage(config)) { ctx, datumRepository ->
+            DatabaseAccess.of(ctx).apply {
+
+                // Expect datum leafs states for 3 last heights (snapshots_to_Keep + 1)
+                val datumHeights = blocks
+                        .mapNotNull { block -> getState(ctx, "${SNAPSHOT_TABLE_PREFIX}_0", block, 0) }
+                        .map { it.blockHeight }
+                assertThat(datumHeights).isEqualTo(listOf(7L, 8L, 9L))
+            }
+
+            // Verify datum values for heights
+            assertThat(datumRepository.getDatum(ctx, 6L, 0L, 0L))
+                    .isNull()
+            assertThat(datumRepository.getDatum(ctx, 7L, 0L, 0L)?.asString())
+                    .isEqualTo("a_datum_0-block-7")
+            assertThat(datumRepository.getDatum(ctx, 8L, 0L, 0L)?.asString())
+                    .isEqualTo("a_datum_0-block-8")
+            assertThat(datumRepository.getDatum(ctx, toHeight, 0L, 0L)?.asString())
+                    .isEqualTo("a_datum_0-block-$toHeight")
+        }
+
+        // All nodes should still have the same snapshot root hash
+        val snapshotRootHash = getSnapshotRootHash(nodes[0], DEFAULT_CHAIN_IID, toHeight, levelsPerPage)
+        assertThat(nodes).hasSameSnapshotRootHash(toHeight, snapshotRootHash)
+
+        // Snapshot data is in expected state - now lets reset each node one by one to enforce them all to sync
+        // snapshot states. This should make all nodes eventually only have the last snapshot state.
+        (0..3).forEach { nodeIndex ->
+            restartAndAwaitSnapshotSync(nodeIndex, toHeight)
+        }
+
+        // All nodes still has same root hash
+        assertThat(nodes).hasSameSnapshotRootHash(toHeight, snapshotRootHash)
+
+        // Verify that all nodes has the same state - one snapshot
+        nodes.forEach { node ->
+            withDatumRepository(node, levelsPerPage) { ctx, datumRepository ->
+                DatabaseAccess.of(ctx).apply {
+                    // Expect datum leafs states for 3 last heights (snapshots_to_Keep + 1)
+                    val datumHeights = blocks
+                            .mapNotNull { block -> getState(ctx, "${SNAPSHOT_TABLE_PREFIX}_0", block, 0) }
+                            .map { it.blockHeight }
+                    assertThat(datumHeights).isEqualTo(listOf(9L))
+                }
+
+                // Verify datum values for heights
+                assertThat(datumRepository.getDatum(ctx, 8L, 0L, 0L))
+                        .isNull()
+                assertThat(datumRepository.getDatum(ctx, toHeight, 0L, 0L)?.asString())
+                        .isEqualTo("a_datum_0-block-$toHeight")
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun syncFromSnapshotWithSignerUpdates() {
         syncWithNewConfigTest()
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun syncFromSnapshotWithPendingSignerUpdates() {
         syncWithNewConfigTest(true)
     }
@@ -363,13 +484,13 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun `skip sync when threshold is too low`() {
 
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce 1 datum per message
         nodeConfigurationOverrides["snapshotsync.threshold"] = 5
 
-        startManagedSystem(4, 1, restApi = true)
+        startManagedSystem(4, 1)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -391,12 +512,12 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun `resumed syncing - from start`() {
 
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce 1 datum per message
 
-        startManagedSystem(4, 1, restApi = true)
+        startManagedSystem(4, 1)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -464,7 +585,7 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.MINUTES)
+    @Timeout(value = 5, unit = TimeUnit.MINUTES)
     fun `simulate resumed syncing - with partial data`() {
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1 // Enforce sending 1 datum per message
 
@@ -474,7 +595,7 @@ class SnapshotSyncSlowIntegrationTest : SnapshotTestBase() {
         val moduleAPart2DatumList = listOf("a_2" to false, "a_3" to true)
         val moduleBPart2DatumList = listOf("b_2" to true)
 
-        startManagedSystem(4, 1, restApi = true)
+        startManagedSystem(4, 1)
 
         val config = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(config), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())

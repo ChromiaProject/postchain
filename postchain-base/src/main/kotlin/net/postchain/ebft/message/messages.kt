@@ -299,7 +299,9 @@ class SnapshotBlockHeaderContextData(val contextId: Long, val rootHash: Hash, va
             return SnapshotBlockHeaderContextData(
                     data[0].asInteger(),
                     data[1].asByteArray(),
-                    data[2].asInteger(),
+                    data[2].let {
+                        if (it.isNull()) null else it.asInteger()
+                    }
             )
         }
     }
