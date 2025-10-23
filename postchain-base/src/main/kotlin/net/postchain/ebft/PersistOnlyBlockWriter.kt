@@ -3,7 +3,6 @@ package net.postchain.ebft
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
@@ -54,7 +53,7 @@ class PersistOnlyBlockWriter(
                 } else {
                     try {
                         theBlockBuilder.commit(block.witness)
-                        logger.info("Saved block: height: ${theBlockBuilder.height}, block-rid: ${block.header.blockRID.toHex()}, prev-block-rid: ${block.header.prevBlockRID.toHex()}")
+//                        logger.info("Saved block: height: ${theBlockBuilder.height}, block-rid: ${block.header.blockRID.toHex()}, prev-block-rid: ${block.header.prevBlockRID.toHex()}")
                     } catch (e: Exception) {
                         // In case exception was thrown before DB commit was successful we need to roll back
                         theBlockBuilder.rollback()

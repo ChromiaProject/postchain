@@ -43,7 +43,8 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 throw UserMistake("Cannot downgrade merkle hash version from $currentMerkleHashVersion to $newMerkleHashVersion")
             }
 
-            if (configurationData.snapshotsEnabled && !dba.isSnapshotEnabled(eContext)) {
+            if ((configurationData.snapshotsEnabled && !dba.isSnapshotEnabled(eContext))
+                    && !BlockchainConfigurationData.forceSnapshot()) {
                 throw UserMistake("Snapshots can only be enabled on height 0")
             }
         }

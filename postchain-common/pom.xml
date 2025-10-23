@@ -117,13 +117,13 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>com.chromaway</groupId>
-                <artifactId>kotlin-bcv-maven-plugin</artifactId>
-                <configuration>
-                    <skip>false</skip>
-                </configuration>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>com.chromaway</groupId>-->
+<!--                <artifactId>kotlin-bcv-maven-plugin</artifactId>-->
+<!--                <configuration>-->
+<!--                    <skip>false</skip>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>

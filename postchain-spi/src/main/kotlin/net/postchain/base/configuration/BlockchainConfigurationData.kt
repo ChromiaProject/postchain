@@ -88,7 +88,7 @@ data class BlockchainConfigurationData(
     val configHash by lazy {
         rawConfig.merkleHash(merkleHashCalculator)
     }
-    val snapshotsEnabled: Boolean = merkleHashVersion >= 2 && features[BlockchainFeatures.snapshot_enabled.name]?.asBoolean() ?: false
+    val snapshotsEnabled: Boolean = snapshotSyncEnabled(rawConfig)
 
     companion object {
         @JvmStatic
@@ -114,8 +114,17 @@ data class BlockchainConfigurationData(
 
         @JvmStatic
         fun snapshotSyncEnabled(configuration: Gtv): Boolean {
+            if (forceSnapshot()) {
+                return true
+            }
             val features = configuration[KEY_FEATURES]?.asDict()
             return features?.get(BlockchainFeatures.snapshot_enabled.name)?.asBoolean() ?: false
+        }
+
+        @JvmStatic
+        fun forceSnapshot(): Boolean {
+            return (System.getenv("FORCE_SNAPSHOT")?.toBoolean() ?: false) ||
+                    System.getProperty("FORCE_SNAPSHOT")?.toBoolean() ?: false
         }
     }
 }
