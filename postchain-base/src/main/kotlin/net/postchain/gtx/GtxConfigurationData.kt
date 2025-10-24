@@ -4,6 +4,7 @@ import net.postchain.base.configuration.KEY_GTX_ALLOWOVERRIDES
 import net.postchain.base.configuration.KEY_GTX_MAX_TX_SIGNATURES
 import net.postchain.base.configuration.KEY_GTX_MODULES
 import net.postchain.base.configuration.KEY_GTX_SLOW_OP_THRESHOLD
+import net.postchain.base.configuration.KEY_GTX_SLOW_PRIORITIZATION_QUERY_THRESHOLD
 import net.postchain.base.configuration.KEY_GTX_TX_SIZE
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -31,6 +32,9 @@ data class GtxConfigurationData(
         @Name(KEY_GTX_SLOW_OP_THRESHOLD)
         @DefaultValue(defaultLong = -1)
         val slowOpThreshold: Long,
+        @Name(KEY_GTX_SLOW_PRIORITIZATION_QUERY_THRESHOLD)
+        @DefaultValue(defaultLong = -1)
+        val slowPrioritizationQueryThreshold: Long,
 ) {
     val modules = modulesRaw ?: listOf()
 

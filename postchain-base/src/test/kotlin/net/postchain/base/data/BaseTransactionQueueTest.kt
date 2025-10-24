@@ -9,6 +9,8 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isSameAs
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import net.postchain.base.BaseTransactionPrioritizerV1
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
@@ -31,6 +33,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.any
@@ -38,6 +41,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.lang.Thread.sleep
 import java.math.BigDecimal
 import java.math.BigDecimal.ONE
 import java.math.BigDecimal.TEN
@@ -97,6 +101,12 @@ private fun incorrectTransaction() =
 class BaseTransactionQueueTest {
     private lateinit var sut: BaseTransactionQueue
 
+    @BeforeEach
+    fun setup() {
+        resetGlobalMetrics()
+        Metrics.addRegistry(SimpleMeterRegistry())
+    }
+
     @AfterEach
     fun tearDown() {
         sut.close()
@@ -108,7 +118,7 @@ class BaseTransactionQueueTest {
         val clock: Clock = mock {
             on { instant() } doReturn now
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(1000))
@@ -134,7 +144,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with lower priority are evicted`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
             when (tx.myRID[0]) {
                 1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
                 2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
@@ -159,7 +169,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with same priority are retrieved in insertion order`() {
-        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
@@ -170,7 +180,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with different priority are retrieved in priority order, and then insertion order`() {
-        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, { tx, _, _ ->
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
             when (tx.myRID[0]) {
                 5.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
                 6.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
@@ -197,7 +207,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions can be removed`() {
-        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
@@ -213,21 +223,21 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `incorrect transaction is rejected`() {
-        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) })
         assertThat(sut.enqueue(incorrectTransaction())).isEqualTo(EnqueueTransactionResult.INVALID)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
     }
 
     @Test
     fun `too expensive transaction is rejected`() {
-        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 1, 2, ZERO) })
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 1, 2, ZERO) })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.FULL)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
     }
 
     @Test
     fun `transaction with lowest priority from same account is evicted when queue is full`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
             when (tx.myRID[0]) {
                 1.toByte() -> TxPriorityStateV1(account0, 2, 1, ZERO)
                 2.toByte() -> TxPriorityStateV1(account1, 2, 1, ONE)
@@ -250,7 +260,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transaction with lowest priority is evicted when queue is full`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
             when (tx.myRID[0]) {
                 1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
                 2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
@@ -281,7 +291,7 @@ class BaseTransactionQueueTest {
         val blockQueries: BlockQueries = mock {
             on { query(any(), any()) } doReturn CompletableFuture.failedStage(userMistake)
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BaseTransactionPrioritizerV1(blockQueries), clock)
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, BaseTransactionPrioritizerV1(blockQueries), clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.INVALID)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.waitingTransactions()).isEmpty()
@@ -298,7 +308,7 @@ class BaseTransactionQueueTest {
         val blockQueries: BlockQueries = mock {
             on { query(any(), any()) } doReturn CompletableFuture.failedStage(Exception("boom"))
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BaseTransactionPrioritizerV1(blockQueries))
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, BaseTransactionPrioritizerV1(blockQueries))
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.waitingTransactions()).containsExactly(tx1)
@@ -315,7 +325,7 @@ class BaseTransactionQueueTest {
             on { prioritize(any(), any(), any()) } doReturn
                     TxPriorityStateV1(account0, 0, 0, ZERO)
         }
-        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, prioritizer, clock)
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, BlockchainRid.ZERO_RID, prioritizer, clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
@@ -342,7 +352,7 @@ class BaseTransactionQueueTest {
             on { prioritize(eq(tx3), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, TWO)
             on { prioritize(eq(tx4), any(), any()) } doReturn TxPriorityStateV1(null, accountPoints = 0, txCostPoints = 0, ZERO)
         }
-        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, prioritizer, clock)
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, BlockchainRid.ZERO_RID, prioritizer, clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
@@ -370,7 +380,7 @@ class BaseTransactionQueueTest {
             on { prioritize(eq(tx2), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, TWO)
             on { prioritize(eq(tx3), any(), any()) } doReturn TxPriorityStateV1(account0, accountPoints = 2, txCostPoints = 1, ZERO)
         }
-        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, prioritizer, clock)
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, MockStorage(), 0L, BlockchainRid.ZERO_RID, prioritizer, clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
@@ -389,7 +399,7 @@ class BaseTransactionQueueTest {
         val clock: Clock = mock {
             on { instant() } doReturn now
         }
-        sut = BaseTransactionQueue(3, INFINITE, 100.milliseconds, MockStorage(), 0L, { _, _, _ -> throw Exception("boom") }, clock)
+        sut = BaseTransactionQueue(3, INFINITE, 100.milliseconds, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> throw Exception("boom") }, clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
@@ -401,7 +411,7 @@ class BaseTransactionQueueTest {
     @Test
     @Timeout(10, unit = TimeUnit.SECONDS)
     fun `returns immediately if queue has transactions`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.takeTransaction(1.minutes)).isNotNull()
@@ -411,7 +421,7 @@ class BaseTransactionQueueTest {
     @Test
     @Timeout(5, unit = TimeUnit.SECONDS)
     fun `waits up to timeout if queue is empty`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         val elapsed = measureTimeMillis {
             assertThat(sut.takeTransaction(2.seconds)).isNull()
@@ -422,10 +432,10 @@ class BaseTransactionQueueTest {
     @Test
     @Timeout(5, unit = TimeUnit.SECONDS)
     fun `stops waiting if transaction enters queue`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         thread {
-            Thread.sleep(1000)
+            sleep(1000)
             assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         }
         val elapsed = measureTimeMillis {
@@ -436,7 +446,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `takenTransactions returns all current transactions in correct order`() {
-        sut = BaseTransactionQueue(5, INFINITE, INFINITE, MockStorage(), 0L, { tx, _, _ ->
+        sut = BaseTransactionQueue(5, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
             when (tx.myRID[0]) {
                 1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
                 2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
@@ -474,7 +484,7 @@ class BaseTransactionQueueTest {
         val clock: Clock = mock {
             on { instant() } doReturn now
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
@@ -497,4 +507,48 @@ class BaseTransactionQueueTest {
         assertThat(sut.getRejectionReason(tx3.getRID().wrap())).isEqualTo(reason2 to timestamp2)
         assertThat(sut.getRejectionReason(tx1.getRID().wrap())).isNull()
     }
+
+    @Test
+    fun `measure prioritization query`() {
+        sut = BaseTransactionQueue(Int.MAX_VALUE, INFINITE, INFINITE, MockStorage(), 0L, BlockchainRid.ZERO_RID, { tx, _, _ ->
+            sleep(1)
+            when (tx.myRID[0]) {
+                1.toByte() -> throw Exception("boom")
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
+            }
+        }, Clock.systemUTC(), 0.milliseconds)
+
+        assertThat(sut.priorityQuerySuccessTimer?.count()).isEqualTo(0)
+        assertThat(sut.priorityQueryFailureTimer?.count()).isEqualTo(0)
+
+        listOf(tx1, tx2, tx3, GTXTransaction(
+                null,
+                GtvNull,
+                Gtx(GtxBody(BlockchainRid.ZERO_RID, listOf(GtxOp(GTX_TEST_OP_NAME, gtv(1), gtv(""))), listOf()), listOf()),
+                arrayOf(),
+                arrayOf(),
+                arrayOf(
+                        GTXTestOp(Unit, ExtOpData("op1", 0, arrayOf(gtv(1), gtv("one")), BlockchainRid.ZERO_RID, arrayOf(), arrayOf())),
+                        GTXTestOp(Unit, ExtOpData("op2", 0, arrayOf(gtv(1), gtv("two")), BlockchainRid.ZERO_RID, arrayOf(), arrayOf())),
+                        GTXTestOp(Unit, ExtOpData("op3", 0, arrayOf(gtv(1), gtv("three")), BlockchainRid.ZERO_RID, arrayOf(), arrayOf())),
+                ),
+                ByteArray(32) { _ -> 4 },
+                ByteArray(32) { _ -> 4 },
+                MockCryptoSystem()
+        ))
+                .forEach(sut::enqueue)
+
+        assertThat(sut.priorityQuerySuccessTimer?.count()).isEqualTo(3)
+        assertThat(sut.priorityQueryFailureTimer?.count()).isEqualTo(1)
+    }
+}
+
+fun resetGlobalMetrics() {
+    val composite = Metrics.globalRegistry
+    Metrics.globalRegistry.registries.toList().forEach { child ->
+        composite.remove(child)
+        child.clear()
+        child.close()
+    }
+    composite.clear()
 }

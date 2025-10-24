@@ -40,13 +40,14 @@ Configuration under the key `blockstrategy`.
 
 Configuration under the key `gtx`.
 
-| Name                         | Description                                                                                                                             | Type          | Default          |
-|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------|------------------|
-| `max_transaction_size`       | Maximum size of transactions in bytes                                                                                                   | int           | 25 * 1024 * 1024 |
-| `max_transaction_signatures` | Maximum number of signers/signatures for a transaction                                                                                  | int           | 100              |
-| `modules`                    | GTX modules                                                                                                                             | array<string> |                  |
-| `allowoverrides`             | Allow operations and queries with the same name to be overridden by another GTX module.                                                 | boolean       | false            |
-| `slow_op_threshold`          | The threshold for considering an operation *slow*, in milliseconds. Slow operations are logged at INFO level, -1 disables this logging. | int           | -1               |
+| Name                                  | Description                                                                                                                                    | Type          | Default          |
+|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|---------------|------------------|
+| `max_transaction_size`                | Maximum size of transactions in bytes                                                                                                          | int           | 25 * 1024 * 1024 |
+| `max_transaction_signatures`          | Maximum number of signers/signatures for a transaction                                                                                         | int           | 100              |
+| `modules`                             | GTX modules                                                                                                                                    | array<string> |                  |
+| `allowoverrides`                      | Allow operations and queries with the same name to be overridden by another GTX module.                                                        | boolean       | false            |
+| `slow_op_threshold`                   | The threshold for considering an operation *slow*, in milliseconds. Slow operations are logged at INFO level, -1 disables this logging.        | int           | -1               |
+| `slow_prioritization_query_threshold` | The threshold for considering a prioritization query *slow*, in milliseconds. Slow queries are logged at INFO level, -1 disables this logging. | int           | -1               |
 
 ## Revolt
 

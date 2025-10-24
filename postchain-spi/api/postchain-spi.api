@@ -461,6 +461,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_GTX_MAX_TX_SIGNATURES Ljava/lang/String;
 	public static final field KEY_GTX_MODULES Ljava/lang/String;
 	public static final field KEY_GTX_SLOW_OP_THRESHOLD Ljava/lang/String;
+	public static final field KEY_GTX_SLOW_PRIORITIZATION_QUERY_THRESHOLD Ljava/lang/String;
 	public static final field KEY_GTX_TX_SIZE Ljava/lang/String;
 	public static final field KEY_HISTORIC_BRID Ljava/lang/String;
 	public static final field KEY_MAX_BLOCK_FUTURE_TIME Ljava/lang/String;
