@@ -22,3 +22,6 @@ const val OPERATIONS_METRIC_DESCRIPTION = "Operation execution times"
 const val OPERATION_CORRECTNESS_METRIC_NAME = "operationCorrectness"
 const val OPERATION_CORRECTNESS_METRIC_DESCRIPTION = "Operation correctness check execution times"
 const val OPERATIONS_NAME_TAG = "operationName"
+
+const val QUERY_PRIORITIZATION_METRIC_NAME = "queryPrioritization"
+const val QUERY_PRIORITIZATION_METRIC_DESCRIPTION = "Query prioritization execution times"

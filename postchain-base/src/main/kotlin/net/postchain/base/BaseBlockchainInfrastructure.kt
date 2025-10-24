@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.configuration.KEY_GTX
 import net.postchain.base.configuration.asyncQueryQueueCapacity
 import net.postchain.base.configuration.asyncQueryResultRetentionSeconds
 import net.postchain.base.configuration.asyncQueryTimeoutSeconds
@@ -38,8 +39,12 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.gtx.GtxConfigurationData
 import net.postchain.metrics.BaseBlockchainEngineMetrics
+import java.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 open class BaseBlockchainInfrastructure(
@@ -112,18 +117,22 @@ open class BaseBlockchainInfrastructure(
             restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
         val blockQueries: BlockQueries = configuration.makeBlockQueries(sharedStorage)
+        val prioritizer = if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V2))
+                BaseTransactionPrioritizerV2(blockQueries)
+            else if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V1))
+                BaseTransactionPrioritizerV1(blockQueries)
+            else null
+        val gtxConfig = configuration.rawConfig[KEY_GTX]?.toObject() ?: GtxConfigurationData.default
         val transactionQueue = BaseTransactionQueue(
                 configuration.transactionQueueSize,
                 recheckThreadInterval = 1.minutes,
                 recheckTxInterval = configuration.transactionQueueRecheckInterval,
                 sharedStorage,
                 configuration.chainID,
-                if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V2))
-                    BaseTransactionPrioritizerV2(blockQueries)
-                else if (configuration.hasQuery(PRIORITIZE_QUERY_NAME_V1))
-                    BaseTransactionPrioritizerV1(blockQueries)
-                else
-                    null,
+                configuration.blockchainRid,
+                prioritizer,
+                Clock.systemUTC(),
+                gtxConfig.slowPrioritizationQueryThreshold.milliseconds,
         )
         val metrics = BaseBlockchainEngineMetrics(configuration.chainID, configuration.blockchainRid, transactionQueue)
         val strategy: BlockBuildingStrategy = configuration.getBlockBuildingStrategy(blockQueries, transactionQueue)

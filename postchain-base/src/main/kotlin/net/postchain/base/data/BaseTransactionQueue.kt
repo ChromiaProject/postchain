@@ -4,9 +4,13 @@ package net.postchain.base.data
 
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.base.TransactionPrioritizer
+import net.postchain.base.TransactionPriorityState
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
@@ -17,7 +21,15 @@ import net.postchain.core.RejectedTransaction
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
+import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.FAILURE_RESULT
+import net.postchain.logging.QUERY_PRIORITIZATION_METRIC_DESCRIPTION
+import net.postchain.logging.QUERY_PRIORITIZATION_METRIC_NAME
+import net.postchain.logging.RESULT_TAG
+import net.postchain.logging.SUCCESS_RESULT
 import java.io.Closeable
 import java.math.BigDecimal
 import java.time.Clock
@@ -72,8 +84,11 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                            private val recheckTxInterval: Duration,
                            private val storage: Storage,
                            private val chainIID: Long,
+                           val blockchainRid: BlockchainRid,
                            private val prioritizer: TransactionPrioritizer?,
-                           private val clock: Clock = Clock.systemUTC()) : TransactionQueue, Closeable {
+                           private val clock: Clock = Clock.systemUTC(),
+                           slowPrioritizationQueryThresholdDuration: Duration? = null
+) : TransactionQueue, Closeable {
 
     companion object : KLogging()
 
@@ -91,6 +106,25 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             return size > MAX_REJECTED
         }
     }
+    val priorityQuerySuccessTimer = prioritizer?.let {
+        Timer
+                .builder(QUERY_PRIORITIZATION_METRIC_NAME)
+                .description(QUERY_PRIORITIZATION_METRIC_DESCRIPTION)
+                .tag(CHAIN_IID_TAG, chainIID.toString())
+                .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
+                .tag(RESULT_TAG, SUCCESS_RESULT)
+                .register(Metrics.globalRegistry)
+    }
+    val priorityQueryFailureTimer = prioritizer?.let {
+        Timer
+                .builder(QUERY_PRIORITIZATION_METRIC_NAME)
+                .description(QUERY_PRIORITIZATION_METRIC_DESCRIPTION)
+                .tag(CHAIN_IID_TAG, chainIID.toString())
+                .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
+                .tag(RESULT_TAG, FAILURE_RESULT)
+                .register(Metrics.globalRegistry)
+    }
+    private val slowPrioritizationQueryThresholdNs = slowPrioritizationQueryThresholdDuration?.inWholeNanoseconds ?: -1
 
     @Volatile
     private var executor: ScheduledExecutorService? = null
@@ -159,13 +193,17 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                 tx.checkCorrectness(ctxt)
             }
 
-            val transactionPriority = try {
-                prioritizer?.prioritize(tx as GTXTransaction, txEnter, clock.instant())
-            } catch (e: UserMistake) { // reject transaction if prioritizer throws UserMistake
-                throw e
-            } catch (e: Exception) { // ignore prioritizer if it throws something else (do not reject transaction)
-                logger.warn(e) { "Prioritizer returned error when enqueuing $txRid: $e" }
-                null
+            val transactionPriority = prioritizer?.let {
+                try {
+                    measurePrioritizationQueryExecution(tx as GTXTransaction) {
+                        prioritizer.prioritize(tx, txEnter, clock.instant())
+                    }
+                } catch (e: UserMistake) { // reject transaction if prioritizer throws UserMistake
+                    throw e
+                } catch (e: Exception) { // ignore prioritizer if it throws something else (do not reject transaction)
+                    logger.warn(e) { "Prioritizer returned error when enqueuing $txRid: $e" }
+                    null
+                }
             }
 
             // 2. if tx_cost_points is higher than account_points, tx is immediately rejected.
@@ -374,5 +412,37 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         executor?.shutdownNow()
         executor?.awaitTermination(2, TimeUnit.SECONDS)
         executor = null
+    }
+
+    fun measurePrioritizationQueryExecution(
+            tx: GTXTransaction,
+            execution: () -> TransactionPriorityState,
+    ): TransactionPriorityState {
+        val sample = Timer.start(Metrics.globalRegistry)
+        return try {
+            val priority = execution()
+            priorityQuerySuccessTimer?.apply {
+                val opTimeNanos = sample.stop(priorityQuerySuccessTimer)
+                maybeLogSlowExecution(opTimeNanos, "succeed", tx)
+            }
+            priority
+        } catch (e: Exception) {
+            priorityQueryFailureTimer?.apply {
+                val opTimeNanos = sample.stop(priorityQueryFailureTimer)
+                maybeLogSlowExecution(opTimeNanos, "fail", tx)
+            }
+            throw e
+        }
+    }
+
+    fun maybeLogSlowExecution(opTimeNanos: Long, msg: String, tx: GTXTransaction) {
+        if (slowPrioritizationQueryThresholdNs in 0..<opTimeNanos) {
+            val opSignatures = tx.ops.joinToString { op ->
+                (op as? GTXOperation)?.shortSignature() ?: "<unknown>" }
+            val opSignaturesTruncated = if (opSignatures.length > 500)
+                opSignatures.take(100) + "..."
+            else opSignatures
+            logger.info("Prioritization query is slow, took ${opTimeNanos / 1000} ms to ${msg}. With transaction operations signatures: $opSignaturesTruncated")
+        }
     }
 }
