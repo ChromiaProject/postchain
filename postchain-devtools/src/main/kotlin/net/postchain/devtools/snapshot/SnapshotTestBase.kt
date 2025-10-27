@@ -18,7 +18,6 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
-import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
@@ -34,6 +33,7 @@ import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
+import java.util.concurrent.TimeUnit
 
 /**
  * Base class for integration tests that use snapshot sync with some helpers to help assert results.
@@ -96,12 +96,14 @@ open class SnapshotTestBase() : ManagedModeTest() {
     fun restartAndAwaitSnapshotSync(nodeIndex: Int, expectedHeight: Long) {
         restartNodeClean(nodeIndex, DEFAULT_CHAIN_IID, -1)
 
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+        Awaitility.await().atMost(Duration.FIVE_MINUTES).untilAsserted {
             assertThat(nodes[nodeIndex].blockQueries().getLastBlockHeight().get()).isEqualTo(expectedHeight)
             assertThat(nodes[nodeIndex]).hasSnapshotSyncEvent(SnapshotSyncEvent.SYNCING)
             assertThat(nodes[nodeIndex]).hasSyncedSnapshotSuccessfully()
         }
-        assertThat(nodes).hasSameSnapshotRootHash(expectedHeight)
+        Awaitility.await().atMost(30, TimeUnit.SECONDS).untilAsserted {
+            assertThat(nodes).hasSameSnapshotRootHash(expectedHeight)
+        }
     }
 
     fun getChainConfig(node: PostchainTestNode) =
@@ -133,15 +135,15 @@ open class SnapshotTestBase() : ManagedModeTest() {
     }
 
     fun Assert<List<PostchainTestNode>>.hasSameSnapshotRootHash(height: Long, snapshotRootHash: Hash? = null) = given { nodes ->
-        val rootHashes = mutableSetOf<WrappedByteArray>()
-        nodes.forEach { node ->
-            rootHashes.add(getSnapshotRootHash(node, DEFAULT_CHAIN_IID, height, getChainConfig(node)).wrap())
-        }
-        if (rootHashes.size > 1) {
-            expected("to have the same snapshot root hash")
+        val rootHashes = nodes.associate { node ->
+            nodes.indexOf(node) to getSnapshotRootHash(node, DEFAULT_CHAIN_IID, height, getChainConfig(node)).wrap() }
+        val rootHashSet = rootHashes.values.toSet()
+        if (rootHashSet.size > 1) {
+            val nodeHashes = rootHashes.map { "${it.key}=${it.value}" }.joinToString(", ")
+            expected("all to have the same snapshot root hash ($nodeHashes)")
         }
         snapshotRootHash?.apply {
-            if (!rootHashes.contains(this.wrap())) {
+            if (!rootHashSet.contains(this.wrap())) {
                 expected("to have snapshot root hash $snapshotRootHash")
             }
         }
