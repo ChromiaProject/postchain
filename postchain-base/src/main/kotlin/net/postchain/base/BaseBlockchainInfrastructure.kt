@@ -26,6 +26,7 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessParams
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.DynamicClassName
@@ -170,11 +171,12 @@ open class BaseBlockchainInfrastructure(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams?
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.create(engine, blockchainConfigurationProvider, restartNotifier, blockchainState)
+        val process = synchronizationInfrastructure.create(engine, blockchainConfigurationProvider, restartNotifier, blockchainState, processParams)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {

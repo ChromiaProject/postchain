@@ -250,7 +250,7 @@ open class BaseBlockchainEngine(
             } catch (e: Exception) {
                 try {
                     blockBuilder.rollback()
-                } catch (ignore: Exception) {
+                } catch (_: Exception) {
                 }
                 nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
                         ErrorDiagnosticValue(
@@ -279,7 +279,7 @@ open class BaseBlockchainEngine(
             } catch (e: Exception) {
                 try {
                     blockBuilder.rollback()
-                } catch (ignore: Exception) {
+                } catch (_: Exception) {
                 }
                 if (e !is ForceStopBlockBuildingException) {
                     try {
@@ -347,7 +347,7 @@ open class BaseBlockchainEngine(
         withReadConnection(blockBuilderStorage, chainID) { ctx ->
             if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false).changeNeeded) {
                 logger.debug("Found new configuration at current height. Will restart and apply it.")
-                restartNotifier.notifyRestart(null)
+                restartNotifier.notifyRestart(null, null)
                 closed = true
             }
         }
@@ -466,7 +466,7 @@ open class BaseBlockchainEngine(
         }
         blockBuilderStorage.closeWriteConnection(currentEContext, true)
 
-        restartNotifier.notifyRestart(null)
+        restartNotifier.notifyRestart(null, null)
         closed = true
     }
 

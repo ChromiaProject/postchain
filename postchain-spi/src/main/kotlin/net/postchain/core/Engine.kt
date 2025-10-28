@@ -51,9 +51,9 @@ interface BlockchainEngine : Shutdownable {
  * block creation.
  *
  * The [BlockchainProcess] delegates many tasks to other classes, typically:
- * - [WorkerContext] that holds most things the process needs, like node specific info and the [BlockchainEngine]
- * - [SyncManager] to sync with other nodes running this blockchain,
- * - [BlockDatabase] to read and store blocks to the DB.
+ * - `WorkerContext` that holds most things the process needs, like node specific info and the [BlockchainEngine]
+ * - `SyncManager` to sync with other nodes running this blockchain,
+ * - `BlockDatabase` to read and store blocks to the DB.
  */
 interface BlockchainProcess {
     val blockchainEngine: BlockchainEngine
@@ -61,6 +61,8 @@ interface BlockchainProcess {
     fun shutdown()
     fun registerDiagnosticData(diagnosticData: DiagnosticData) = Unit
     fun isSigner(): Boolean
+    /** true if new blocks are expected, false if this process neither builds or syncs blocks */
+    fun isExpectingNewBlocks(): Boolean = true
     fun getBlockchainState(): BlockchainState
     fun isProcessRunning(): Boolean
 }

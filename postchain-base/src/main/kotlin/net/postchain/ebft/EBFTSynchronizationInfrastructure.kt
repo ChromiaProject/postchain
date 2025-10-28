@@ -15,6 +15,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessParams
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
@@ -54,7 +55,8 @@ open class EBFTSynchronizationInfrastructure(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val chainId = blockchainConfig.chainID
@@ -146,8 +148,8 @@ open class EBFTSynchronizationInfrastructure(
             blockchainState == BlockchainState.RUNNING -> createRunningBlockchainProcess(
                     workerContext, historicBlockchainContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
 
-            blockchainState == BlockchainState.PAUSED -> createPausedBlockchainProcess(
-                    workerContext, blockchainConfigurationProvider, blockchainConfig, blockchainState)
+            blockchainState == BlockchainState.PAUSED ->
+                ReadOnlyBlockchainProcess(workerContext, blockchainState, null, processParams)
 
             blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
@@ -177,9 +179,6 @@ open class EBFTSynchronizationInfrastructure(
             }
         }
     }
-
-    protected open fun createPausedBlockchainProcess(workerContext: WorkerContext, blockchainConfigProvider: BlockchainConfigurationProvider, blockchainConfig: BlockchainConfiguration, blockchainState: BlockchainState): BlockchainProcess =
-            ReadOnlyBlockchainProcess(workerContext, blockchainState)
 
     protected open fun canMovingBlockchainBeForceReadOnly(
             blockchainConfig: BlockchainConfiguration,

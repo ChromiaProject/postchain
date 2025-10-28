@@ -251,7 +251,7 @@ class AbstractSynchronizerTest {
         // execute & verify
         assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
-        verify(restartNotifier, never()).notifyRestart(incomingConfigHash)
+        verify(restartNotifier, never()).notifyRestart(incomingConfigHash, null)
     }
 
     @Test
@@ -262,7 +262,7 @@ class AbstractSynchronizerTest {
         // execute & verify
         assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isTrue()
         // verify
-        verify(restartNotifier).notifyRestart(incomingConfigHash)
+        verify(restartNotifier).notifyRestart(incomingConfigHash, null)
     }
 
     ///// handle Add block exception /////
@@ -287,7 +287,7 @@ class AbstractSynchronizerTest {
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
         verify(blockchainConfigurationProvider, atLeastOnce()).activeBlockNeedsConfigurationChange(eContext, chainId, false)
-        verify(restartNotifier).notifyRestart(null)
+        verify(restartNotifier).notifyRestart(null, null)
     }
 
     @Test
@@ -352,7 +352,7 @@ class AbstractSynchronizerTest {
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
-        verify(restartNotifier).notifyRestart(configHash)
+        verify(restartNotifier).notifyRestart(configHash, null)
     }
 
     ///// handle Add block exception: FailedConfigurationMismatchException /////
@@ -399,7 +399,7 @@ class AbstractSynchronizerTest {
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
-        verify(restartNotifier).notifyRestart(failedConfigHash)
+        verify(restartNotifier).notifyRestart(failedConfigHash, null)
     }
 
     @Test

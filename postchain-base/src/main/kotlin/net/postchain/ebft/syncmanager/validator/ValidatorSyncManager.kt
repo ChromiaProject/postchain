@@ -300,7 +300,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val configCheckResult = bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)
         if (configCheckResult.changeNeeded) {
             logger.debug("New config found. Reloading.")
-            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad)
+            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad, null)
         }
     }
 
@@ -636,7 +636,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
             if (isCurrentConfigNotApplied) {
                 logger.info("Detected non-applied configuration before going into fast sync, unloading it")
-                workerContext.restartNotifier.notifyRestart(null)
+                workerContext.restartNotifier.notifyRestart(null, null)
                 return true
             }
         }

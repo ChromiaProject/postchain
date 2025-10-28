@@ -1455,7 +1455,7 @@ public final class net/postchain/core/BlockchainEngine$DefaultImpls {
 }
 
 public abstract interface class net/postchain/core/BlockchainInfrastructure : net/postchain/core/Shutdownable {
-	public abstract fun createBlockchainProcess (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;)Lnet/postchain/core/BlockchainProcess;
+	public abstract fun createBlockchainProcess (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;Lnet/postchain/core/BlockchainProcessParams;)Lnet/postchain/core/BlockchainProcess;
 	public abstract fun handleBlockchainRestart (Lnet/postchain/core/BlockchainProcess;)V
 	public abstract fun handleBlockchainTermination (Lnet/postchain/core/BlockchainProcess;)V
 	public abstract fun makeBlockchainConfiguration ([BLnet/postchain/core/ExecutionContext;IJLnet/postchain/core/BlockchainConfigurationFactorySupplier;Lnet/postchain/base/configuration/BlockchainConfigurationOptions;)Lnet/postchain/core/BlockchainConfiguration;
@@ -1465,6 +1465,7 @@ public abstract interface class net/postchain/core/BlockchainInfrastructure : ne
 public abstract interface class net/postchain/core/BlockchainProcess {
 	public abstract fun getBlockchainEngine ()Lnet/postchain/core/BlockchainEngine;
 	public abstract fun getBlockchainState ()Lnet/postchain/core/BlockchainState;
+	public abstract fun isExpectingNewBlocks ()Z
 	public abstract fun isProcessRunning ()Z
 	public abstract fun isSigner ()Z
 	public abstract fun registerDiagnosticData (Lnet/postchain/debug/DiagnosticData;)V
@@ -1473,6 +1474,7 @@ public abstract interface class net/postchain/core/BlockchainProcess {
 }
 
 public final class net/postchain/core/BlockchainProcess$DefaultImpls {
+	public static fun isExpectingNewBlocks (Lnet/postchain/core/BlockchainProcess;)Z
 	public static fun registerDiagnosticData (Lnet/postchain/core/BlockchainProcess;Lnet/postchain/debug/DiagnosticData;)V
 }
 
@@ -1496,8 +1498,12 @@ public abstract interface class net/postchain/core/BlockchainProcessManagerExten
 	public abstract fun afterCommit (Lnet/postchain/core/BlockchainProcess;J)V
 }
 
+public abstract interface class net/postchain/core/BlockchainProcessParams {
+	public abstract fun getSyncEnabled ()Z
+}
+
 public abstract interface class net/postchain/core/BlockchainRestartNotifier {
-	public abstract fun notifyRestart ([B)V
+	public abstract fun notifyRestart ([BLjava/lang/Boolean;)V
 }
 
 public final class net/postchain/core/BlockchainState : java/lang/Enum {
@@ -1677,7 +1683,7 @@ public abstract interface class net/postchain/core/Storage : java/lang/AutoClose
 }
 
 public abstract interface class net/postchain/core/SynchronizationInfrastructure : net/postchain/core/Shutdownable {
-	public abstract fun create (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;)Lnet/postchain/core/BlockchainProcess;
+	public abstract fun create (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;Lnet/postchain/core/BlockchainProcessParams;)Lnet/postchain/core/BlockchainProcess;
 	public abstract fun restart (Lnet/postchain/core/BlockchainProcess;)V
 	public abstract fun terminate (Lnet/postchain/core/BlockchainProcess;)V
 }

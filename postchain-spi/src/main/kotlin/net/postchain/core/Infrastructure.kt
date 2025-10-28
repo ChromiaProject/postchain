@@ -22,7 +22,8 @@ interface SynchronizationInfrastructure : Shutdownable {
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams?
     ): BlockchainProcess
 
     /**
@@ -44,8 +45,15 @@ fun interface BlockchainRestartNotifier {
      * 
      * @param pendingConfigHash The hash of the pending configuration to load on restart, or null if no pending config should be loaded.
      * Will fall back to the latest applied configuration if a pending config with this hash does not exist
+     * @param syncEnabled Turn on or off syncing after restart (only supported by paused chain in `ReadOnlyBlockchainProcess` atm)
      */
-    fun notifyRestart(pendingConfigHash: ByteArray?)
+    fun notifyRestart(pendingConfigHash: ByteArray?, syncEnabled: Boolean?)
+}
+
+/** Parameters passed to the [SynchronizationInfrastructure.create] function for creating a new process. */
+interface BlockchainProcessParams {
+    /** Turn on or off syncing after restart (only supported by paused chain in `ReadOnlyBlockchainProcess` atm) */
+    val syncEnabled: Boolean
 }
 
 interface BlockchainInfrastructure : Shutdownable {
@@ -60,7 +68,8 @@ interface BlockchainInfrastructure : Shutdownable {
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams?
     ): BlockchainProcess
 
     /**

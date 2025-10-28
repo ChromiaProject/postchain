@@ -72,7 +72,7 @@ import kotlin.system.measureTimeMillis
  * has been build to see if we need to upgrade anything about the chain's configuration.
  * Since ProcMan doesn't like to do many important things at once, we block (=synchorize) in the beginning of
  * "wrappedRestartHandler()", and only let go after we are done. If there are errors somewhere else in the code,
- * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test [ForkSlowIntegrationTest]
+ * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test `ForkSlowIntegrationTest`
  * "testAliasesManyLevels()" for an example that (used to cause) deadlock).
  *
  * Doc: see the /doc/postchain_ManagedModeFlow.graphml (created with yEd)
@@ -250,7 +250,7 @@ open class ManagedBlockchainProcessManager(
                 restart
             } catch (e: Exception) {
                 logger.error(e) { "Exception in after commit handler: $e" }
-                startBlockchainAsync(chainId, bTrace, null)
+                startBlockchainAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)

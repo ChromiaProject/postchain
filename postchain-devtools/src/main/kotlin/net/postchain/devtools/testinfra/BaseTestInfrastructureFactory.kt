@@ -17,6 +17,7 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainProcessParams
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.InfrastructureFactory
@@ -61,7 +62,8 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams?
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }

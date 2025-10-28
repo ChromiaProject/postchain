@@ -379,7 +379,8 @@ class PcuManagedModeTest : ManagedModeTest() {
             markPendingConfigurationAsFaulty(chain, reconfigHeight)
             // Make sure the other nodes drop it
             otherNodes.forEach { node ->
-                (node.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess).workerContext.restartNotifier.notifyRestart(null)
+                (node.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess).workerContext
+                        .restartNotifier.notifyRestart(null, null)
             }
             // Await restart with new config
             Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {

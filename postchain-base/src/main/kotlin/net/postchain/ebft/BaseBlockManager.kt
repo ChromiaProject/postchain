@@ -192,7 +192,7 @@ class BaseBlockManager(
                     if (isIncomingFaultyConfigPending) {
                         // Let's also attempt to load the potentially faulty pending config
                         logger.info("Try to load potentially failing pending config")
-                        workerContext.restartNotifier.notifyRestart(incomingBlockFailedConfigHash.data)
+                        workerContext.restartNotifier.notifyRestart(incomingBlockFailedConfigHash.data, null)
                     }
                 }
             }
@@ -213,7 +213,7 @@ class BaseBlockManager(
             if (isMyConfigPending) {
                 // early adopter
                 logger.info("Wrong config used. Chain will be restarted")
-                workerContext.restartNotifier.notifyRestart(null)
+                workerContext.restartNotifier.notifyRestart(null, null)
             } else {
                 checkForConfigurationUpdate(bcConfig, bcConfigProvider)
             }
@@ -227,7 +227,7 @@ class BaseBlockManager(
         if (configCheckResult.changeNeeded) {
             // late adopter
             logger.info("Wrong config used. Chain will be restarted")
-            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad)
+            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad, null)
         }
     }
 

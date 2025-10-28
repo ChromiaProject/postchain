@@ -5,10 +5,13 @@ package net.postchain.ebft.worker
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainProcessParams
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.framework.AbstractBlockchainProcess
@@ -31,19 +34,24 @@ import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
+import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
+import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.seconds
 
-class ReadOnlyBlockchainProcess(
+open class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
         private val blockchainState: BlockchainState,
         private val transactionForwarder: TransactionForwarder? = null,
+        private val processParams: BlockchainProcessParams? = null,
+        private val initialSyncMonitorDelay: Long = 30000
 ) : AbstractBlockchainProcess(
         "${if (blockchainState == BlockchainState.PAUSED) "paused-" else ""}replica-c${workerContext.blockchainConfiguration.chainID}",
         workerContext.engine
@@ -51,7 +59,7 @@ class ReadOnlyBlockchainProcess(
 
     companion object : KLogging()
 
-    private var txChecker: ScheduledExecutorService? = null
+    private var singleExecutor: ScheduledExecutorService? = null
 
     val isForwardingReplica = transactionForwarder != null
 
@@ -73,6 +81,10 @@ class ReadOnlyBlockchainProcess(
     )
 
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
+
+    protected val restartNotified = AtomicBoolean(false)
+    protected var syncMonitorLastHeight: Long? = null
+    protected var syncMonitorLastActivityTime: Instant? = null
 
     private val fastSynchronizer = FastSynchronizer(
             workerContext,
@@ -102,8 +114,49 @@ class ReadOnlyBlockchainProcess(
 
     private var syncMethod = SyncMethod.NOT_SYNCING
 
+    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(
+            workerContext.engine.getBlockQueries(), workerContext.communicationManager,
+            workerContext.engine.getBlockQueries().getLastBlockHeight().get(),
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig))
+
+    override fun isExpectingNewBlocks(): Boolean {
+        return processParams == null || processParams.syncEnabled
+    }
+
     override fun start() {
         super.start()
+
+        singleExecutor = Executors.newSingleThreadScheduledExecutor(
+                ThreadFactoryBuilder().setNameFormat("$processName-scheduled").build()
+        ).apply {
+            if (blockchainState == BlockchainState.PAUSED && isExpectingNewBlocks()) {
+                val maxBlockTime = (workerContext.blockchainConfiguration.rawConfig[KEY_BLOCKSTRATEGY]
+                        ?.toObject<BaseBlockBuildingStrategyConfigurationData>()
+                        ?: BaseBlockBuildingStrategyConfigurationData.default).maxBlockTime
+                val syncBlockTimeout = maxBlockTime * 3
+                scheduleAtFixedRate({
+                    if (syncMonitorLastActivityTime == null) {
+                        if (syncMethod != SyncMethod.NOT_SYNCING) {
+                            syncMonitorLastActivityTime = Instant.now()
+                        }
+                    } else if (!restartNotified.get()) {
+                        val height = workerContext.engine.getBlockQueries().getLastBlockHeight().get()
+                        if (syncMonitorLastHeight == height) {
+                            if (Instant.now().minusMillis(syncBlockTimeout).isAfter(syncMonitorLastActivityTime)) {
+                                withLoggingContext(loggingContext) {
+                                    logger.info { "No new blocks. Restarting without sync enabled " }
+                                }
+                                restartNotified.set(true)
+                                workerContext.restartNotifier.notifyRestart(null, false)
+                            }
+                        } else {
+                            syncMonitorLastHeight = height
+                        }
+                    }
+                }, initialSyncMonitorDelay, maxBlockTime, TimeUnit.MILLISECONDS)
+            }
+        }
+
         if (transactionForwarder != null) {
             thread(name = "$processName-txForwarder", start = true) {
                 withLoggingContext(loggingContext) {
@@ -123,10 +176,7 @@ class ReadOnlyBlockchainProcess(
                 }
             }
 
-            txChecker = Executors.newSingleThreadScheduledExecutor(
-                    ThreadFactoryBuilder().setNameFormat("$processName-txStatusChecker").build()
-            ).apply {
-                scheduleAtFixedRate({
+            singleExecutor?.scheduleAtFixedRate({
                     for (tx in workerContext.engine.getTransactionQueue().takenTransactions()) {
                         try {
                             val apiStatus = transactionForwarder.checkStatus(tx)
@@ -147,7 +197,6 @@ class ReadOnlyBlockchainProcess(
                         /* initialDelay = */ 0,
                         /* period = */ 1,
                         TimeUnit.SECONDS)
-            }
         }
     }
 
@@ -156,10 +205,15 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        // TODO: Maybe we need to check latest rather than current config?
         val snapshotSyncEnabled = BlockchainConfigurationData.snapshotSyncEnabled(workerContext.blockchainConfiguration.rawConfig)
         withLoggingContext(loggingContext) {
-            if (params.slowSyncEnabled) {
+            if (!isExpectingNewBlocks()) {
+                logger.debug { "Syncing is disabled for this read only process" }
+                while (isProcessRunning()) {
+                    forceReadOnlyMessageProcessor.processMessages()
+                    Thread.sleep(100)
+                }
+            } else if (params.slowSyncEnabled) {
                 logger.debug { "Using slow sync for read only bc process" }
                 if (snapshotSyncEnabled) {
                     syncMethod = SyncMethod.SNAPSHOT_SYNC
@@ -186,7 +240,7 @@ class ReadOnlyBlockchainProcess(
 
     override fun cleanup() {
         withLoggingContext(loggingContext) {
-            txChecker?.shutdown()
+            singleExecutor?.shutdown()
             blockDatabase.stop()
             persistOnlyBlockWriter.stop()
             workerContext.shutdown()

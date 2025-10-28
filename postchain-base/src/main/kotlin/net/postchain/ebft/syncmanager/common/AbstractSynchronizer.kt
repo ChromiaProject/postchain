@@ -134,7 +134,7 @@ abstract class AbstractSynchronizer(
             // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
             if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
                 logger.debug { "Incoming config is pending with us as signer, will restart" }
-                workerContext.restartNotifier.notifyRestart(pendingConfigPromotingUsAsSigner)
+                workerContext.restartNotifier.notifyRestart(pendingConfigPromotingUsAsSigner, null)
                 true
             } else {
                 logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
@@ -190,7 +190,7 @@ abstract class AbstractSynchronizer(
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
             if (configCheckResult.changeNeeded) {
                 logger.warn { "Wrong config used. Chain will be restarted" }
-                workerContext.restartNotifier.notifyRestart(null)
+                workerContext.restartNotifier.notifyRestart(null, null)
                 return true
             }
 
@@ -234,7 +234,7 @@ abstract class AbstractSynchronizer(
 
                             logger.info { "A valid configuration for management chain on height $height was loaded. Chain will be restarted." }
 
-                            workerContext.restartNotifier.notifyRestart(null)
+                            workerContext.restartNotifier.notifyRestart(null, null)
                             true
                         } catch (e: Exception) {
                             logger.error("Failed to validate or load configuration on height $height: ${e.message}", e)
@@ -270,7 +270,7 @@ abstract class AbstractSynchronizer(
                 try {
                     validator.validateWitness(block.witness, witnessBuilder)
                     logger.debug { "Witness check passed. Reloading chain with pending configuration." }
-                    workerContext.restartNotifier.notifyRestart(configHash)
+                    workerContext.restartNotifier.notifyRestart(configHash, null)
                     return true
                 } catch (e: Exception) {
                     logger.error(e) { "Block signature for block with new pending config is not valid" }

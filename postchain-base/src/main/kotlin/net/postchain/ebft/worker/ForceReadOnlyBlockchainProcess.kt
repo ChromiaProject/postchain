@@ -38,7 +38,9 @@ open class ForceReadOnlyBlockchainProcess(
         actual
     }
 
-    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight, RateLimitConfiguration.fromAppConfig(workerContext.appConfig))
+    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(
+            workerContext.engine.getBlockQueries(), workerContext.communicationManager,
+            blockHeight, RateLimitConfiguration.fromAppConfig(workerContext.appConfig))
 
     override fun action() {
         withLoggingContext(loggingContext) {
@@ -70,4 +72,6 @@ open class ForceReadOnlyBlockchainProcess(
     }
 
     override fun currentBlockHeight(): Long = blockHeight
+
+    override fun isExpectingNewBlocks(): Boolean = false
 }

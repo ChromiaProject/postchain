@@ -26,6 +26,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.BlockchainProcessParams
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.DefaultBlockchainConfigurationFactory
@@ -90,7 +91,6 @@ open class BaseBlockchainProcessManager(
 
     // For DEBUG only
     var insideATest = false
-    var blockDebug: BlockTrace? = null
 
     private val metrics = BlockchainProcessManagerMetrics(this)
 
@@ -102,20 +102,20 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to start.
      * @param pendingConfigHash The hash of the pending configuration to load on restart, or null if no pending config should be loaded.
      */
-    protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray? = null) {
+    protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray? = null, processParams: BlockchainProcessParams? = null) {
         if (!scheduledForStart.add(chainId)) {
             logger.info { "Chain $chainId is already scheduled for start" }
             return
         }
-        startBlockchainAsyncInternal(chainId, bTrace, pendingConfigHash)
+        startBlockchainAsyncInternal(chainId, bTrace, pendingConfigHash, processParams)
     }
 
-    private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray?) {
+    private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray?, processParams: BlockchainProcessParams? = null) {
         logger.info { "startBlockchainAsync() - Enqueue async starting of blockchain with chainId: $chainId" }
         executor.execute {
             withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
                 try {
-                    startBlockchainInternal(chainId, bTrace, pendingConfigHash)
+                    startBlockchainInternal(chainId, bTrace, pendingConfigHash, processParams)
                 } catch (e: Exception) {
                     logger.error(e) { e.message }
                 }
@@ -155,10 +155,10 @@ open class BaseBlockchainProcessManager(
      * @throws UserMistake if failed
      */
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid = withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
-        startBlockchainInternal(chainId, bTrace, null)
+        startBlockchainInternal(chainId, bTrace, null, null)
     }
 
-    private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray?): BlockchainRid {
+    private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray?, processParams: BlockchainProcessParams?): BlockchainRid {
         chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             val blockchainRid = processLock.withLock {
                 startDebug("Begin by stopping blockchain", bTrace)
@@ -191,9 +191,14 @@ open class BaseBlockchainProcessManager(
                         }
                         afterMakeConfiguration(chainId, blockchainConfig)
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                            startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext)
+                            startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext, processParams)
                         }
                         if (!initialEContext.conn.isClosed) blockBuilderStorage.releaseSharedContext(initialEContext)
+
+                        // Do not keep tx open if no more blocks are expected
+                        if (blockchainProcesses[chainId]?.isExpectingNewBlocks() == false) {
+                            blockBuilderStorage.closeWriteConnection(initialEContext, false)
+                        }
                         blockchainConfig.blockchainRid
                     } catch (e: Exception) {
                         var eContext: EContext? = null
@@ -237,13 +242,15 @@ open class BaseBlockchainProcessManager(
     protected open fun afterStartBlockchain(chainId: Long) {}
 
     private fun startBlockchainImpl(blockchainConfig: BlockchainConfiguration, chainId: Long, bTrace: BlockTrace?,
-                                    initialEContext: EContext) {
+                                    initialEContext: EContext, processParams: BlockchainProcessParams?) {
         startDebug("BlockchainConfiguration has been created", bTrace)
 
         val beforeCommitHandler = buildBeforeCommitHandler(blockchainConfig)
         val afterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
-        val restartNotifier = BlockchainRestartNotifier { pendingConfigHash ->
-            startBlockchainAsync(chainId, bTrace, pendingConfigHash)
+        val restartNotifier = BlockchainRestartNotifier { pendingConfigHash, syncEnabled ->
+            startBlockchainAsync(chainId, bTrace, pendingConfigHash, syncEnabled?.let {
+                BaseBlockchainProcessParams(syncEnabled)
+            })
         }
         val engine = blockchainInfrastructure.makeBlockchainEngine(
                 blockchainConfig,
@@ -263,7 +270,8 @@ open class BaseBlockchainProcessManager(
                 blockchainConfig,
                 engine,
                 restartNotifier,
-                getBlockchainState(chainId, blockchainConfig.blockchainRid)
+                getBlockchainState(chainId, blockchainConfig.blockchainRid),
+                processParams
         )
         logger.debug("BlockchainProcess has been launched")
 
@@ -301,7 +309,7 @@ open class BaseBlockchainProcessManager(
         }
         blockBuilderStorage.closeWriteConnection(eContext, true)
 
-        startBlockchainAsyncInternal(chainId, bTrace, null)
+        startBlockchainAsyncInternal(chainId, bTrace, null, null)
     }
 
     private fun addToErrorQueue(chainId: Long, e: Exception) {
@@ -325,9 +333,11 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             engine: BlockchainEngine,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            processParams: BlockchainProcessParams? = null
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.createBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
+        blockchainProcesses[chainId] = blockchainInfrastructure.createBlockchainProcess(engine,
+                blockchainConfigProvider, restartNotifier, blockchainState, processParams)
                 .also {
                     try {
                         extensions.forEach { ext -> ext.connectProcess(it) }
