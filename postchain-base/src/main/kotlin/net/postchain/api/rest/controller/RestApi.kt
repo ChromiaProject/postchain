@@ -155,23 +155,16 @@ import org.http4k.lens.LensFailure
 import org.http4k.lens.Meta
 import org.http4k.lens.ParamMeta
 import org.http4k.lens.RequestKey
-import org.http4k.routing.ResourceLoader
 import org.http4k.routing.bind
 import org.http4k.routing.path
 import org.http4k.routing.routes
-import org.http4k.routing.static
 import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.time.Duration
-import java.util.Timer
-import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.timer
-import kotlin.concurrent.timerTask
 
 const val BLOCKCHAIN_RID = "blockchainRid"
 
@@ -353,9 +346,22 @@ class RestApi(
     private val volatileResponse = CacheResponse.NoCache()
 
     private val app = routes(
-            "/" bind static(ResourceLoader.Classpath("/restapi-root")),
-            "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
-            "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
+            // Static content
+            "/" bind GET to { serveStaticFile("/restapi-root/index.html") },
+            "/_debug" bind GET to { serveStaticFile("/restapi-root/_debug/index.html") },
+            "/apidocs" bind GET to { serveStaticFile("/restapi-docs/index.html") },
+            "/apidocs/{file}" bind GET to { request: Request ->
+                val file = request.path("file") ?: ""
+                when (file) {
+                    "index.html", "pdf.html" -> {
+                        serveStaticFile("/restapi-docs/$file")
+                    }
+                    "postchain-restapi.yaml" -> {
+                        serveStaticFile("/restapi-docs/postchain-restapi.yaml", "text/yaml")
+                    }
+                    else -> Response(NOT_FOUND)
+                }
+            },
 
             "/version" bind GET to ::getVersion,
             "/version/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainVersion),
@@ -407,6 +413,16 @@ class RestApi(
 
             "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to ::getHighestBlockHeightAnchoringCheck,
     )
+
+    private fun serveStaticFile(resourcePath: String, contentType: String = "text/html"): Response {
+        val content = this::class.java.getResourceAsStream(resourcePath)
+                ?.use { it.readBytes() }
+                ?: throw NotFoundError("${resourcePath.substringAfterLast('/')} not found")
+
+        return Response(OK)
+                .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
+                .body(String(content, Charsets.UTF_8))
+    }
 
     @Suppress("UNUSED_PARAMETER")
     private fun getVersion(request: Request): Response = Response(OK).with(
