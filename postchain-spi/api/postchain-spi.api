@@ -2166,10 +2166,32 @@ public abstract interface class net/postchain/core/block/SpecialTxHandlerAware {
 	public abstract fun setSpecialTxHandler (Lnet/postchain/base/SpecialTransactionHandler;)V
 }
 
+public class net/postchain/debug/ConcurrentLinkedHashMap : java/util/Map, kotlin/jvm/internal/markers/KMutableMap {
+	public fun <init> ()V
+	public fun clear ()V
+	public fun containsKey (Ljava/lang/Object;)Z
+	public fun containsValue (Ljava/lang/Object;)Z
+	public final fun entrySet ()Ljava/util/Set;
+	public fun get (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun getEntries ()Ljava/util/Set;
+	public fun getKeys ()Ljava/util/Set;
+	public final fun getOrPut (Ljava/lang/Object;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public fun getSize ()I
+	public fun getValues ()Ljava/util/Collection;
+	public fun isEmpty ()Z
+	public final fun keySet ()Ljava/util/Set;
+	public fun put (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public fun putAll (Ljava/util/Map;)V
+	public fun remove (Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun size ()I
+	public final fun values ()Ljava/util/Collection;
+}
+
 public final class net/postchain/debug/DiagnosticData : java/util/Map, kotlin/jvm/internal/markers/KMutableMap, net/postchain/debug/DiagnosticValue {
 	public fun <init> ()V
 	public fun <init> (Ljava/util/Map;)V
-	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lnet/postchain/debug/ConcurrentLinkedHashMap;)V
+	public synthetic fun <init> (Lnet/postchain/debug/ConcurrentLinkedHashMap;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> ([Lkotlin/Pair;)V
 	public fun clear ()V
 	public final fun containsKey (Ljava/lang/Object;)Z

@@ -1,13 +1,11 @@
 package net.postchain.debug
 
-import java.util.Collections
-
 class DiagnosticData(
-        private val properties: MutableMap<DiagnosticProperty, DiagnosticValue> = Collections.synchronizedMap(linkedMapOf())
+        private val properties: ConcurrentLinkedHashMap<DiagnosticProperty, DiagnosticValue> = ConcurrentLinkedHashMap()
 ) : DiagnosticValue, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) :
-            this(values.toMap(Collections.synchronizedMap(linkedMapOf())))
+            this(values.toMap(ConcurrentLinkedHashMap()))
 
     override val value: Any
         get() = synchronized(properties) {
