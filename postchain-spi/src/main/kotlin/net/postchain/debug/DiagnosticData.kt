@@ -8,9 +8,7 @@ class DiagnosticData(
             this(values.toMap(ConcurrentLinkedHashMap()))
 
     override val value: Any
-        get() = synchronized(properties) {
-            properties.map { it.key.prettyName to it.value.value }.toMap()
-        }
+        get() = properties.map { it.key.prettyName to it.value.value }.toMap()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

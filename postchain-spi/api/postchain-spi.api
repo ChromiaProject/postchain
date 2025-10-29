@@ -2189,7 +2189,6 @@ public class net/postchain/debug/ConcurrentLinkedHashMap : java/util/Map, kotlin
 
 public final class net/postchain/debug/DiagnosticData : java/util/Map, kotlin/jvm/internal/markers/KMutableMap, net/postchain/debug/DiagnosticValue {
 	public fun <init> ()V
-	public fun <init> (Ljava/util/Map;)V
 	public fun <init> (Lnet/postchain/debug/ConcurrentLinkedHashMap;)V
 	public synthetic fun <init> (Lnet/postchain/debug/ConcurrentLinkedHashMap;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> ([Lkotlin/Pair;)V
