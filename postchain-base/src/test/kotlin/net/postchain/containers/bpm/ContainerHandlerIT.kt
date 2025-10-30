@@ -113,13 +113,9 @@ internal class ContainerHandlerIT {
         }
     }
 
-    private fun getResolvedDockerHost(): URI? {
-        return if (System.getenv("DOCKER_HOST") != null) {
-            val dockerUri = URI(System.getenv("DOCKER_HOST"))
-            // Pass docker host to master container with hostname resolved
-            URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
-        } else {
-            null
-        }
+    private fun getResolvedDockerHost(): URI? = (System.getenv("POSTCHAIN_DOCKER_HOST") ?: System.getenv("DOCKER_HOST"))?.let {
+        val dockerUri = URI(it)
+        // Pass docker host to master container with hostname resolved
+        URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
     }
 }
