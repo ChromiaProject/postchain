@@ -1,11 +1,11 @@
 package net.postchain.debug
 
 class DiagnosticData(
-        private val properties: ConcurrentLinkedHashMap<DiagnosticProperty, DiagnosticValue> = ConcurrentLinkedHashMap()
+        private val properties: SynchronizedLinkedHashMap<DiagnosticProperty, DiagnosticValue> = SynchronizedLinkedHashMap()
 ) : DiagnosticValue, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) :
-            this(values.toMap(ConcurrentLinkedHashMap()))
+            this(values.toMap(SynchronizedLinkedHashMap()))
 
     override val value: Any
         get() = properties.map { it.key.prettyName to it.value.value }.toMap()

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class DiagnosticDataTest {
     @Test
     fun diagnosticDataCanBeUpdated() {
-        val map = ConcurrentLinkedHashMap<DiagnosticProperty, DiagnosticValue>()
+        val map = SynchronizedLinkedHashMap<DiagnosticProperty, DiagnosticValue>()
         val data = DiagnosticData(map)
         assertThat(data.value).isEqualTo(mapOf<DiagnosticProperty, DiagnosticValue>())
         map[DiagnosticProperty.VERSION] = EagerDiagnosticValue("1")

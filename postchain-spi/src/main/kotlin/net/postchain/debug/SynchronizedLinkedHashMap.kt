@@ -5,7 +5,7 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 /** Wrapper for java LinkedHashMap, but as Kotlin MutableMap, that is thread safe */
-open class ConcurrentLinkedHashMap<K, V> : MutableMap<K, V> {
+open class SynchronizedLinkedHashMap<K, V> : MutableMap<K, V> {
     private val map = LinkedHashMap<K, V>()
     private val lock = ReentrantReadWriteLock()
 
@@ -27,17 +27,17 @@ open class ConcurrentLinkedHashMap<K, V> : MutableMap<K, V> {
 
     override val values: MutableCollection<V>
         get() = lock.read {
-            map.values.toMutableList() // Return snapshot
+            map.values.toMutableList()
         }
 
     override val keys: MutableSet<K>
         get() = lock.read {
-            map.keys.toMutableSet() // Return snapshot
+            map.keys.toMutableSet()
         }
 
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
         get() = lock.read {
-            map.entries.toMutableSet() // Return snapshot
+            map.entries.toMutableSet()
         }
 
     override val size: Int
