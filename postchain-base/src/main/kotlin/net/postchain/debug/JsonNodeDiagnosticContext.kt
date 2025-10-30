@@ -5,11 +5,11 @@ import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.InfrastructureFactory
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class JsonNodeDiagnosticContext private constructor(
         private val properties: DiagnosticData,
-        private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
+        private val blockchainDiagnosticData: ConcurrentHashMap<BlockchainRid, DiagnosticData>
 ) : NodeDiagnosticContext, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory, databaseServerVersion: String) : this(
@@ -21,7 +21,8 @@ class JsonNodeDiagnosticContext private constructor(
             DiagnosticProperty.DATABASE_SERVER_VERSION withValue databaseServerVersion,
     )
 
-    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), Collections.synchronizedMap(mutableMapOf()))
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>)
+            : this(DiagnosticData(*values), ConcurrentHashMap())
 
     private val json = JsonFactory.makeJson()
 

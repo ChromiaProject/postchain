@@ -7,7 +7,5 @@ class LazyDiagnosticValueCollection(
     val collection get() = lazyCollection()
 
     override val value
-        get() = synchronized(collection) {
-            collection.map { it.value }
-        }
+        get() = collection.map { it.value }
 }

@@ -1,18 +1,14 @@
 package net.postchain.debug
 
-import java.util.Collections
-
 class DiagnosticData(
-        private val properties: MutableMap<DiagnosticProperty, DiagnosticValue> = Collections.synchronizedMap(linkedMapOf())
+        private val properties: SynchronizedLinkedHashMap<DiagnosticProperty, DiagnosticValue> = SynchronizedLinkedHashMap()
 ) : DiagnosticValue, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) :
-            this(values.toMap(Collections.synchronizedMap(linkedMapOf())))
+            this(values.toMap(SynchronizedLinkedHashMap()))
 
     override val value: Any
-        get() = synchronized(properties) {
-            properties.map { it.key.prettyName to it.value.value }.toMap()
-        }
+        get() = properties.map { it.key.prettyName to it.value.value }.toMap()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
