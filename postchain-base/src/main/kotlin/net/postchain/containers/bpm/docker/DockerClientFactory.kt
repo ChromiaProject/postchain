@@ -17,7 +17,7 @@ object DockerClientFactory {
 
     fun create(): DockerClient {
 
-        val endPointFromEnv: String = System.getenv("DOCKER_HOST") ?: defaultDockerEndpoint()
+        val endPointFromEnv: String = System.getenv("POSTCHAIN_DOCKER_HOST") ?: System.getenv("DOCKER_HOST") ?: defaultDockerEndpoint()
 
         val config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
                 .withDockerHost(endPointFromEnv)
