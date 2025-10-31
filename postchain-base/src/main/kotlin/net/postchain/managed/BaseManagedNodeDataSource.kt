@@ -286,4 +286,17 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             height
         }
     }
+
+    override fun getManagementChain(): BlockchainRid? = if (nmApiVersion >= 7) {
+        try {
+            query(
+                    "nm_get_management_chain",
+                    buildArgs()
+            ).asByteArray().let { BlockchainRid(it) }
+        } catch (_: UserMistake) { // can happen if the management chain is not initialized
+            null
+        }
+    } else {
+        null
+    }
 }

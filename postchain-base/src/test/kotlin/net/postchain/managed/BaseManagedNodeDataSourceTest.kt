@@ -3,6 +3,7 @@ package net.postchain.managed
 import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationOptions
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import java.time.Instant
@@ -293,6 +295,34 @@ class BaseManagedNodeDataSourceTest {
             on { pubKeyByteArray } doReturn byteArrayOf()
         })
         assertThat(sut.getBlockchainApiUrls(ZERO_RID)).isEqualTo(expected)
+    }
+
+    @Test
+    fun testGetManagementChainSuccess() {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(7L)
+            on { query(eq("nm_get_management_chain"), any()) } doReturn gtv(BlockchainRid.buildRepeat(1))
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertThat(sut.getManagementChain()).isEqualTo(BlockchainRid.buildRepeat(1))
+    }
+
+    @Test
+    fun testGetManagementChainNotInitialized() {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(7L)
+            on { query(eq("nm_get_management_chain"), any()) } doThrow UserMistake("no records found")
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertThat(sut.getManagementChain()).isNull()
     }
 
     companion object {

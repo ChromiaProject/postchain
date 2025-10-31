@@ -34,6 +34,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
     private lateinit var nodes: Map<NodeSeqNumber, NodeSetup>
     private lateinit var myNode: NodeSetup
+    lateinit var directoryChain: BlockchainRid
     private val inactiveStates = setOf(BlockchainState.REMOVED, BlockchainState.ARCHIVED)
 
     fun addNodeSetup(nodeMap: Map<NodeSeqNumber, NodeSetup>, nodeSetup: NodeSetup) {
@@ -161,6 +162,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         }
         return null
     }
+
+    override fun getManagementChain(): BlockchainRid = directoryChain
 
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
