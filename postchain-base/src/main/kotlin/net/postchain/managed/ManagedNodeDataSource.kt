@@ -42,4 +42,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getBlockchainApiUrls(brid: BlockchainRid): List<String>
 
     fun getHistoricConfigurationHeight(blockchainRid: BlockchainRid, historicBlockHeight: Long): Long?
+
+    /** Returns the RID of the management/directory chain, or `null` if not possible to fetch. */
+    fun getManagementChain(): BlockchainRid?
 }

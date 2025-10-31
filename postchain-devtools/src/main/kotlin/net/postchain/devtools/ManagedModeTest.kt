@@ -159,6 +159,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     protected open fun createManagedNodeDataSource() = MockManagedNodeDataSource()
+            .also { it.directoryChain = ChainUtil.ridOf(c0) }
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
