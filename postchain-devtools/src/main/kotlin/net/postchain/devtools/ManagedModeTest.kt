@@ -11,6 +11,7 @@ import net.postchain.base.configuration.KEY_GTX_MODULES
 import net.postchain.base.configuration.KEY_HISTORIC_BRID
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -159,7 +160,6 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     protected open fun createManagedNodeDataSource() = MockManagedNodeDataSource()
-            .also { it.directoryChain = ChainUtil.ridOf(c0) }
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
@@ -202,7 +202,12 @@ open class ManagedModeTest : AbstractSyncTest() {
         val signerKeys = (0 until signers).associateWith { KeyPairHelper.pubKey(it) }
         addGtxBlockchainConfiguration(0, signerKeys, null, 0)
         runNodes(signers, replicas, infra, restApi)
-        mockDataSources.forEach { (nodeId, dataSource) -> dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!) }
+        mockDataSources.forEach { (nodeId, dataSource) ->
+            dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!)
+            dataSource.directoryChain = withReadConnection(nodes[nodeId].postchainContext.blockBuilderStorage, 0L) { ctx ->
+                DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+            }
+        }
         buildBlock(c0, 0)
     }
 
