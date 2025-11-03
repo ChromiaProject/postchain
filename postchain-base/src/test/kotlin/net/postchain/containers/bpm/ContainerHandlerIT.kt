@@ -74,7 +74,8 @@ internal class ContainerHandlerIT {
                 resourceLimits,
                 false,
                 containerNodeConfig.containerImage,
-                GtvDictionary.build(emptyMap())
+                GtvDictionary.build(emptyMap()),
+                listOf()
         )
         logger.debug { ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().toString() }
         sut.startContainer(postchainContainerMock)

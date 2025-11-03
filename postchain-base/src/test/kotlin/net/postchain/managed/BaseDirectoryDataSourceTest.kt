@@ -9,6 +9,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
+import net.postchain.containers.bpm.ContainerJarExtensionInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.Cpu
 import net.postchain.containers.bpm.resources.IoRead
@@ -217,6 +218,55 @@ class BaseDirectoryDataSourceTest {
         assertThat(sut.getContainerRateLimits("my_container")).isEmpty()
     }
 
+    @ParameterizedTest
+    @MethodSource("getJarExtensionsForContainerTestData")
+    fun testGetJarExtensionsForContainer(apiVersion: Long, gtvResult: Gtv, expected: List<ContainerJarExtensionInfo>) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_get_container_jar_extensions"), any()) } doReturn gtvResult
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getJarExtensionsForContainer("my_container")).isEqualTo(expected)
+    }
+
+    @Test
+    fun testGetJarExtensionsForContainerUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(27)
+            on { query(eq("nm_get_container_jar_extensions"), any()) } doThrow
+                    UserMistake("Container my_container not found")
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getJarExtensionsForContainer("my_container")).isEmpty()
+    }
+
+    @ParameterizedTest
+    @MethodSource("getJarExtensionTestData")
+    fun testGetJarExtension(apiVersion: Long, gtvResult: Gtv, expected: ByteArray?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_get_jar_extension"), any()) } doReturn gtvResult
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        val actual = sut.getJarExtension("ext_1")
+        if (expected == null) {
+            assertThat(actual).isEqualTo(null)
+        } else {
+            assertThat(actual?.toList()).isEqualTo(expected.toList())
+        }
+    }
+
+    @Test
+    fun testGetJarExtensionUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(27)
+            on { query(eq("nm_get_jar_extension"), any()) } doThrow
+                    UserMistake("Extension ext_1 not found")
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getJarExtension("ext_1")).isEqualTo(null)
+    }
+
     companion object {
 
         @JvmStatic
@@ -337,6 +387,43 @@ class BaseDirectoryDataSourceTest {
                         gtv(emptyMap()),
                         emptyMap<String, ContainerRateLimit>()
                 )
+        )
+
+        @JvmStatic
+        fun getJarExtensionsForContainerTestData(): List<Array<Any?>> = listOf(
+                arrayOf(
+                        26L,
+                        GtvArray(arrayOf()),
+                        emptyList<ContainerJarExtensionInfo>()
+                ),
+                arrayOf(
+                        27L,
+                        GtvArray(arrayOf()),
+                        emptyList<ContainerJarExtensionInfo>()
+                ),
+                arrayOf(
+                        27L,
+                        gtv(listOf(
+                                gtv(mapOf(
+                                        "name" to gtv("ext_1"),
+                                        "hash" to gtv(byteArrayOf(1, 2, 3))
+                                )),
+                                gtv(mapOf(
+                                        "name" to gtv("ext_2"),
+                                        "hash" to gtv(byteArrayOf(4, 5, 6))
+                                )),
+                        )),
+                        listOf(
+                                ContainerJarExtensionInfo("ext_1", byteArrayOf(1, 2, 3)),
+                                ContainerJarExtensionInfo("ext_2", byteArrayOf(4, 5, 6))
+                        )
+                )
+        )
+
+        @JvmStatic
+        fun getJarExtensionTestData(): List<Array<Any?>> = listOf(
+                arrayOf(26L, gtv(byteArrayOf(9, 9)), null),
+                arrayOf(27L, gtv(byteArrayOf(7, 8, 9)), byteArrayOf(7, 8, 9))
         )
     }
 }

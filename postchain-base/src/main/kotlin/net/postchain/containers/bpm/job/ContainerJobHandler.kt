@@ -190,7 +190,10 @@ class ContainerJobHandler(
             getDefaultContainerImage(containerNodeConfig)
         }
         pullImage(image)
-        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image, psContainer.configuration).also {
+        val jarExtensions = resolveJarExtensions(psContainer.jarExtensions) { name ->
+            directoryDataSource().getJarExtension(name)
+        }
+        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image, psContainer.configuration, jarExtensions).also {
             logger.debug { dcLog(psContainer.containerName, "created", psContainer) }
         }
     }

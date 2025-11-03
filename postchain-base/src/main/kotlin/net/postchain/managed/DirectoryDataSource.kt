@@ -3,6 +3,7 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
+import net.postchain.containers.bpm.ContainerJarExtensionInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.gtv.GtvDictionary
 import java.time.Instant
@@ -67,4 +68,14 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * Retrieve any container-specific configurations set by the container owner
      */
     fun getContainerConfiguration(container: String): GtvDictionary
+
+    /**
+     * Returns any custom JAR extensions for the container,
+     */
+    fun getJarExtensionsForContainer(container: String): List<ContainerJarExtensionInfo>
+
+    /**
+     * Returns custom JAR extension raw file data
+     */
+    fun getJarExtension(extension: String): ByteArray?
 }

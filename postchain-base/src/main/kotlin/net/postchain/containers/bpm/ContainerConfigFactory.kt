@@ -21,6 +21,7 @@ import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.makeLenientGtvGson
+import java.nio.file.Path
 
 object ContainerConfigFactory : KLogging() {
 
@@ -29,10 +30,11 @@ object ContainerConfigFactory : KLogging() {
 
     fun setConfig(createContainerCmd: CreateContainerCmd, fs: FileSystem, appConfig: AppConfig,
                   containerNodeConfig: ContainerNodeConfig, containerName: ContainerName,
-                  resourceLimits: ContainerResourceLimits, readOnly: Boolean, directoryContainerConfiguration: GtvDictionary) {
+                  resourceLimits: ContainerResourceLimits, readOnly: Boolean, directoryContainerConfiguration: GtvDictionary,
+                  jarExtensions: List<Path>) {
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-        val volumes = createVolumes(fs, containerName, containerNodeConfig)
+        val volumes = createVolumes(fs, containerName, containerNodeConfig, jarExtensions)
         val portBindings = createPortBindings(restApiConfig, containerNodeConfig, containerName)
         val hostConfig = createHostConfig(volumes, portBindings, resourceLimits, containerNodeConfig)
 
@@ -136,7 +138,7 @@ object ContainerConfigFactory : KLogging() {
         return portBindings
     }
 
-    private fun createVolumes(fs: FileSystem, containerName: ContainerName, containerNodeConfig: ContainerNodeConfig): MutableList<Bind> {
+    private fun createVolumes(fs: FileSystem, containerName: ContainerName, containerNodeConfig: ContainerNodeConfig, jarExtensions: List<Path>): MutableList<Bind> {
 
         val volumes = mutableListOf<Bind>()
 
@@ -176,6 +178,10 @@ object ContainerConfigFactory : KLogging() {
         if (containerNodeConfig.subnodeUser != null) {
             volumes.add(Bind("/etc/passwd", Volume("/etc/passwd"), AccessMode.ro))
             volumes.add(Bind("/etc/group", Volume("/etc/group"), AccessMode.ro))
+        }
+
+        for (jarExtension in jarExtensions) {
+            volumes.add(Bind(jarExtension.toString(), Volume("${FileSystem.CONTAINER_LIBS_PATH}/${jarExtension.fileName}"), AccessMode.ro))
         }
 
         return volumes

@@ -19,6 +19,7 @@ interface PostchainContainer {
     val configuration: GtvDictionary
     val containerPortMapping: MutableMap<Int, Int>
     val readOnly: AtomicBoolean
+    val jarExtensions: Set<ContainerJarExtensionInfo>
 
     fun shortContainerId(): String?
     fun findProcesses(chainId: Long): ContainerBlockchainProcess?
@@ -45,6 +46,9 @@ interface PostchainContainer {
 
     /** @return `true` if there are updates */
     fun updateConfiguration(): Boolean
+
+    /** @return `true` if there are updates */
+    fun updateJarExtensions(): Boolean
 
     /** @return `false` if a limit is reached and state has changed */
     fun checkResourceLimits(fileSystem: FileSystem): Boolean
