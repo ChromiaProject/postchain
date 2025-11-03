@@ -35,6 +35,9 @@ class DefaultPostchainContainer(
     override var image = getImageForContainer()
 
     @Volatile
+    override var jarExtensions = getJarExtensionsForContainer()
+
+    @Volatile
     override var configuration = dataSource.getContainerConfiguration(containerName.directoryContainer)
 
     override val readOnly = AtomicBoolean(false)
@@ -174,11 +177,25 @@ class DefaultPostchainContainer(
         }
     }
 
+    override fun updateJarExtensions(): Boolean {
+        val oldJarExtension = jarExtensions
+        val newJarExtensions = getJarExtensionsForContainer()
+        return if (oldJarExtension != newJarExtensions) {
+            jarExtensions = newJarExtensions
+            setLastUpdated()
+            true
+        } else {
+            false
+        }
+    }
+
     private fun getImageForContainer(): ContainerImageInfo? =
             if (containerNodeConfig.containerImageFromDirectoryChain)
                 dataSource.getImageForContainerOrDefault(containerName.directoryContainer)
             else
                 dataSource.getImageForContainer(containerName.directoryContainer)
+
+    private fun getJarExtensionsForContainer() = dataSource.getJarExtensionsForContainer(containerName.directoryContainer).toSet()
 
     override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
         val readOnlyBeforeCheck = readOnly.get()

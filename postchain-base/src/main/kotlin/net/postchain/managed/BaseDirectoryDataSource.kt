@@ -6,6 +6,7 @@ import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
+import net.postchain.containers.bpm.ContainerJarExtensionInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.ResourceLimitFactory
 import net.postchain.gtv.GtvDictionary
@@ -176,5 +177,36 @@ open class BaseDirectoryDataSource(
                 response as GtvDictionary
             }
         } else GtvDictionary.build(emptyMap())
+    }
+
+    override fun getJarExtensionsForContainer(container: String): List<ContainerJarExtensionInfo> {
+        try {
+            if (nmApiVersion < 27) return listOf()
+
+            val response = query(
+                    "nm_get_container_jar_extensions",
+                    buildArgs("name" to gtv(container))
+            )
+
+            return response.asArray().map { it.toObject<ContainerJarExtensionInfo>() }
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't find JAR extensions for container $container: ${e.message}" }
+            return listOf()
+        }
+    }
+
+    override fun getJarExtension(extension: String): ByteArray? {
+        return try {
+            if (nmApiVersion < 27) return null
+
+            query(
+                    "nm_get_jar_extension",
+                    buildArgs("name" to gtv(extension))
+            ).asByteArray()
+        } catch (e: UserMistake) {
+            logger.error { "Can't find JAR extension $extension: ${e.message}" }
+            null
+        }
     }
 }

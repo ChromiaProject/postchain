@@ -119,4 +119,7 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig, private va
 
     override fun hostRootOf(containerName: ContainerName): Path =
             Paths.get(File.separator, containerConfig.zfsPoolName, containerName.dockerContainer)
+
+    override fun extensionsDir() =
+            Paths.get(containerConfig.masterMountDir, "extensions").also { it.toFile().mkdirs() }
 }

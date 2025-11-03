@@ -6,6 +6,8 @@ import com.github.dockerjava.api.model.Container
 import com.github.dockerjava.api.model.ExposedPort
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.docker.DockerTools.asyncExecAwaitMultiResponse
 import net.postchain.containers.bpm.docker.DockerTools.asyncExecAwaitSingleResponse
@@ -13,8 +15,13 @@ import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.docker.DockerTools.listSubContainersCmd
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDictionary
 import net.postchain.metrics.SubContainerResourceMetrics
+import java.nio.file.Path
+import kotlin.io.path.createFile
+import kotlin.io.path.exists
+import kotlin.io.path.writeBytes
 
 open class ContainerHandler(
         private val dockerClient: DockerClient,
@@ -33,11 +40,41 @@ open class ContainerHandler(
         })
     }
 
+    fun resolveJarExtensions(jarExtensions: Set<ContainerJarExtensionInfo>, rawJarFileContentFetcher: (String) -> ByteArray?): List<Path> {
+        val resolvedExtensions = mutableListOf<Path>()
+        val extensionsDir = fileSystem.extensionsDir()
+        for (jarExtension in jarExtensions) {
+            val hashFile = extensionsDir.resolve("${jarExtension.name}.sha256")
+            val jarFile = extensionsDir.resolve("${jarExtension.name}.jar")
+            val currentHash = if (hashFile.exists()) hashFile.toFile().readBytes() else null
+
+            if (!currentHash.contentEquals(jarExtension.hash)) {
+                logger.info("Writing JAR extension ${jarExtension.name} to disk...")
+
+                if (!jarFile.exists()) jarFile.createFile()
+                val rawJarFile = rawJarFileContentFetcher(jarExtension.name)
+                        ?: throw UserMistake("Unable to fetch JAR file ${jarExtension.name}")
+                val loadedFileHash = sha256Digest(rawJarFile)
+                if (!loadedFileHash.contentEquals(jarExtension.hash)) {
+                    throw UserMistake("Loaded JAR file for extension ${jarExtension.name} hash mismatched, expected ${jarExtension.hash.toHex()}, actual ${loadedFileHash.toHex()}")
+                }
+                jarFile.writeBytes(rawJarFile)
+
+                if (currentHash == null) hashFile.createFile()
+                hashFile.toFile().writeBytes(jarExtension.hash)
+            }
+
+            resolvedExtensions.add(jarFile)
+        }
+        return resolvedExtensions
+    }
+
     fun createDockerContainer(containerName: ContainerName, resourceLimits: ContainerResourceLimits,
-                              readOnly: Boolean, image: String, directoryContainerConfiguration: GtvDictionary): String {
+                              readOnly: Boolean, image: String, directoryContainerConfiguration: GtvDictionary,
+                              jarExtensions: List<Path>): String {
         val createContainerCmd = dockerClient.createContainerCmd(image)
         ContainerConfigFactory.setConfig(createContainerCmd, fileSystem, appConfig, containerNodeConfig,
-                containerName, resourceLimits, readOnly, directoryContainerConfiguration)
+                containerName, resourceLimits, readOnly, directoryContainerConfiguration, jarExtensions)
         return createContainerCmd.exec().id!!
     }
 

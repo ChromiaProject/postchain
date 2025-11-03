@@ -73,4 +73,7 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
 
     override fun hostRootOf(containerName: ContainerName): Path =
             Paths.get(containerConfig.hostMountDir, containerName.dockerContainer)
+
+    override fun extensionsDir(): Path =
+            Paths.get(containerConfig.masterMountDir, "extensions").also { it.toFile().mkdirs() }
 }

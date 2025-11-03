@@ -65,6 +65,7 @@ class ContainerHealthcheckHandler(
         val currentResourceLimits = psContainer.resourceLimits
         val currentImage = psContainer.image
         val currentConfiguration = psContainer.configuration
+        val currentJarExtensions = psContainer.jarExtensions
         val updatedResourceLimits = try {
             psContainer.updateResourceLimits()
         } catch (e: UserMistake) {
@@ -83,7 +84,13 @@ class ContainerHealthcheckHandler(
             logger.warn { "Unable to fetch current configuration for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
             false
         }
-        val chainsToTerminate = if (updatedResourceLimits || updatedImage || updatedConfiguration) {
+        val updatedJarExtensions = try {
+            psContainer.updateJarExtensions()
+        } catch (e: UserMistake) {
+            logger.warn { "Unable to fetch current JAR extensions for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
+            false
+        }
+        val chainsToTerminate = if (updatedResourceLimits || updatedImage || updatedConfiguration || updatedJarExtensions) {
             if (updatedResourceLimits) {
                 logger.info { "Resource limits for container ${cname.dockerContainer} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}, container will be restarted" }
             }
@@ -92,6 +99,9 @@ class ContainerHealthcheckHandler(
             }
             if (updatedConfiguration) {
                 logger.info { "Configuration for container ${cname.dockerContainer} has been changed from $currentConfiguration to ${psContainer.configuration}, container will be restarted" }
+            }
+            if (updatedJarExtensions) {
+                logger.info { "JAR extensions for container ${cname.dockerContainer} has been changed from $currentJarExtensions to ${psContainer.jarExtensions}, container will be restarted" }
             }
             fixedContainers.add(cname)
             psContainer.reset()

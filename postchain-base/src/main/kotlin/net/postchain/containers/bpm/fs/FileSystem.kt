@@ -27,6 +27,7 @@ interface FileSystem {
         const val ZFS_POOL_NAME = "psvol"
         const val CONTAINER_LOG4J_PATH = "/opt/chromaway/postchain/log4j2.yml"
         const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
+        const val CONTAINER_LIBS_PATH = "/opt/chromaway/postchain/libs"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
         const val CONTAINER_PG_UNIX_SOCKET_PATH = "/var/run/postgresql/"
         const val CONTAINER_TMP_PATH = "/tmp/"
@@ -91,6 +92,11 @@ interface FileSystem {
 
         rootOf(containerName).toFile().deleteRecursively()
     }
+
+    /**
+     * Creates (if not exists) and returns extensions directory
+     */
+    fun extensionsDir(): Path
 
     fun supportsQuotas() = false
 }
