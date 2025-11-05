@@ -17,6 +17,11 @@ class TransactionIncorrect(txRid: ByteArray, message: String? = null, cause: Exc
  */
 class TransactionFailed(txRid: ByteArray) : UserMistake("Transaction ${txRid.toHex()} failed")
 
+/**
+ * When a special TX failed to be applied. This is a critical error that prevents block building.
+ */
+class SpecialTransactionFailed(message: String, cause: Exception? = null) : UserMistake(message, cause)
+
 class NotFound(message: String, cause: Exception? = null) : UserMistake(message, cause)
 
 class AlreadyExists(message: String, cause: Exception? = null) : UserMistake(message, cause)
