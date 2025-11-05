@@ -21,6 +21,7 @@ import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.SpecialTransactionFailed
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BadBlockException
@@ -159,7 +160,11 @@ open class BaseBlockBuilder(
             specialTxHandler.createSpecialTransaction(Begin, bctx)?.let { stx ->
                 withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
                     logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", Begin)
-                    appendTransaction(stx)
+                    try {
+                        appendTransaction(stx)
+                    } catch (e: UserMistake) {
+                        throw SpecialTransactionFailed("Begin special transaction failed", e)
+                    }
                     logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", Begin)
                 }
             }
@@ -282,7 +287,11 @@ open class BaseBlockBuilder(
             specialTxHandler.createSpecialTransaction(End, bctx)?.let { stx ->
                 withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
                     logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", End)
-                    appendTransaction(stx)
+                    try {
+                        appendTransaction(stx)
+                    } catch (e: UserMistake) {
+                        throw SpecialTransactionFailed("End special transaction failed", e)
+                    }
                     logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", End)
                 }
             }

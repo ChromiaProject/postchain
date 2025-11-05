@@ -15,6 +15,7 @@ import net.postchain.base.extension.getConfigHash
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.SpecialTransactionFailed
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
@@ -283,7 +284,7 @@ open class BaseBlockchainEngine(
                 }
                 if (e !is ForceStopBlockBuildingException) {
                     try {
-                        if (hasBuiltInitialBlock() && e is FaultyExtensionException) {
+                        if (hasBuiltInitialBlock() && (e is FaultyExtensionException || e is SpecialTransactionFailed)) {
                             if (!hasBuiltFirstBlockAfterConfigUpdate) {
                                 revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash, e.cause?.message ?: e.message)
                             } else {
@@ -292,7 +293,7 @@ open class BaseBlockchainEngine(
                             }
                         }
                     } catch (e: Exception) {
-                        logger.warn(e) { "Unable to revert configuration: $e" }
+                        logger.warn(e) { "Unable to handle block building failure: $e" }
                     }
                     nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
                             ErrorDiagnosticValue(
@@ -483,7 +484,7 @@ open class BaseBlockchainEngine(
         return try {
             op(currentEContext)
         } finally {
-            if (currentEContext.id == initialEContext.id) {
+            if (!closed && currentEContext.id == initialEContext.id) {
                 blockBuilderStorage.releaseSharedContext(currentEContext)
             }
         }
