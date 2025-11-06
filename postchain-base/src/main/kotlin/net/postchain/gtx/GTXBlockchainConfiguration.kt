@@ -12,6 +12,7 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.core.BlockchainContext
+import net.postchain.core.EContext
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
@@ -80,11 +81,11 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
 
     override fun hasQuery(name: String): Boolean = module.getQueries().contains(name)
 
-    override fun initializeModules(postchainContext: PostchainContext) {
+    override fun initializeModules(postchainContext: PostchainContext, ctx: EContext) {
         if (module is PostchainContextAware) {
-            module.initializeContext(this, postchainContext)
+            module.initializeContext(this, postchainContext, ctx)
         }
-        super.initializeModules(postchainContext)
+        super.initializeModules(postchainContext, ctx)
     }
 
     override fun shutdownModules() {

@@ -52,7 +52,7 @@ interface BlockchainConfiguration {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun hasQuery(name: String): Boolean
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
-    fun initializeModules(postchainContext: PostchainContext)
+    fun initializeModules(postchainContext: PostchainContext, ctx: EContext)
     fun shutdownModules()
     fun getSnapshotAwareModules(): List<SnapshotAware>
 }

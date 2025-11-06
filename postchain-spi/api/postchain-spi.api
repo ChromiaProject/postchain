@@ -1401,7 +1401,7 @@ public abstract interface class net/postchain/core/BlockchainConfiguration {
 	public abstract fun getTransactionQueueRecheckInterval-UwyO8pc ()J
 	public abstract fun getTransactionQueueSize ()I
 	public abstract fun hasQuery (Ljava/lang/String;)Z
-	public abstract fun initializeModules (Lnet/postchain/PostchainContext;)V
+	public abstract fun initializeModules (Lnet/postchain/PostchainContext;Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun makeBlockBuilder (Lnet/postchain/core/ExecutionContext;ZLjava/util/List;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun makeBlockQueries (Lnet/postchain/core/Storage;)Lnet/postchain/core/block/BlockQueries;
 	public abstract fun makePersistOnlyBlockBuilder (Lnet/postchain/core/ExecutionContext;)Lnet/postchain/core/block/BlockBuilder;
@@ -2487,6 +2487,12 @@ public abstract interface class net/postchain/gtx/OperationWrapper {
 
 public abstract interface class net/postchain/gtx/PostchainContextAware {
 	public abstract fun initializeContext (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;)V
+	public abstract fun initializeContext (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;Lnet/postchain/core/ExecutionContext;)V
+}
+
+public final class net/postchain/gtx/PostchainContextAware$DefaultImpls {
+	public static fun initializeContext (Lnet/postchain/gtx/PostchainContextAware;Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;)V
+	public static fun initializeContext (Lnet/postchain/gtx/PostchainContextAware;Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;Lnet/postchain/core/ExecutionContext;)V
 }
 
 public final class net/postchain/gtx/QueryMetadata {

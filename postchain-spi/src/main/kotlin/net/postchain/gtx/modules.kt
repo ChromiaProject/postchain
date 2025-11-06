@@ -33,7 +33,13 @@ interface GTXModule : Shutdownable {
 }
 
 interface PostchainContextAware {
-    fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext)
+    @Deprecated("Use initializeContext(configuration, postchainContext, ctxt)")
+    fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {}
+
+    @Suppress("DEPRECATION")
+    fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
+        initializeContext(configuration, postchainContext)
+    }
 }
 
 /**

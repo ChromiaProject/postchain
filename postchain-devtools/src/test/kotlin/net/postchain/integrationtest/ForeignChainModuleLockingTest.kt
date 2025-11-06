@@ -74,7 +74,7 @@ class ForeignAccessGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()), Po
 
     override fun getSpecialTxExtensions() = listOf(specialTxExtension)
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         specialTxExtension.foreignBrid = BlockchainRid(configuration.rawConfig["foreign_brid"]!!.asByteArray())
         specialTxExtension.blockQueriesProvider = postchainContext.blockQueriesProvider
     }

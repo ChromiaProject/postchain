@@ -2,6 +2,7 @@ package net.postchain.managed.config
 
 import net.postchain.PostchainContext
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.PostchainContextAware
@@ -13,10 +14,10 @@ open class ManagedBlockchainConfiguration(
 ) : BlockchainConfiguration by configuration, ManagedDataSourceAware, GTXModuleAware {
     override val module = configuration.module
 
-    override fun initializeModules(postchainContext: PostchainContext) {
+    override fun initializeModules(postchainContext: PostchainContext, ctx: EContext) {
         val gtxModule = module
         if (gtxModule is PostchainContextAware) {
-            gtxModule.initializeContext(this, postchainContext)
+            gtxModule.initializeContext(this, postchainContext, ctx)
         }
     }
 }
