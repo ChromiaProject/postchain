@@ -253,7 +253,7 @@ abstract class BaseBlockchainConfiguration(
                 if (it is SpecialTxHandlerAware) it.specialTxHandler = getSpecialTxHandler()
             }
 
-    override fun initializeModules(postchainContext: PostchainContext) {}
+    override fun initializeModules(postchainContext: PostchainContext, ctx: EContext) {}
 
     override fun shutdownModules() {}
 

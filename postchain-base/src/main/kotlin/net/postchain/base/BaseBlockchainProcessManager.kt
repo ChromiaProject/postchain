@@ -179,7 +179,7 @@ open class BaseBlockchainProcessManager(
                                 rawConfigurationData, initialEContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId), bcConfigOptions
                         ).also {
                             DependenciesValidator.validateBlockchainRids(initialEContext, it.blockchainDependencies)
-                            it.initializeModules(postchainContext)
+                            it.initializeModules(postchainContext, initialEContext)
                         }
 
                         // Initial configuration will be committed immediately

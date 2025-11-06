@@ -151,9 +151,9 @@ class CompositeGTXModule(
         }
     }
 
-    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext, ctx: EContext) {
         modules.filterIsInstance<PostchainContextAware>()
-                .forEach { it.initializeContext(configuration, postchainContext) }
+                .forEach { it.initializeContext(configuration, postchainContext, ctx) }
 
         // Initialize snapshot contexts
         if (snapshotsEnabled) {

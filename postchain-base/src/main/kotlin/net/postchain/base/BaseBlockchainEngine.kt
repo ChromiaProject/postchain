@@ -251,7 +251,7 @@ open class BaseBlockchainEngine(
             } catch (e: Exception) {
                 try {
                     blockBuilder.rollback()
-                } catch (ignore: Exception) {
+                } catch (_: Exception) {
                 }
                 nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
                         ErrorDiagnosticValue(
@@ -280,7 +280,7 @@ open class BaseBlockchainEngine(
             } catch (e: Exception) {
                 try {
                     blockBuilder.rollback()
-                } catch (ignore: Exception) {
+                } catch (_: Exception) {
                 }
                 if (e !is ForceStopBlockBuildingException) {
                     try {
