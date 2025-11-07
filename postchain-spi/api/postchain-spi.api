@@ -2486,13 +2486,7 @@ public abstract interface class net/postchain/gtx/OperationWrapper {
 }
 
 public abstract interface class net/postchain/gtx/PostchainContextAware {
-	public abstract fun initializeContext (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;)V
 	public abstract fun initializeContext (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;Lnet/postchain/core/ExecutionContext;)V
-}
-
-public final class net/postchain/gtx/PostchainContextAware$DefaultImpls {
-	public static fun initializeContext (Lnet/postchain/gtx/PostchainContextAware;Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;)V
-	public static fun initializeContext (Lnet/postchain/gtx/PostchainContextAware;Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;Lnet/postchain/core/ExecutionContext;)V
 }
 
 public final class net/postchain/gtx/QueryMetadata {
