@@ -142,7 +142,6 @@ open class ManagedBlockchainProcessManager(
             if (!::dataSource.isInitialized) {
                 initManagedEnvironment(makeBlockQueryDataSource())
             }
-        }
         } else {
             commitTimeByChain[chainId] = clock.millis()
         }
@@ -255,8 +254,8 @@ open class ManagedBlockchainProcessManager(
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
                 } else {
-                    afterCommitHandlerChainN(bTrace)
                     commitTimeByChain[chainId] = clock.millis()
+                    afterCommitHandlerChainN(bTrace)
                 }
                 wrTrace("After", bTrace)
                 restart
