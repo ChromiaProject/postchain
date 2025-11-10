@@ -198,7 +198,7 @@ class AppConfig(private val config: Configuration) : Config {
 
     val housekeepingIntervalMs
         get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping.interval_ms",
-                config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping_interval_ms", 30_000))
+                config.getLong("housekeeping_interval_ms", 30_000))
 
     val housekeepingRestartInactiveChainMs
         get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_RESTART_INACTIVE_CHAIN_MS", "housekeeping.restart_inactive_chain_ms", 7200000)
