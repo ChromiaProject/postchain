@@ -143,7 +143,7 @@ open class ManagedBlockchainProcessManager(
                 initManagedEnvironment(makeBlockQueryDataSource())
             }
         }
-        if (chainId != CHAIN0) {
+        } else {
             commitTimeByChain[chainId] = clock.millis()
         }
     }
@@ -256,9 +256,6 @@ open class ManagedBlockchainProcessManager(
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
                 } else {
                     afterCommitHandlerChainN(bTrace)
-                }
-
-                if (chainId != CHAIN0) {
                     commitTimeByChain[chainId] = clock.millis()
                 }
                 wrTrace("After", bTrace)
