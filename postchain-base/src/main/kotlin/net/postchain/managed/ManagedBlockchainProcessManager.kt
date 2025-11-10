@@ -390,23 +390,23 @@ open class ManagedBlockchainProcessManager(
                 blockchainProcesses
                         .filterValues { it.isProcessRunning() }
                         .forEach { (chainId, process) ->
-                    val elapsedTimeSinceCommit = commitTimeByChain[chainId]?.let {
-                        clock.millis() - it
-                    } ?: 0
+                            val elapsedTimeSinceCommit = commitTimeByChain[chainId]?.let {
+                                clock.millis() - it
+                            } ?: 0
 
-                    if (elapsedTimeSinceCommit >= appConfig.housekeepingRestartInactiveChainMs) {
-                        val maxBlockTime = (process.blockchainEngine.getConfiguration()
-                                .rawConfig[KEY_BLOCKSTRATEGY]?.toObject<BaseBlockBuildingStrategyConfigurationData>()
-                                ?: BaseBlockBuildingStrategyConfigurationData.default).maxBlockTime
+                            if (elapsedTimeSinceCommit >= appConfig.housekeepingRestartInactiveChainMs) {
+                                val maxBlockTime = (process.blockchainEngine.getConfiguration()
+                                        .rawConfig[KEY_BLOCKSTRATEGY]?.toObject<BaseBlockBuildingStrategyConfigurationData>()
+                                        ?: BaseBlockBuildingStrategyConfigurationData.default).maxBlockTime
 
-                        if (elapsedTimeSinceCommit >= (maxBlockTime * 2)) {
-                            withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
-                                logger.info { "Chain has been idling for ${Duration.ofMillis(elapsedTimeSinceCommit).toKotlinDuration()} and will be restarted" }
+                                if (elapsedTimeSinceCommit >= (maxBlockTime * 2)) {
+                                    withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+                                        logger.info { "Chain has been idling for ${Duration.ofMillis(elapsedTimeSinceCommit).toKotlinDuration()} and will be restarted" }
+                                    }
+                                    startBlockchainAsync(chainId, null)
+                                }
                             }
-                            startBlockchainAsync(chainId, null)
                         }
-                    }
-                }
             }
         }
     }
