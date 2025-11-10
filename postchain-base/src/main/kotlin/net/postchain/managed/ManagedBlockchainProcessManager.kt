@@ -143,7 +143,9 @@ open class ManagedBlockchainProcessManager(
                 initManagedEnvironment(makeBlockQueryDataSource())
             }
         }
-        commitTimeByChain[chainId] = clock.millis()
+        if (chainId != CHAIN0) {
+            commitTimeByChain[chainId] = clock.millis()
+        }
     }
 
     protected open fun makeBlockQueryDataSource(): ManagedNodeDataSource = BaseManagedNodeDataSource({ name, args ->
@@ -256,7 +258,9 @@ open class ManagedBlockchainProcessManager(
                     afterCommitHandlerChainN(bTrace)
                 }
 
-                commitTimeByChain[chainId] = clock.millis()
+                if (chainId != CHAIN0) {
+                    commitTimeByChain[chainId] = clock.millis()
+                }
                 wrTrace("After", bTrace)
                 restart
             } catch (e: Exception) {
@@ -388,6 +392,7 @@ open class ManagedBlockchainProcessManager(
         if (appConfig.housekeepingRestartInactiveChainMs > 0) {
             processLock.withLock {
                 blockchainProcesses
+                        .filterKeys { it != CHAIN0 }
                         .filterValues { it.isProcessRunning() }
                         .forEach { (chainId, process) ->
                             val elapsedTimeSinceCommit = commitTimeByChain[chainId]?.let {
