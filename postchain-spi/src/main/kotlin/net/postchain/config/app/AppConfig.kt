@@ -197,7 +197,11 @@ class AppConfig(private val config: Configuration) : Config {
     fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
     val housekeepingIntervalMs
-        get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping_interval_ms", 30_000)
+        get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping.interval_ms",
+                config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping_interval_ms", 30_000))
+
+    val housekeepingRestartInactiveChainMs
+        get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_RESTART_INACTIVE_CHAIN_MS", "housekeeping.restart_inactive_chain_ms", 7200000)
 
     // -1: Disable tracking
     val trackedEbftMessageMaxKeepTimeMs

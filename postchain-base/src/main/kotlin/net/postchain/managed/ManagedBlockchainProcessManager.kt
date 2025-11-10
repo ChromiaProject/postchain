@@ -6,7 +6,9 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.BaseBlockchainProcessManager
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
@@ -32,6 +34,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -39,12 +42,16 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.time.Clock
+import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.withLock
 import kotlin.math.max
 import kotlin.system.measureTimeMillis
+import kotlin.time.toKotlinDuration
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -72,7 +79,7 @@ import kotlin.system.measureTimeMillis
  * has been build to see if we need to upgrade anything about the chain's configuration.
  * Since ProcMan doesn't like to do many important things at once, we block (=synchorize) in the beginning of
  * "wrappedRestartHandler()", and only let go after we are done. If there are errors somewhere else in the code,
- * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test [ForkSlowIntegrationTest]
+ * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test `ForkSlowIntegrationTest`
  * "testAliasesManyLevels()" for an example that (used to cause) deadlock).
  *
  * Doc: see the /doc/postchain_ManagedModeFlow.graphml (created with yEd)
@@ -82,7 +89,8 @@ open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf(),
+        private val clock: Clock = Clock.systemUTC()
 ) : BaseBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
@@ -92,7 +100,8 @@ open class ManagedBlockchainProcessManager(
 
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected open lateinit var chain0BlockQueries: BlockQueries
-    protected val blockchainPruningExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    protected val blockchainHousekeepingExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    protected val commitTimeByChain = ConcurrentHashMap<Long, Long>()
 
     @Volatile
     protected var currentInactiveBlockchainsHeight = 0L
@@ -100,8 +109,8 @@ open class ManagedBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        blockchainPruningExecutor.scheduleWithFixedDelay(
-                ::pruneRemovedBlockchains, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
+        blockchainHousekeepingExecutor.scheduleWithFixedDelay(
+                ::blockchainHousekeeping, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
     }
 
     protected open fun initNodeConfigProvider(dataSource: ManagedNodeDataSource) {
@@ -134,6 +143,7 @@ open class ManagedBlockchainProcessManager(
                 initManagedEnvironment(makeBlockQueryDataSource())
             }
         }
+        commitTimeByChain[chainId] = clock.millis()
     }
 
     protected open fun makeBlockQueryDataSource(): ManagedNodeDataSource = BaseManagedNodeDataSource({ name, args ->
@@ -246,6 +256,7 @@ open class ManagedBlockchainProcessManager(
                     afterCommitHandlerChainN(bTrace)
                 }
 
+                commitTimeByChain[chainId] = clock.millis()
                 wrTrace("After", bTrace)
                 restart
             } catch (e: Exception) {
@@ -308,6 +319,11 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
+    protected fun blockchainHousekeeping() {
+        pruneRemovedBlockchains()
+        restartLongIdlingBlockchains()
+    }
+
     protected fun pruneRemovedBlockchains() {
         if (!::dataSource.isInitialized) return
 
@@ -365,6 +381,33 @@ open class ManagedBlockchainProcessManager(
             currentInactiveBlockchainsHeight = inactiveChains.first().height
         } catch (e: Exception) {
             logger.error(e) { e.message }
+        }
+    }
+
+    protected fun restartLongIdlingBlockchains() {
+        if (appConfig.housekeepingRestartInactiveChainMs > 0) {
+            processLock.withLock {
+                blockchainProcesses
+                        .filterValues { it.isProcessRunning() }
+                        .forEach { (chainId, process) ->
+                    val elapsedTimeSinceCommit = commitTimeByChain[chainId]?.let {
+                        clock.millis() - it
+                    } ?: 0
+
+                    if (elapsedTimeSinceCommit >= appConfig.housekeepingRestartInactiveChainMs) {
+                        val maxBlockTime = (process.blockchainEngine.getConfiguration()
+                                .rawConfig[KEY_BLOCKSTRATEGY]?.toObject<BaseBlockBuildingStrategyConfigurationData>()
+                                ?: BaseBlockBuildingStrategyConfigurationData.default).maxBlockTime
+
+                        if (elapsedTimeSinceCommit >= (maxBlockTime * 2)) {
+                            withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+                                logger.info { "Chain has been idling for ${Duration.ofMillis(elapsedTimeSinceCommit).toKotlinDuration()} and will be restarted" }
+                            }
+                            startBlockchainAsync(chainId, null)
+                        }
+                    }
+                }
+            }
         }
     }
 
