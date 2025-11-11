@@ -48,7 +48,7 @@ open class BaseApiInfrastructure(
                 nodeDiagnosticContext = nodeDiagnosticContext,
                 gracefulShutdown = gracefulShutdown,
                 requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
-                    calcRequestConcurrency(restApiConfig)
+                    calcRequestConcurrency(restApiConfig, 5)
                 },
                 requestConcurrencyLocal = -1,
                 requestConcurrencyExternal = -1,
@@ -67,11 +67,13 @@ open class BaseApiInfrastructure(
             function(value)
     }
 
-    fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
-            if (restApiConfig.requestConcurrency > 0)
-                restApiConfig.requestConcurrency
-            else
-                min(postchainContext.appConfig.databaseSharedReadConcurrency, Runtime.getRuntime().availableProcessors() * 2)
+    fun calcRequestConcurrency(restApiConfig: RestApiConfig, cpuMultiplier: Int): Int {
+        return if (restApiConfig.requestConcurrency > 0)
+            restApiConfig.requestConcurrency
+        else
+            min(postchainContext.appConfig.databaseSharedReadConcurrency,
+                    cpuMultiplier * Runtime.getRuntime().availableProcessors())
+    }
 
     val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
