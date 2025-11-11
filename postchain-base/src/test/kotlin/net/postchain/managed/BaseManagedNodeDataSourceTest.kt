@@ -46,6 +46,7 @@ class BaseManagedNodeDataSourceTest {
     @MethodSource("getPeerInfosTestData")
     fun testGetPeerInfos(gtvResult: Gtv, expected: Array<PeerInfo>) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("nm_get_peer_infos"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
@@ -70,6 +71,7 @@ class BaseManagedNodeDataSourceTest {
     @MethodSource("getConfigurationTestData")
     fun testGetConfiguration(gtvResult: Gtv, expected: ByteArray?) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("nm_get_blockchain_configuration"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
@@ -79,6 +81,7 @@ class BaseManagedNodeDataSourceTest {
     @Test
     fun testGetConfigurationUserMistake() {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("nm_get_blockchain_configuration"), any()) } doAnswer {
                 throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
             }
@@ -91,6 +94,7 @@ class BaseManagedNodeDataSourceTest {
     @MethodSource("findNextConfigurationHeightTestData")
     fun testFindNextConfigurationHeight(gtvResult: Gtv, expected: Long?) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("nm_find_next_configuration_height"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
@@ -289,6 +293,7 @@ class BaseManagedNodeDataSourceTest {
     @MethodSource("getBlockchainApiUrlsTestData")
     fun getBlockchainApiUrls(gtvResult: Gtv, expected: List<String>) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("cm_get_blockchain_api_urls"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock {

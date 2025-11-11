@@ -45,6 +45,7 @@ class BaseDirectoryDataSourceTest {
     @MethodSource("getContainersToRunTestData")
     fun testGetContainersToRun(gtvResult: Gtv, expected: Array<String>) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(14)
             on { query(eq("nm_get_containers"), any()) } doReturn gtvResult
         }
         val sut = BaseDirectoryDataSource(queryRunner, appConfig)
@@ -54,6 +55,7 @@ class BaseDirectoryDataSourceTest {
     @Test
     fun testGetContainersToRunUserMistake() {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(14)
             on { query(eq("nm_get_containers"), any()) } doThrow
                     UserMistake("Node not found: ${ZERO_RID.wData}")
         }
@@ -113,6 +115,7 @@ class BaseDirectoryDataSourceTest {
     @MethodSource("getResourceLimitForContainerTestData")
     fun testGetResourceLimitForContainer(gtvResult: Gtv, expected: ContainerResourceLimits) {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(14)
             on { query(eq("nm_get_container_limits"), any()) } doReturn gtvResult
         }
         val sut = BaseDirectoryDataSource(queryRunner, mock())
@@ -122,6 +125,7 @@ class BaseDirectoryDataSourceTest {
     @Test
     fun testGetResourceLimitForContainerUserMistake() {
         val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(14)
             on { query(eq("nm_get_container_limits"), any()) } doThrow
                     UserMistake("Container my_container not found")
         }

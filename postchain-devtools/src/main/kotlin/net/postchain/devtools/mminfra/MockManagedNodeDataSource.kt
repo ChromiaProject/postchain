@@ -42,6 +42,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         myNode = nodeSetup
     }
 
+    override fun onDirectoryChainRestart() {}
+
     override val nmApiVersion: Int
         get() = throw NotImplementedError("not used in mock")
 
