@@ -35,7 +35,7 @@ class DefaultMasterApiInfra(
             Runtime.getRuntime().availableProcessors() * 2
         }
         dynamicRequestConcurrencyLocal = getValueOrComputeValue(restApiConfig.requestConcurrencyLocal) {
-            calcRequestConcurrency(restApiConfig)
+            calcRequestConcurrency(restApiConfig, 2)
         }
         dynamicRequestConcurrencyExternal = getValueOrComputeValue(restApiConfig.requestConcurrencyExternal) {
             val value = dynamicRequestConcurrency - dynamicRequestConcurrencyLocal
