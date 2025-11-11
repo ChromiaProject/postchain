@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import net.postchain.api.rest.json.JsonFactory
+import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import org.junit.jupiter.api.Test
 
 class JsonNodeDiagnosticContextTest {
@@ -67,6 +69,26 @@ class JsonNodeDiagnosticContextTest {
         // Asserts
         assertThat(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
         assertThat(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("Unable to fetch value, fail")
+    }
+
+    @Test
+    fun testChainOrder() {
+        val sut = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "4.4.4",
+        )
+
+        val expectedBrids = mutableListOf<String>()
+        (1..10).forEach { i ->
+            val brid = ByteArray(32) { i.toByte() }
+            expectedBrids.add(brid.toHex())
+            sut.blockchainData(BlockchainRid(brid))[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = DiagnosticData(
+                    DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { 1 }
+            )
+        }
+
+        val actualBrids = JsonFactory.parse(sut.format().toString())
+                .asJsonObject.get("blockchain").asJsonArray.map { it.asJsonObject.get("brid").asString }
+        assertThat(actualBrids).isEqualTo(expectedBrids)
     }
 
     @Test
