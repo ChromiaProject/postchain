@@ -141,6 +141,8 @@ open class ManagedBlockchainProcessManager(
                     ?: throw ProgrammerMistake("Chain 0 was reported started but process is not registered")
             if (!::dataSource.isInitialized) {
                 initManagedEnvironment(makeBlockQueryDataSource())
+            } else {
+                dataSource.onDirectoryChainRestart()
             }
         } else {
             commitTimeByChain[chainId] = clock.millis()

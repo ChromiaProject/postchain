@@ -29,8 +29,13 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
 
-    override val nmApiVersion by lazy {
-        query("nm_api_version", buildArgs()).asInteger().toInt()
+    @Volatile
+    override var nmApiVersion = fetchNmApiVersion()
+
+    private fun fetchNmApiVersion() = query("nm_api_version", buildArgs()).asInteger().toInt()
+
+    override fun onDirectoryChainRestart() {
+        nmApiVersion = fetchNmApiVersion()
     }
 
     override fun getPeerInfos(): Array<PeerInfo> {

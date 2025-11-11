@@ -10,8 +10,12 @@ import net.postchain.crypto.PubKey
 import net.postchain.managed.query.QueryRunner
 
 interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
-
     val nmApiVersion: Int
+
+    /**
+     * Triggered on chain 0 restart
+     */
+    fun onDirectoryChainRestart()
 
     fun computeBlockchainInfoList(): List<BlockchainInfo>
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
