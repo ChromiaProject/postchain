@@ -142,6 +142,7 @@ variables:
   MAVEN_CLI_OPTS: "-DexcludedGroups=no-ci --batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml"
   MAVEN_CLI_NVD_OPTS: "-DnvdDatafeedUrl=https://nvd-data-feeds.chromia.dev/nvdcve-{0}.json.gz"
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
+  POSTCHAIN_DOCKER_HOST: tcp://docker:2375
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
