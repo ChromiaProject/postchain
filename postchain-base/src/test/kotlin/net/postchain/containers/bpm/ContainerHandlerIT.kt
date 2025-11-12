@@ -86,7 +86,7 @@ internal class ContainerHandlerIT {
         val nodeDiagnosticContext: NodeDiagnosticContext = mock()
         val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
         subnodeAdminClient.connectBlocking()
-        await().atMost(Duration.ONE_MINUTE).untilAsserted {
+        await().pollInterval(Duration.TEN_SECONDS).atMost(Duration.ONE_MINUTE).untilAsserted {
             assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
         }
         subnodeAdminClient.disconnect()
