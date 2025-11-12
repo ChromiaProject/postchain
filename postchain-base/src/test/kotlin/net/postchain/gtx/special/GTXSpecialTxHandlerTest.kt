@@ -100,7 +100,7 @@ class GTXSpecialTxHandlerTest {
 
         // create
         val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("unknown_op"), ops)
+        assertEquals(listOf("unknown_op", GtxSpecNop.OP_NAME), ops)
 
         // validate
         val validated = sut.validateSpecialTransaction(mock(), tx, mock())
@@ -137,7 +137,7 @@ class GTXSpecialTxHandlerTest {
 
         // create
         val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("op1", "op11"), ops)
+        assertEquals(listOf("op1", "op11", GtxSpecNop.OP_NAME), ops)
 
         // validate
         val validated = sut.validateSpecialTransaction(mock(), tx, mock())
@@ -173,7 +173,7 @@ class GTXSpecialTxHandlerTest {
 
         // create
         val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("op1", "op11"), ops)
+        assertEquals(listOf("op1", "op11", GtxSpecNop.OP_NAME), ops)
 
         // validate
         val validated = sut.validateSpecialTransaction(mock(), tx, mock())
@@ -203,7 +203,7 @@ class GTXSpecialTxHandlerTest {
 
         // create
         val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("op1"), ops)
+        assertEquals(listOf("op1", GtxSpecNop.OP_NAME), ops)
 
         // validate
         val validatedBegin = sut.validateSpecialTransaction(SpecialTransactionPosition.Begin, tx, mock())

@@ -14,6 +14,7 @@ import net.postchain.core.FaultyExtensionException
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -76,6 +77,10 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         // if no extension emitted an operation we don't create any tx
         if (ops.isEmpty()) return null
 
+        val hasSpecNop = ops.any { it.opName == GtxSpecNop.OP_NAME }
+        if (!hasSpecNop) {
+            ops.addLast(GtxOp(GtxSpecNop.OP_NAME, gtv(bctx.height)))
+        }
         val tx = Gtx(GtxBody(blockchainRID, ops, listOf()), listOf())
         return factory.decodeTransaction(tx.encode())
     }
