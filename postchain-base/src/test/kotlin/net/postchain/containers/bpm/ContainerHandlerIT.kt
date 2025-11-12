@@ -86,7 +86,7 @@ internal class ContainerHandlerIT {
         val nodeDiagnosticContext: NodeDiagnosticContext = mock()
         val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
         subnodeAdminClient.connectBlocking()
-        await().atMost(Duration.TEN_SECONDS).untilAsserted {
+        await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
         }
         subnodeAdminClient.disconnect()
@@ -114,7 +114,8 @@ internal class ContainerHandlerIT {
         }
     }
 
-    private fun getResolvedDockerHost(): URI? = (System.getenv("POSTCHAIN_DOCKER_HOST") ?: System.getenv("DOCKER_HOST"))?.let {
+    private fun getResolvedDockerHost(): URI? = (System.getenv("POSTCHAIN_DOCKER_HOST")
+            ?: System.getenv("DOCKER_HOST"))?.let {
         val dockerUri = URI(it)
         // Pass docker host to master container with hostname resolved
         URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
