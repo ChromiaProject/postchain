@@ -17,14 +17,19 @@ import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
+import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
@@ -45,6 +50,12 @@ internal class ContainerHandlerIT {
     @Test
     @Tag("docker")
     fun `create and start container`(@TempDir tempDir: Path) {
+        val mockedMasterConnectionManager = DefaultMasterConnectionManager(mock(), mock(), mock())
+        mockedMasterConnectionManager.dataSource = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(27)
+        }
+        val mockedMasterServer = NettyMasterConnector(mockedMasterConnectionManager, 9860)
+
         val dockerHost = getResolvedDockerHost()?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")
         val appConfig = AppConfig.fromPropertiesFile(
                 File(javaClass.getResource("/net/postchain/containers/bpm/job/node.properties")!!.toURI()),
@@ -90,6 +101,8 @@ internal class ContainerHandlerIT {
             assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
         }
         subnodeAdminClient.disconnect()
+        mockedMasterServer.shutdown()
+        mockedMasterConnectionManager.shutdown()
     }
 
     @AfterEach
