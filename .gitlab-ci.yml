@@ -40,7 +40,6 @@ include:
 
 stages:
   - build
-  - code-coverage
   - slow-integration-tests
   - deploy
   - dependency-check
@@ -99,15 +98,6 @@ build:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,coverage
       verify
-
-test-coverage-report:
-  stage: code-coverage
-  except:
-    refs:
-      - dev
-      - tags
-  dependencies:
-    - build
 
 slow-integration-tests:
   extends: .setup
