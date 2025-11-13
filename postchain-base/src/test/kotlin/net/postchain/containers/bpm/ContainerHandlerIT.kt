@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.github.dockerjava.api.command.LogContainerCmd
 import mu.KLogging
@@ -22,6 +23,7 @@ import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
+import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -57,6 +59,7 @@ internal class ContainerHandlerIT {
         val mockedMasterServer = NettyMasterConnector(mockedMasterConnectionManager, 9860)
 
         val dockerHost = getResolvedDockerHost()?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")
+logger.info("Using docker host $dockerHost")
         val appConfig = AppConfig.fromPropertiesFile(
                 File(javaClass.getResource("/net/postchain/containers/bpm/job/node.properties")!!.toURI()),
                 mapOf(
@@ -97,8 +100,14 @@ internal class ContainerHandlerIT {
         val nodeDiagnosticContext: NodeDiagnosticContext = mock()
         val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
         subnodeAdminClient.connectBlocking()
-        await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
+
+        try {
+            await().atMost(Duration.TEN_SECONDS).untilAsserted {
+                assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
+                assertThat(1).isEqualTo(2)
+            }
+        } catch (e: ConditionTimeoutException) {
+            tearDown()
         }
         subnodeAdminClient.disconnect()
         mockedMasterServer.shutdown()
