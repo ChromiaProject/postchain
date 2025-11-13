@@ -9,13 +9,17 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
+import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.mockito.kotlin.mock
 import java.util.concurrent.TimeUnit
 
 /**
@@ -55,7 +59,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
     fun testBlockContent() {
         val count = 3
         configOverrides.setProperty("testpeerinfos", createPeerInfos(count))
-        configOverrides.setProperty("api.port", 0)
+        configOverrides.setProperty("api.port", -1)
         createNodes(count, "/net/postchain/devtools/specialtx/blockchain_config_3node_gtx.xml")
 
         // --------------------
@@ -64,7 +68,10 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
         val module = SpecialTxTestGTXModule() // Had to build a special module for this test
         val cs = Secp256K1CryptoSystem()
-        gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs, GtvMerkleHashCalculatorV2(cryptoSystem))
+        val compositeModule = CompositeGTXModule(arrayOf(module, StandardOpsGTXModule()), false, false,
+                mock(), makeMerkleHashCalculator(2))
+        compositeModule.initializeDB(mock())
+        gtxTxFactory = GTXTransactionFactory(blockchainRID, compositeModule, cs, GtvMerkleHashCalculatorV2(cryptoSystem))
 
         // --------------------
         // Create TXs
@@ -120,16 +127,16 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
     }
 
     private fun checkForTx(tx: ByteArray) {
-        checkForOperation(tx, "gtx_empty")
+        checkForOperation(tx, "gtx_empty", false)
     }
 
     private fun checkForEnd(tx: ByteArray) {
         checkForOperation(tx, GTXAutoSpecialTxExtension.OP_END_BLOCK)
     }
 
-    private fun checkForOperation(tx: ByteArray, opName: String) {
+    private fun checkForOperation(tx: ByteArray, opName: String, expectNop: Boolean = true) {
         val txGtx = gtxTxFactory.decodeTransaction(tx) as GTXTransaction
-        assertEquals(1, txGtx.ops.size)
+        assertEquals(if (expectNop) 2 else 1, txGtx.ops.size)
         val op = txGtx.ops[0] as GTXOperation
         //println("Op : ${op.toString()}")
         assertEquals(opName, op.data.opName)
