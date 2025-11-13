@@ -83,6 +83,7 @@ class DefaultSubConnectionManager(
     private var reconnectionScheduledForQuery: ScheduledFuture<*>? = null
     private val reconnectDelay = Duration.ofSeconds(15)
     private var isShutDown = false
+    private val onMasterConnectedHooks = mutableListOf<() -> Unit>()
 
     private val connectedPeersHandler: MsMessageHandler = object : MsMessageHandler {
         override fun onMessage(message: MsMessage) {
@@ -200,6 +201,11 @@ class DefaultSubConnectionManager(
         }
     }
 
+    fun addOnMasterConnectedHook(hook: () -> Unit) {
+        onMasterConnectedHooks.add(hook)
+        callMasterConnectedHooks()
+    }
+
     // ----------------------------------
     // After/Before connections hooks
     // ----------------------------------
@@ -214,6 +220,8 @@ class DefaultSubConnectionManager(
             queryConnection = connection
 
             logger.debug("Query connection to master established")
+
+            callMasterConnectedHooks()
             masterSubQueryManager
         } else {
             val chain = chains.get(descriptor.blockchainRid)
@@ -236,6 +244,7 @@ class DefaultSubConnectionManager(
 
                     else -> {
                         logger.info("Master node connected")
+                        callMasterConnectedHooks()
                         chain.setConnection(connection)
                         chain.getPacketHandler()
                     }
@@ -338,6 +347,12 @@ class DefaultSubConnectionManager(
                 logger.info("Reconnecting to master node")
                 subConnector.connectMaster(masterNodePeerInfo, queryConnectionDescriptor)
             }, reconnectDelay.toMillis(), TimeUnit.MILLISECONDS)
+        }
+    }
+
+    private fun callMasterConnectedHooks() {
+        if (queryConnection != null) {
+            onMasterConnectedHooks.forEach { it() }
         }
     }
 }

@@ -14,6 +14,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.managed.BaseManagedNodeDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
+import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.mastersub.subnode.SubQueryHandler
 
@@ -28,17 +29,21 @@ class SubNodeBlockchainProcessManager(
 ) {
 
     init {
+        connectionManager as DefaultSubConnectionManager
+
         val queryRunner = { name: String, args: Gtv ->
-            (connectionManager as SubConnectionManager).masterSubQueryManager.query(
+            connectionManager.masterSubQueryManager.query(
                     null,
                     name,
                     args
             ).get()
         }
 
-        val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
-        initNodeConfigProvider(masterDataSource)
-        initManagedEnvironment(masterDataSource)
+        connectionManager.addOnMasterConnectedHook {
+            val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
+            initNodeConfigProvider(masterDataSource)
+            initManagedEnvironment(masterDataSource)
+        }
     }
 
     override fun createAndRegisterBlockchainProcess(
