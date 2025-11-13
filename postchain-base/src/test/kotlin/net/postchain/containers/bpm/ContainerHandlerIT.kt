@@ -108,6 +108,7 @@ logger.info("Using docker host $dockerHost")
             }
         } catch (e: ConditionTimeoutException) {
             tearDown()
+            throw e
         }
         subnodeAdminClient.disconnect()
         mockedMasterServer.shutdown()
