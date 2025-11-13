@@ -5,7 +5,6 @@ include:
     file:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
-      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -86,7 +85,6 @@ gitlab-release:
 build:
   extends:
     - .setup
-    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
