@@ -213,14 +213,14 @@ class DefaultSubConnectionManager(
         onMasterConnectedHooks.add(hook)
 
         queryConnection?.let {
-            callOnMasterConnectedHooks(queryConnectionDescriptor, it)
+            callOnMasterConnectedHooks(listOf(hook), queryConnectionDescriptor, it)
         }
         chains.getBlockchainRids().forEach { brid ->
             chains.get(brid)?.let { chain ->
                 if (chain.isConnected()) {
                     chain.getConnection()?.let { connection ->
                         val connectionDescriptor = createSubConnectionDescriptor(chain)
-                        callOnMasterConnectedHooks(connectionDescriptor, connection)
+                        callOnMasterConnectedHooks(listOf(hook), connectionDescriptor, connection)
                     }
                 }
             }
@@ -236,7 +236,7 @@ class DefaultSubConnectionManager(
             descriptor: SubConnectionDescriptor,
             connection: SubConnection,
     ): MsMessageHandler? {
-        callOnMasterConnectedHooks(descriptor, connection)
+        callOnMasterConnectedHooks(onMasterConnectedHooks, descriptor, connection)
 
         return if (descriptor.blockchainRid == null) {
             queryConnection?.close()
@@ -370,9 +370,9 @@ class DefaultSubConnectionManager(
         }
     }
 
-    private fun callOnMasterConnectedHooks(descriptor: SubConnectionDescriptor, connection: SubConnection) {
+    private fun callOnMasterConnectedHooks(hooks: List<(SubConnectionDescriptor) -> Unit>, descriptor: SubConnectionDescriptor, connection: SubConnection) {
         try {
-            onMasterConnectedHooks.forEach { it(descriptor) }
+            hooks.forEach { it(descriptor) }
         } catch (e: Exception) {
             logger.error("Error in hook for when master is connected: ${e.message}", e)
             connection.close()
