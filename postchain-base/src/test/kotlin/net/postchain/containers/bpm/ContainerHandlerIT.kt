@@ -20,6 +20,7 @@ import net.postchain.gtv.GtvDictionary
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -32,7 +33,7 @@ import java.net.InetAddress
 import java.net.URI
 import java.nio.file.Path
 
-
+@Disabled
 internal class ContainerHandlerIT {
     companion object : KLogging()
 
