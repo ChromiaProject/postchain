@@ -53,6 +53,8 @@ class ChainsWithOneConnection<
         return chainsWithOneConnection[bcRid] ?: throw ProgrammerMistake("Chain RID not found: ${bcRid.toHex()}")
     }
 
+    fun getBlockchainRids() = chainsWithOneConnection.keys.toSet()
+
     // --------------
     // Mutators
     // --------------

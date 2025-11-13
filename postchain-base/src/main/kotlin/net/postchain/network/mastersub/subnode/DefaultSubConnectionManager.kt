@@ -46,6 +46,12 @@ interface SubConnectionManager : ConnectionManager {
      * Sends a [MsMessage] to the Master node
      */
     fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean
+
+    /**
+     * Add a hook to be called when the connection to the master node is established. If a connection already is
+     * established the hook will be called immediately.
+     */
+    fun addOnMasterConnectedHook(hook: (SubConnectionDescriptor) -> Unit)
 }
 
 /**
@@ -83,7 +89,7 @@ class DefaultSubConnectionManager(
     private var reconnectionScheduledForQuery: ScheduledFuture<*>? = null
     private val reconnectDelay = Duration.ofSeconds(15)
     private var isShutDown = false
-    private val onMasterConnectedHooks = mutableListOf<() -> Unit>()
+    private val onMasterConnectedHooks = mutableListOf<(SubConnectionDescriptor) -> Unit>()
 
     private val connectedPeersHandler: MsMessageHandler = object : MsMessageHandler {
         override fun onMessage(message: MsMessage) {
@@ -131,10 +137,12 @@ class DefaultSubConnectionManager(
 
 
     private fun connectToMaster(chain: ChainWithOneMasterConnection) {
-        val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers, containerNodeConfig.containerIID)
-
         logger.info { "Connecting to master node ${masterNodePeerInfo.host}:${masterNodePeerInfo.port}" }
-        subConnector.connectMaster(masterNodePeerInfo, connectionDescriptor)
+        subConnector.connectMaster(masterNodePeerInfo, createSubConnectionDescriptor(chain))
+    }
+
+    private fun createSubConnectionDescriptor(chain: ChainWithOneMasterConnection): SubConnectionDescriptor {
+        return SubConnectionDescriptor(chain.config.blockchainRid, chain.peers, containerNodeConfig.containerIID)
     }
 
     /**
@@ -201,9 +209,22 @@ class DefaultSubConnectionManager(
         }
     }
 
-    fun addOnMasterConnectedHook(hook: () -> Unit) {
+    override fun addOnMasterConnectedHook(hook: (SubConnectionDescriptor) -> Unit) {
         onMasterConnectedHooks.add(hook)
-        callMasterConnectedHooks()
+
+        queryConnection?.let {
+            callOnMasterConnectedHooks(queryConnectionDescriptor, it)
+        }
+        chains.getBlockchainRids().forEach { brid ->
+            chains.get(brid)?.let { chain ->
+                if (chain.isConnected()) {
+                    chain.getConnection()?.let { connection ->
+                        val connectionDescriptor = createSubConnectionDescriptor(chain)
+                        callOnMasterConnectedHooks(connectionDescriptor, connection)
+                    }
+                }
+            }
+        }
     }
 
     // ----------------------------------
@@ -215,13 +236,13 @@ class DefaultSubConnectionManager(
             descriptor: SubConnectionDescriptor,
             connection: SubConnection,
     ): MsMessageHandler? {
+        callOnMasterConnectedHooks(descriptor, connection)
+
         return if (descriptor.blockchainRid == null) {
             queryConnection?.close()
             queryConnection = connection
 
             logger.debug("Query connection to master established")
-
-            callMasterConnectedHooks()
             masterSubQueryManager
         } else {
             val chain = chains.get(descriptor.blockchainRid)
@@ -244,7 +265,6 @@ class DefaultSubConnectionManager(
 
                     else -> {
                         logger.info("Master node connected")
-                        callMasterConnectedHooks()
                         chain.setConnection(connection)
                         chain.getPacketHandler()
                     }
@@ -350,9 +370,20 @@ class DefaultSubConnectionManager(
         }
     }
 
-    private fun callMasterConnectedHooks() {
-        if (queryConnection != null) {
-            onMasterConnectedHooks.forEach { it() }
+    private fun callOnMasterConnectedHooks(descriptor: SubConnectionDescriptor, connection: SubConnection) {
+        try {
+            onMasterConnectedHooks.forEach { it(descriptor) }
+        } catch (e: Exception) {
+            logger.error("Error in hook for when master is connected: ${e.message}", e)
+            connection.close()
+            if (descriptor.blockchainRid == null) {
+                scheduleQueryReconnection()
+            } else {
+                chains.get(descriptor.blockchainRid)?.let { chain ->
+                    scheduleReconnection(chain)
+                }
+            }
+            throw e
         }
     }
 }

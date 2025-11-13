@@ -39,10 +39,12 @@ class SubNodeBlockchainProcessManager(
             ).get()
         }
 
-        connectionManager.addOnMasterConnectedHook {
-            val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
-            initNodeConfigProvider(masterDataSource)
-            initManagedEnvironment(masterDataSource)
+        connectionManager.addOnMasterConnectedHook { descriptor ->
+            if (descriptor.blockchainRid == null && !isDataSourceInitialized()) {
+                val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
+                initNodeConfigProvider(masterDataSource)
+                initManagedEnvironment(masterDataSource)
+            }
         }
     }
 
