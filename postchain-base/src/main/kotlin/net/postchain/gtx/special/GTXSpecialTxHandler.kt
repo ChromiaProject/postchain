@@ -8,6 +8,7 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.FaultyExtensionException
@@ -42,13 +43,13 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
     private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
     private val opToExtension: Map<String, GTXSpecialTxExtension> = buildMap {
-        for (x in extensions) {
-            x.init(module, chainID, blockchainRID, cs)
-            for (op in x.getRelevantOps()) {
+        for (ext in extensions) {
+            ext.init(module, chainID, blockchainRID, cs)
+            for (op in ext.getRelevantOps()) {
                 if (containsKey(op)) {
                     throw ProgrammerMistake("Overlapping op: $op")
                 }
-                put(op, x)
+                put(op, ext)
             }
         }
     }
@@ -63,10 +64,10 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction? {
         val ops = mutableListOf<GtxOp>()
-        for (x in extensions) {
-            if (x.needsSpecialTransaction(position)) {
+        for (ext in extensions) {
+            if (ext.needsSpecialTransaction(position)) {
                 try {
-                    for (o in x.createSpecialOperations(position, bctx)) {
+                    for (o in ext.createSpecialOperations(position, bctx)) {
                         ops.add(GtxOp(o.opName, *o.args))
                     }
                 } catch (e: Exception) {
@@ -128,18 +129,25 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
             // ext validation
             extOps.forEach { (ext, ops) ->
-                try {
-                    if (ext != null && !ext.needsSpecialTransaction(position)) {
-                        logger.warn("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
-                        return false
+                if (ext != null) {
+                    try {
+                        if (!ext.needsSpecialTransaction(position)) {
+                            logger.warn("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
+                            return false
+                        }
+                        try {
+                            if (!ext.validateSpecialOperations(position, bctx, ops)) {
+                                logger.warn("Validation failed in special handler ${ext.javaClass.name}")
+                                return false
+                            }
+                        } catch (e: UserMistake) {
+                            logger.warn("Validation failed in special handler ${ext.javaClass.name}: ${e.message}")
+                            return false
+                        }
+                    } catch (e: Exception) {
+                        // Extensions should not throw when validating
+                        throw FaultyExtensionException("Unexpected exception while validating transaction at position: $position", e)
                     }
-                    if (ext != null && !ext.validateSpecialOperations(position, bctx, ops)) {
-                        logger.warn("Validation failed in special handler ${ext.javaClass.name}")
-                        return false
-                    }
-                } catch (e: Exception) {
-                    // Extensions should not throw when validating
-                    throw FaultyExtensionException("Unexpected exception while validating transaction at position: $position", e)
                 }
             }
             extensions.filterIsInstance<GTXNonSkippingSpecialTxExtension>()
