@@ -540,4 +540,14 @@ internal class GtvObjectMapperTest {
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf("bar" to gtv(17L))), Simple::class)).isEqualTo(Simple(17L))
         assertThat(GtvObjectMapper.toGtvDictionary(Simple(17L))).isEqualTo(gtv(mapOf("bar" to gtv(17L))))
     }
+
+    @Test
+    fun emptyMapTest() {
+        data class MyConfig(
+                @Name("collections")
+                val collections: Map<String, String> = emptyMap(),
+        )
+        val emptyGtvDict = GtvObjectMapper.toGtvDictionary(MyConfig())
+        assertThat(emptyGtvDict).isEqualTo(gtv(mapOf("collections" to gtv(mapOf()))))
+    }
 }

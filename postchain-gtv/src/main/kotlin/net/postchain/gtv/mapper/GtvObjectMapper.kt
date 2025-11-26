@@ -130,8 +130,6 @@ object GtvObjectMapper {
     fun <T : Any> default(classType: Class<T>): T = fromGtv(gtv(emptyMap()), classType)
 
     fun <T : Any> toGtvArray(obj: T): GtvArray {
-        requireAllowedAnnotations(obj)
-
         val gtv = when (obj) {
             is Map<*, *> -> {
                 obj.map {
@@ -141,7 +139,7 @@ object GtvObjectMapper {
 
             is Collection<*> -> obj.map { classToGtv(it!!) }
             else -> {
-                getPrimaryConstructorParameters(obj).map { parameter ->
+                getAndValidatePrimaryConstructorParameters(obj).map { parameter ->
                     val v = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
                     v?.let { classToGtv(it) } ?: GtvNull
                 }
@@ -151,7 +149,6 @@ object GtvObjectMapper {
     }
 
     fun <T : Any> toGtvDictionary(obj: T): GtvDictionary {
-        requireAllowedAnnotations(obj)
         val map = when (obj) {
             is Map<*, *> -> {
                 obj.map { (key, value) ->
@@ -160,10 +157,10 @@ object GtvObjectMapper {
                 }
             }
 
-            is List<*> -> throw IllegalArgumentException("List types not supported")
-            is Set<*> -> throw IllegalArgumentException("Set types not supported")
+            is Collection<*> -> throw IllegalArgumentException("Collection types not supported")
+
             else -> {
-                getPrimaryConstructorParameters(obj).map { parameter ->
+                getAndValidatePrimaryConstructorParameters(obj).map { parameter ->
                     val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
                     val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
                     val name = parameter.findAnnotation<Name>()?.name
@@ -176,21 +173,22 @@ object GtvObjectMapper {
         return gtv(map)
     }
 
-    private fun <T : Any> requireAllowedAnnotations(obj: T) {
-        obj::class.constructors.first().parameters.forEach {
+    private fun <T : Any> getAndValidatePrimaryConstructorParameters(obj: T): List<KParameter> {
+        val constructorParameters = obj::class.primaryConstructor?.parameters
+        if (constructorParameters.isNullOrEmpty()) {
+            throw IllegalArgumentException("${obj::class} is not supported for mapping since it does not have any primary constructor parameters")
+        }
+        requireAllowedAnnotations(constructorParameters)
+        return constructorParameters
+    }
+
+    private fun requireAllowedAnnotations(parameters: List<KParameter>) {
+        parameters.forEach {
             require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted" }
             require(!it.hasAnnotation<Transient>())
             require(!it.hasAnnotation<Nested>())
         }
     }
-}
-
-private fun <T : Any> getPrimaryConstructorParameters(obj: T): List<KParameter> {
-    val constructorParameters = obj::class.primaryConstructor?.parameters
-    if (constructorParameters.isNullOrEmpty()) {
-        throw IllegalArgumentException("${obj::class} is not supported for mapping since it does not have any primary constructor parameters")
-    }
-    return constructorParameters
 }
 
 private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvArray(it) }): Gtv {
