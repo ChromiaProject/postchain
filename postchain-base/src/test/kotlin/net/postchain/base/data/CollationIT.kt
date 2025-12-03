@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 
@@ -48,7 +48,7 @@ class CollationIT {
         }
     }
 
-    private fun appConfig(postgres: PostgreSQLContainer<out PostgreSQLContainer<*>>) =
+    private fun appConfig(postgres: PostgreSQLContainer) =
             AppConfig(PropertiesConfiguration().apply {
                 addProperty("database.url", postgres.jdbcUrl)
                 addProperty("database.username", postgres.username)
