@@ -13,6 +13,7 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.whenCompleteUnwrapped
+import net.postchain.core.BadBlockException
 import net.postchain.core.BadDataException
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.ConfigurationMismatchException
@@ -305,10 +306,15 @@ class BaseBlockManager(
                                 logger.debug { "Got interrupted while building block at height ${statusManager.myStatus.height}: ${exception.message}" }
 
                             else -> {
-                                if (exception is PmEngineIsAlreadyClosed) {
-                                    logger.debug(msg)
-                                } else {
-                                    logger.error(msg, exception)
+                                when (exception) {
+                                    is PmEngineIsAlreadyClosed ->
+                                        logger.debug(msg)
+
+                                    is BadBlockException ->
+                                        logger.error(msg)
+
+                                    else ->
+                                        logger.error(msg, exception)
                                 }
                                 blockStrategy.blockFailed()
                             }
