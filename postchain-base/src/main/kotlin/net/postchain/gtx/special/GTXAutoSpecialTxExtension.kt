@@ -2,6 +2,7 @@ package net.postchain.gtx.special
 
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvInteger
@@ -57,32 +58,32 @@ class GTXAutoSpecialTxExtension : GTXNonSkippingSpecialTxExtension {
         return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))
     }
 
-    private fun validateOp(bctx: BlockEContext, op: OpData, requiredOpName: String): Boolean {
-        if (op.opName != requiredOpName) return false
-
-        if (op.args.size != 1) return false
-        val arg = op.args[0]
-        if (arg.type !== GtvType.INTEGER) return false
-        if (arg.asInteger() != bctx.height) return false
-        return true
-    }
-
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
         if (position == SpecialTransactionPosition.Begin) {
             if (wantBegin) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_BEGIN_BLOCK)
+                if (ops.size != 1) throw UserMistake("missing $OP_BEGIN_BLOCK")
+                validateOp(bctx, ops[0], OP_BEGIN_BLOCK)
             } else {
-                return ops.isEmpty()
+                if (ops.isNotEmpty()) throw UserMistake("Got unexpected operations")
             }
         } else {
             if (wantEnd) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_END_BLOCK)
+                if (ops.size != 1) throw UserMistake("missing $OP_END_BLOCK")
+                validateOp(bctx, ops[0], OP_END_BLOCK)
             } else {
-                return ops.isEmpty()
+                if (ops.isNotEmpty()) throw UserMistake("Got unexpected operations")
             }
         }
+        return true
+    }
+
+    private fun validateOp(bctx: BlockEContext, op: OpData, requiredOpName: String) {
+        if (op.opName != requiredOpName) throw UserMistake("Wrong operation name")
+
+        if (op.args.size != 1) throw UserMistake("needs 1 argument, got ${op.args.size}")
+        val arg = op.args[0]
+        if (arg.type !== GtvType.INTEGER) throw UserMistake("needs 1 integer argument")
+        if (arg.asInteger() != bctx.height) throw UserMistake("${arg.asInteger()} != ${bctx.height}")
     }
 
     override fun isAllowedToSkipSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean =
