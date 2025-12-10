@@ -72,7 +72,14 @@ private fun PostchainTestNode.strategy(chainId: Long) =
         blockBuildingStrategy(chainId) as OnDemandBlockBuildingStrategy
 
 /**
+ * Builds blocks up to the specified height and waits for them to be committed.
+ * This method triggers block building and then waits for the blocks to be committed.
  *
+ * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+ * strategy and will wait indefinitely on a stale object.
+ *
+ * @param chainId the chain ID to build blocks on
+ * @param height the target block height to build and wait for
  * @param timeout  time to wait for each block
  *
  * @throws TimeoutException if timeout
@@ -85,8 +92,15 @@ fun PostchainTestNode.awaitBuiltBlock(chainId: Long, height: Long, timeout: Dura
 }
 
 /**
+ * Waits for the blockchain to reach the specified height without actively building blocks.
+ * This method only waits for blocks to be committed, unlike [awaitBuiltBlock] which also triggers block building.
  *
- * @param timeout  time to wait for each block
+ * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+ * strategy and will wait indefinitely on a stale object.
+ *
+ * @param chainId the chain ID to wait on
+ * @param height the target block height to wait for
+ * @param timeout  time to wait for each block (default is Duration.INFINITE)
  *
  * @throws TimeoutException if timeout
  */
