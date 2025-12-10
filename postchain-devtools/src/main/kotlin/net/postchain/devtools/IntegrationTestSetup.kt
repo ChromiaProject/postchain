@@ -364,10 +364,19 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
-
+    
     /**
+     * Builds blocks on the specified chain up to the target height.
+     * This method enqueues the provided transactions, triggers block building up to the specified height
+     * on all chain nodes, and then waits for all nodes to reach that height.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param chainId the chain ID where blocks should be built
+     * @param toHeight the target block height to reach
+     * @param txs optional vararg of transactions to include in the blocks
+     * @param timeout time to wait for each block to be committed (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
@@ -376,9 +385,17 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     /**
-     * Builds next block
+     * Builds the next block on the specified chain.
+     * This method determines the current height from the first node, enqueues the provided transactions,
+     * triggers block building up to `currentHeight + 1` on all chain nodes, and then waits for all nodes to
+     * reach that height.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param chainId the chain ID where the block should be built
+     * @param txs optional vararg of transactions to include in the block
+     * @param timeout  time to wait for each block (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
@@ -388,8 +405,18 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     /**
+     * Builds blocks on the specified chain for the given nodes up to the target height.
+     * This method enqueues the provided transactions, triggers block building up to the specified height
+     * on all nodes, and then waits for all nodes to reach that height.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param nodes the list of nodes on which to build blocks
+     * @param chainId the chain ID where blocks should be built
+     * @param toHeight the target block height to reach
+     * @param txs optional vararg of transactions to include in the blocks
+     * @param timeout time to wait for each block to be committed (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
@@ -399,9 +426,18 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     /**
-     * Builds next block
+     * Builds the next block on the specified chain for the given nodes.
+     * This method first determines the current height from the first node, enqueues the provided transactions,
+     * triggers block building up to `currentHeight + 1` on all nodes, and then waits for all nodes to
+     * reach that height.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param nodes the list of nodes on which to build the block
+     * @param chainId the chain ID where the block should be built
+     * @param txs optional vararg of transactions to include in the block
+     * @param timeout time to wait for each block to be committed (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
@@ -411,6 +447,19 @@ open class IntegrationTestSetup : AbstractIntegration() {
         awaitHeight(nodes, chainId, currentHeight + 1, timeout)
     }
 
+
+    /**
+     * Enqueues transactions and triggers block building up to the specified height without waiting for completion.
+     * This method first enqueues the provided transactions on all nodes, then triggers block building up to
+     * the target height on each node. Unlike [buildBlock], this method does not wait for the blocks to be committed.
+     *
+     * This method can be used during reconfiguration.
+     *
+     * @param nodes the list of nodes on which to build blocks
+     * @param chainId the chain ID where blocks should be built
+     * @param toHeight the target block height to reach
+     * @param txs optional vararg of transactions to include in the blocks
+     */
     fun buildBlockNoWait(
             nodes: List<PostchainTestNode>,
             chainId: Long,
@@ -426,8 +475,16 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     /**
+     * Waits for all chain nodes to reach the given height on the specified chain.
+     * This method only waits for blocks to be committed, unlike [buildBlock] which also triggers block building.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param nodes the list of nodes to wait for
+     * @param chainId the chain ID to check
+     * @param height the target block height to reach
+     * @param timeout time to wait for each block (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
@@ -437,9 +494,18 @@ open class IntegrationTestSetup : AbstractIntegration() {
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
+    
     /**
+     * Waits for all specified nodes to reach the given height on the specified chain.
+     * This method only waits for blocks to be committed, unlike [buildBlock] which also triggers block building.
      *
-     * @param timeout  time to wait for each block
+     * **Warning:** Don't use during reconfiguration -- holds a reference to the old block building
+     * strategy and will wait indefinitely on a stale object.
+     *
+     * @param nodes the list of nodes to wait for
+     * @param chainId the chain ID to check
+     * @param height the target block height to reach
+     * @param timeout time to wait for each block (default is Duration.INFINITE)
      *
      * @throws TimeoutException if timeout
      */
