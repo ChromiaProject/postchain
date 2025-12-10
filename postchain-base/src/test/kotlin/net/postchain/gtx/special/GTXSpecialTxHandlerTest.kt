@@ -1,8 +1,12 @@
 package net.postchain.gtx.special
 
+import assertk.assertFailure
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
@@ -19,7 +23,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -40,9 +43,9 @@ class GTXSpecialTxHandlerTest {
             on { getSpecialTxExtensions() } doReturn listOf(ext1, ext2)
         }
 
-        assertThrows<ProgrammerMistake> {
+        assertFailure {
             GTXSpecialTxHandler(module, 0L, mock(), mock(), mock())
-        }
+        }.isInstanceOf<ProgrammerMistake>().messageContains("Overlapping op")
     }
 
     @Test
@@ -54,8 +57,9 @@ class GTXSpecialTxHandlerTest {
         val sut = GTXSpecialTxHandler(mock(), 0L, ZERO_RID, cs, mock())
 
         // validate
-        val validated = sut.validateSpecialTransaction(mock(), emptyTx, mock())
-        assertEquals(false, validated)
+        assertFailure {
+            sut.validateSpecialTransaction(mock(), emptyTx, mock())
+        }.isInstanceOf<UserMistake>().messageContains("Empty operation list is not allowed")
     }
 
     @Test
@@ -103,8 +107,9 @@ class GTXSpecialTxHandlerTest {
         assertEquals(listOf("unknown_op", GtxSpecNop.OP_NAME), ops)
 
         // validate
-        val validated = sut.validateSpecialTransaction(mock(), tx, mock())
-        assertEquals(false, validated)
+        assertFailure {
+            sut.validateSpecialTransaction(mock(), tx, mock())
+        }.isInstanceOf<UserMistake>().messageContains("Unknown operation detected")
     }
 
     @Test
@@ -208,8 +213,9 @@ class GTXSpecialTxHandlerTest {
         // validate
         val validatedBegin = sut.validateSpecialTransaction(SpecialTransactionPosition.Begin, tx, mock())
         assertEquals(true, validatedBegin)
-        val validatedEnd = sut.validateSpecialTransaction(SpecialTransactionPosition.End, tx, mock())
-        assertEquals(false, validatedEnd)
+        assertFailure {
+            sut.validateSpecialTransaction(SpecialTransactionPosition.End, tx, mock())
+        }.isInstanceOf<UserMistake>().messageContains("does not need special transaction at position: End")
     }
 
     @Test
@@ -235,7 +241,8 @@ class GTXSpecialTxHandlerTest {
         val tx = factory.decodeTransaction(nopGtx.encode()) as GTXTransaction
 
         // validate
-        val validated = sut.validateSpecialTransaction(mock(), tx, mock())
-        assertEquals(false, validated)
+        assertFailure {
+            sut.validateSpecialTransaction(mock(), tx, mock())
+        }.isInstanceOf<UserMistake>().messageContains("Skipping special operations is not allowed by handler")
     }
 }

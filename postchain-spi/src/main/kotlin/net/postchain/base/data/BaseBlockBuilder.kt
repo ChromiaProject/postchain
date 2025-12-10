@@ -346,8 +346,14 @@ open class BaseBlockBuilder(
         val expectBeginTx = specialTxHandler.needsSpecialTransaction(Begin) && transactions.size == 0
         if (tx.isSpecial()) {
             if (expectBeginTx) {
-                if (!suppressSpecialTransactionValidation && !specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
-                    throw BadBlockException("Special transaction validation failed: $Begin")
+                if (!suppressSpecialTransactionValidation) {
+                    try {
+                        if (!specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
+                            throw BadBlockException("Special transaction validation failed at position $Begin")
+                        }
+                    } catch (e: UserMistake) {
+                        throw BadBlockException("Special transaction validation failed at position $Begin: ${e.message}")
+                    }
                 }
                 return // all is well, the first transaction is special and valid
             }
@@ -355,8 +361,14 @@ open class BaseBlockBuilder(
             if (!needEndTx) {
                 throw BadBlockException("Found unexpected special transaction")
             }
-            if (!suppressSpecialTransactionValidation && !specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
-                throw BadBlockException("Special transaction validation failed: $End")
+            if (!suppressSpecialTransactionValidation) {
+                try {
+                    if (!specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
+                        throw BadBlockException("Special transaction validation failed at position $End")
+                    }
+                } catch (e: UserMistake) {
+                    throw BadBlockException("Special transaction validation failed at position $End: ${e.message}")
+                }
             }
             haveSpecialEndTransaction = true
         } else if (expectBeginTx && !specialTxHandler.isAllowedToSkipSpecialTransaction(Begin, bctx)) {

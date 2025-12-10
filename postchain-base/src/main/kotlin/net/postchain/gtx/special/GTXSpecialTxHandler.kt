@@ -28,7 +28,7 @@ import net.postchain.logging.TRANSACTION_RID_TAG
 /**
  * In this case "Handler" means we:
  *
- * - can find out if we need a special tx, and
+ * - Can find out if we need a special tx, and
  * - can create a special tx, and
  * - can validate a special tx.
  *
@@ -65,7 +65,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction? {
         val ops = mutableListOf<GtxOp>()
         for (ext in extensions) {
-            if (ext.needsSpecialTransaction(position)) {
+            if (needsSpecialTransaction(ext, position)) {
                 try {
                     for (o in ext.createSpecialOperations(position, bctx)) {
                         ops.add(GtxOp(o.opName, *o.args))
@@ -75,7 +75,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                 }
             }
         }
-        // if no extension emitted an operation we don't create any tx
+        // if no extension emitted an operation, we don't create any tx
         if (ops.isEmpty()) return null
 
         val hasSpecNop = ops.any { it.opName == GtxSpecNop.OP_NAME }
@@ -89,14 +89,15 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     /**
      * The goal of this method is to call "validateSpecialOperations()" on all extensions we have.
      *
-     * NOTE: For the logic below to work no two extensions can have operations with the same name. If they do we
+     * NOTE: For the logic below to work, no two extensions can have operations with the same name. If they do, we
      *       might use the wrong extension to validate an operation.
      *
      * @param position is the position we are investigating
      * @param tx is the [Transaction] we are investigating (must already have been created at an earlier stage).
-     *           This tx holds all operations from all extensions, so it can be very big (in case of Anchoring chain at least)
+     *           This tx holds all operations from all extensions, so it can be very big (in the case of an Anchoring chain at least)
      * @param bctx
-     * @return true if all special operations of all extensions valid
+     * @return true
+     * @throws UserMistake if any special operation is invalid
      */
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean {
         withLoggingContext(TRANSACTION_RID_TAG to tx.getRID().toHex()) {
@@ -106,15 +107,13 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
             // empty ops
             if (operations.isEmpty()) {
-                logger.warn("Empty operation list is not allowed")
-                return false
+                throw UserMistake("Empty operation list is not allowed")
             }
 
             // __nop
             val nopIdx = operations.indexOfFirst { it.opName == GtxSpecNop.OP_NAME }
             if (nopIdx != -1 && nopIdx != operations.lastIndex) {
-                logger.warn("${GtxSpecNop.OP_NAME} is allowed only as the last operation")
-                return false
+                throw UserMistake("${GtxSpecNop.OP_NAME} is allowed only as the last operation")
             }
 
             val extOps = operations
@@ -123,30 +122,26 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
             // unknown ops
             if (extOps.containsKey(null)) {
-                logger.warn("Unknown operation detected: ${extOps[null]?.toTypedArray()?.contentToString()}")
-                return false
+                throw UserMistake("Unknown operation detected: ${extOps[null]?.toTypedArray()?.contentToString()}")
             }
 
             // ext validation
             extOps.forEach { (ext, ops) ->
                 if (ext != null) {
-                    try {
-                        if (!ext.needsSpecialTransaction(position)) {
-                            logger.warn("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
-                            return false
-                        }
-                        try {
-                            if (!ext.validateSpecialOperations(position, bctx, ops)) {
-                                logger.warn("Validation failed in special handler ${ext.javaClass.name}")
-                                return false
-                            }
-                        } catch (e: UserMistake) {
-                            logger.warn("Validation failed in special handler ${ext.javaClass.name}: ${e.message}")
-                            return false
-                        }
+                    if (!needsSpecialTransaction(ext, position)) {
+                        throw UserMistake("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
+                    }
+
+                    val isValid = try {
+                        ext.validateSpecialOperations(position, bctx, ops)
+                    } catch (e: UserMistake) {
+                        throw UserMistake("Validation failed in special handler ${ext.javaClass.name}: ${e.message}")
                     } catch (e: Exception) {
-                        // Extensions should not throw when validating
+                        // Extensions should not throw anything else than `UserMistake` when validating
                         throw FaultyExtensionException("Unexpected exception while validating transaction at position: $position", e)
+                    }
+                    if (!isValid) {
+                        throw UserMistake("Validation failed in special handler ${ext.javaClass.name}")
                     }
                 }
             }
@@ -154,13 +149,18 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                     .filterNot { extOps.keys.contains(it) }
                     .forEach { skippedExtension ->
                         if (!skippedExtension.isAllowedToSkipSpecialOperations(position, bctx)) {
-                            logger.warn("Skipping special operations is not allowed by handler ${skippedExtension.javaClass.name}")
-                            return false
+                            throw UserMistake("Skipping special operations is not allowed by handler ${skippedExtension.javaClass.name}")
                         }
                     }
             logger.trace(VALIDATE_SPECIAL_TRANSACTION, "End", position)
         }
         return true
+    }
+
+    private fun needsSpecialTransaction(ext: GTXSpecialTxExtension, position: SpecialTransactionPosition): Boolean = try {
+        ext.needsSpecialTransaction(position)
+    } catch (e: Exception) {
+        throw FaultyExtensionException("Unexpected exception while checking needsSpecialTransaction at position: $position", e)
     }
 
     override fun isAllowedToSkipSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean {
