@@ -6,13 +6,15 @@ import net.postchain.containers.bpm.docker.DockerTools.asyncExecAwaitSingleRespo
 import org.assertj.core.api.AssertionsForClassTypes.assertThat
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.TimeUnit
 
 
-class DockerToolsTest {
+class DockerToolsIT {
 
+    @Tag("docker")
     @Test
     fun `test async single response - don't get stuck on error`() {
         val dockerClient = DockerClientFactory.create()
@@ -28,6 +30,7 @@ class DockerToolsTest {
         }
     }
 
+    @Tag("docker")
     @Test
     fun `test async multi response - don't get stuck on error`() {
         val dockerClient = DockerClientFactory.create()
