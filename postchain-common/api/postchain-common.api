@@ -67,6 +67,7 @@ public final class net/postchain/common/PropertiesFileLoader {
 public final class net/postchain/common/UtilsKt {
 	public static final fun hexStringToByteArray (Ljava/lang/String;)[B
 	public static final fun hexStringToWrappedByteArray (Ljava/lang/String;)Lnet/postchain/common/types/WrappedByteArray;
+	public static final fun safeToHex ([BI)Ljava/lang/String;
 	public static final fun toHex ([B)Ljava/lang/String;
 	public static final fun wrap ([B)Lnet/postchain/common/types/WrappedByteArray;
 }

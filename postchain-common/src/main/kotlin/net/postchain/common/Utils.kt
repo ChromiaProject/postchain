@@ -31,10 +31,25 @@ fun String.hexStringToByteArray(): ByteArray {
 private val HEX_CHAR_ARRAY = HEX_CHARS.toCharArray()
 
 fun ByteArray.toHex(): String {
-    val result = StringBuffer()
+    val result = StringBuilder()
 
     forEach {
         val octet = it.toInt()
+        val firstIndex = (octet and 0xF0).ushr(4)
+        val secondIndex = octet and 0x0F
+        result.append(HEX_CHAR_ARRAY[firstIndex])
+        result.append(HEX_CHAR_ARRAY[secondIndex])
+    }
+
+    return result.toString()
+}
+
+fun ByteArray.safeToHex(maxLength: Int): String {
+    val result = StringBuilder()
+
+    for ((i, b) in this.withIndex()) {
+        if (i >= maxLength) break
+        val octet = b.toInt()
         val firstIndex = (octet and 0xF0).ushr(4)
         val secondIndex = octet and 0x0F
         result.append(HEX_CHAR_ARRAY[firstIndex])

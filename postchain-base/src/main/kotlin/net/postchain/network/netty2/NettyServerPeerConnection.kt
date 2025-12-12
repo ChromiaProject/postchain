@@ -6,7 +6,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
+import net.postchain.core.BadMessageException
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
@@ -73,6 +73,8 @@ class NettyServerPeerConnection<PacketType>(
             } else {
                 handleMessage(message, ctx)
             }
+        } catch (e: BadMessageException) {
+            logger.warn("Error when receiving message from peer ${peerConnectionDescriptor?.nodeId}: ${e.message}")
         } catch (e: Exception) {
             logger.error("Error when receiving message from peer ${peerConnectionDescriptor?.nodeId}", e)
         } finally {
@@ -99,7 +101,7 @@ class NettyServerPeerConnection<PacketType>(
         if (packetCodec.isIdentPacket(message)) {
             val identPacketInfo = try {
                 packetCodec.parseIdentPacket(message)
-            } catch (e: UserMistake) {
+            } catch (e: BadMessageException) {
                 logger.warn("Failed to parse ident packet from peer with remote address ${ctx?.channel()?.remoteAddress()} reason: ${e.message}")
                 return
             }

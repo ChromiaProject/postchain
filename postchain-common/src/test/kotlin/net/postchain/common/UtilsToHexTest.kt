@@ -31,4 +31,12 @@ class UtilsToHexTest {
 
         assertThat(actual).isEqualTo(expected, ignoreCase = true)
     }
+
+    @Test
+    fun `safeToHex test`() {
+        val actual = "ABCD1234".hexStringToByteArray().safeToHex(2)
+        val expected = "ABCD"
+
+        assertThat(actual).isEqualTo(expected, ignoreCase = true)
+    }
 }
