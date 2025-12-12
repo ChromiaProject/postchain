@@ -4,14 +4,21 @@ package net.postchain.network.peer
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isInstanceOf
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.ebft.EBFT_VERSION
 import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -114,5 +121,67 @@ class DefaultPeerCommunicationManager2PeersIT {
                     actual2.addAll(actualPackets2.filter { it.message is GetBlockAtHeight }.map { (it.message as GetBlockAtHeight).height })
                     assertThat(actual2).containsExactly(10L, 11L)
                 }
+    }
+
+    @Test
+    fun `send message which is unrecognized by receiver`() {
+        val message = GtvEncoder.encodeGtv(gtv(gtv(4711), gtv("bogus")))
+        val signature = cryptoSystem.buildSigMaker(keyPair1).signMessage(message)
+        sendStrangeMessage(GtvEncoder.encodeGtv(gtv(gtv(message), gtv(signature.subjectID), gtv(signature.data))))
+    }
+
+    @Test
+    fun `send message with bad signature`() {
+        val message = GetBlockAtHeight(0).encoded(EBFT_VERSION).value
+        val signature = cryptoSystem.buildSigMaker(keyPair1).signMessage("ABCD".hexStringToByteArray())
+        sendStrangeMessage(GtvEncoder.encodeGtv(gtv(gtv(message), gtv(signature.subjectID), gtv(signature.data))))
+    }
+
+    @Test
+    fun `send garbage inner message`() {
+        val message = "ABCD".hexStringToByteArray()
+        val signature = cryptoSystem.buildSigMaker(keyPair1).signMessage(message)
+        sendStrangeMessage(GtvEncoder.encodeGtv(gtv(gtv(message), gtv(signature.subjectID), gtv(signature.data))))
+    }
+
+    @Test
+    fun `send incorrectly structured inner message`() {
+        val message = GtvEncoder.encodeGtv(gtv(mapOf("foo" to gtv(17))))
+        val signature = cryptoSystem.buildSigMaker(keyPair1).signMessage(message)
+        sendStrangeMessage(GtvEncoder.encodeGtv(gtv(gtv(message), gtv(signature.subjectID), gtv(signature.data))))
+    }
+
+    @Test
+    fun `send garbage outer message`() {
+        val message = "ABCD".hexStringToByteArray()
+        sendStrangeMessage(message)
+    }
+
+    private fun sendStrangeMessage(message: ByteArray) {
+        // Waiting for all connections to be established
+        await().atMost(Duration.FIVE_SECONDS)
+                .untilAsserted {
+                    val actual1 = context1.connectionManager.getConnectedNodes(context1.chainId)
+                    assertThat(actual1).containsExactly(peerInfo2.pubKey.wrap())
+
+                    val actual2 = context2.connectionManager.getConnectedNodes(context2.chainId)
+                    assertThat(actual2).containsExactly(peerInfo1.pubKey.wrap())
+                }
+
+        // Consume version packet
+        assertThat(context2.communicationManager.getPackets()).hasSize(1)
+
+        context1.connectionManager.sendPacket(lazy { message }, context1.chainId, NodeRid(keyPair2.pubKey.data))
+
+        Thread.sleep(1 * 1000)
+        assertThat(context2.communicationManager.getPackets()).isEmpty()
+
+        // Ensure that valid messages are still received
+        context1.communicationManager.sendPacket(GetBlockAtHeight(1), NodeRid(keyPair2.pubKey.data))
+        await().atMost(Duration.FIVE_SECONDS).untilAsserted {
+            val actual = context2.communicationManager.getPackets()
+            assertThat(actual).hasSize(1)
+            assertThat(actual.first().message).isInstanceOf(GetBlockAtHeight::class.java)
+        }
     }
 }

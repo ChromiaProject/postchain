@@ -5,9 +5,9 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.message.AppliedConfig
@@ -57,11 +57,11 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
         val message = verifySignedMessage(signedMessage, signedMessage.pubKey, 1)
 
         if (message !is Identification) {
-            throw UserMistake("Packet was not an Identification. Got ${message::class}")
+            throw BadMessageException("Packet was not an Identification. Got ${message::class}")
         }
 
         if (!config.pubKey.contentEquals(message.pubKey)) {
-            throw UserMistake("'yourPubKey' ${message.pubKey.toHex()} of Identification is not mine")
+            throw BadMessageException("'yourPubKey' ${message.pubKey.toHex()} of Identification is not mine")
         }
 
         return IdentPacketInfo(NodeRid(signedMessage.pubKey), message.blockchainRID, null)
@@ -71,14 +71,14 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
         val signedMessage = decodeSignedMessage(rawMessage, 1)
         val message = verifySignedMessage(signedMessage, signedMessage.pubKey, 1)
         if (message !is EbftVersion) {
-            throw UserMistake("Packet was not an EbftVersion. Got ${message::class}")
+            throw BadMessageException("Packet was not an EbftVersion. Got ${message::class}")
         }
         return message.ebftVersion
     }
 
     override fun getVersionFromVersionPacket(packet: EbftMessage): Long {
         if (packet !is EbftVersion) {
-            throw UserMistake("Packet was not an EbftVersion. Got ${packet::class}")
+            throw BadMessageException("Packet was not an EbftVersion. Got ${packet::class}")
         }
         return packet.ebftVersion
     }
@@ -117,7 +117,7 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
     private fun verifySignedMessage(message: SignedMessage, pubKey: ByteArray, ebftVersion: Long): EbftMessage {
         val verified = message.pubKey.contentEquals(pubKey)
                 && config.verifier()(message.message.encoded(ebftVersion).value, Signature(message.pubKey, message.signature))
-        return if (verified) message.message else throw UserMistake("Verification failed")
+        return if (verified) message.message else throw BadMessageException("Verification failed")
     }
 
     private fun decodeAndVerify(rawMessage: ByteArray, ebftVersion: Long): EbftMessage? {

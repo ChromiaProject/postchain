@@ -9,6 +9,7 @@ import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
+import net.postchain.core.BadMessageException
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -73,6 +74,8 @@ class NettyClientPeerConnection<PacketType>(
             } else {
                 peerPacketHandler?.handle(message, peerInfo.peerId())
             }
+        } catch (e: BadMessageException) {
+            logger.warn("Error when receiving message from peer ${peerInfo.peerId()}: ${e.message}")
         } catch (e: Exception) {
             logger.error("Error when receiving message from peer ${peerInfo.peerId()}", e)
         } finally {

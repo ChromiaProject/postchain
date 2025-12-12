@@ -6,7 +6,6 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BadDataException
 import net.postchain.core.BadMessageException
@@ -211,7 +210,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                 inboundPackets.add(ReceivedPacket(peerId, packetVersion, decodedPacket))
             }
         } catch (e: BadMessageException) {
-            logger.info("Bad message received from peer ${peerId}: ${e.message}")
+            logger.warn("Bad message received from peer ${peerId}: ${e.message}")
         } catch (e: BadDataException) {
             logger.error("Error when receiving message from peer $peerId", e)
         }
@@ -220,7 +219,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     private fun decodePacket(peerId: NodeRid, packet: ByteArray, packetVersion: Long) =
             try {
                 packetCodec.decodePacket(peerId, packet, packetVersion)
-            } catch (e: UserMistake) {
+            } catch (e: BadMessageException) {
                 if (packetVersion > 1) {
                     // In some cases, our packet version has not been received quick enough by the other peer,
                     // so it will think we are on packet version 1. This will be resolved as soon as the version
@@ -233,6 +232,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                         logger.info { "Got exception when decoding receive packet from ${peerId.toHex()} with version $packetVersion. Retry with version 1 succeeded so discarding packet." }
                         null
                     } catch (e2: Exception) {
+                        logger.debug(e2) { "Second exception when decoding packet" }
                         // Throw the original exception if there really is a problem with the verification and not a
                         // version problem.
                         throw e
