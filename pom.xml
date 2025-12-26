@@ -58,7 +58,7 @@
         <kotlin-logging.version>3.0.5</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
         <!-- NB! When updating log4j2 version from 2.20.0 check dependency overrides below -->
-        <log4j2.version>2.24.1</log4j2.version>
+        <log4j2.version>2.25.3</log4j2.version>
 
         <!-- 3rd party -->
         <netty.version>4.1.129.Final</netty.version>
