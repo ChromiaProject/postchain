@@ -916,7 +916,13 @@ class RestApi(
         }
     }
 
-    val server = ServerFilters.Cors(CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false))
+    val server = ServerFilters.Cors(CorsPolicy(
+            OriginPolicy.AllowAll(),
+            listOf("Content-Type", "Accept", "X-Accept-Query-Response-Signature"),
+            listOf(GET, POST, OPTIONS),
+            credentials = false,
+            exposedHeaders = listOf(DATA_TRUNCATED_HEADER, TRANSACTION_TIMESTAMP, BLOCK_HEIGHT_HEADER, QUERY_RESPONSE_SIGNATURE)
+    ))
             .then(requestLogContext)
             .then(Filter { next ->
                 { request ->
