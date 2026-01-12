@@ -5,6 +5,7 @@ package net.postchain.ebft.syncmanager.validator
 import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.withReadConnection
@@ -43,6 +44,7 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.SpecialTxExtension
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
@@ -97,7 +99,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var appliedConfigSenderEnsured = false
     private var hasRunInitialSync: Boolean
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
-        it.mustSyncUntilHeight = workerContext.nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
+        it.mustSyncUntilHeight = workerContext.nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID)
+                ?: -1
     }
 
     @Volatile
@@ -243,6 +246,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }
+                                is SpecialTxExtension -> handleSpecialTxExtension(xPeerId, message)
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
                         }
@@ -318,11 +322,26 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     return@runAsync
                 }
                 if (blockQueries.isTransactionConfirmed(tx.getRID()).get()) {
-                    logger.debug {"Got transaction with RID ${tx.getRID().toHex()} that is already in database from peer $xPeerId, ignoring"}
+                    logger.debug { "Got transaction with RID ${tx.getRID().toHex()} that is already in database from peer $xPeerId, ignoring" }
                     return@runAsync
                 }
 
                 workerContext.engine.getTransactionQueue().enqueue(tx)
+            }
+        }
+    }
+
+    /**
+     * Handle special tx extension received from peer
+     *
+     * @param message message
+     */
+    private fun handleSpecialTxExtension(xPeerId: NodeRid, message: SpecialTxExtension) {
+        CompletableFuture.runAsync {
+            withLoggingContext(loggingContext) {
+                logger.debug { "Got special tx extension message from peer $xPeerId" }
+                (blockchainConfiguration as? BaseBlockchainConfiguration)?.getSpecialTxHandler()
+                        ?.receiveBroadcast(message.extensionClass, message.data)
             }
         }
     }

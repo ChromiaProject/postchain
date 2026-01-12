@@ -170,6 +170,41 @@ class DefaultPeerCommunicationManagerTest {
     }
 
     @Test
+    fun sendPacket_with_version_filter_sends_packet_successfully() {
+        // Given
+        val connectionManager: PeerConnectionManager = mock {
+            on { getConnectedNodes(CHAIN_ID) } doReturn listOf(nodeRid1, nodeRid2)
+            }
+        val peerCommunicationConfig: PeerCommConfiguration = mock {
+            on { myPeerInfo() } doReturn myPeerInfo
+            on { pubKey } doReturn myPubKey
+        }
+
+        val packetCodec: XPacketCodec<Int> = mock {
+            on { isVersionPacket(any<ByteArray>()) } doReturn true
+            on { parseVersionPacket(pubKey1) } doReturn 3
+            on { parseVersionPacket(pubKey2) } doReturn 2
+        }
+
+        // When
+        val communicationManager = DefaultPeerCommunicationManager<Int>(
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetCodec, mock()
+        )
+                .apply {
+                    init()
+                    consumePacket(pubKey1, nodeRid1)
+                    consumePacket(pubKey2, nodeRid2)
+                    sendPacket(0, listOf(nodeRid1, nodeRid2)) { it >= 3}
+                }
+
+        // Then
+        verify(connectionManager).sendPacket(any(), eq(CHAIN_ID), eq(peerInfo1.peerId()))
+        verify(connectionManager, never()).sendPacket(any(), eq(CHAIN_ID), eq(peerInfo2.peerId()))
+
+        communicationManager.shutdown()
+    }
+
+    @Test
     fun broadcastPacket_sends_packet_successfully() {
         // Given
         val connectionManager: PeerConnectionManager = mock {

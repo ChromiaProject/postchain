@@ -308,6 +308,7 @@ public final class net/postchain/base/NullSpecialTransactionHandler : net/postch
 	public fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
 	public fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
+	public fun receiveBroadcast (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
 	public fun shouldAffectBlockBuilding ()Z
 	public fun shouldBuildBlock ()Z
 	public fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
@@ -353,6 +354,7 @@ public abstract interface class net/postchain/base/SpecialTransactionHandler {
 	public abstract fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
 	public abstract fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public abstract fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
+	public abstract fun receiveBroadcast (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
 	public abstract fun shouldAffectBlockBuilding ()Z
 	public abstract fun shouldBuildBlock ()Z
 	public abstract fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
@@ -1466,6 +1468,7 @@ public abstract interface class net/postchain/core/BlockchainInfrastructure : ne
 public abstract interface class net/postchain/core/BlockchainProcess {
 	public abstract fun getBlockchainEngine ()Lnet/postchain/core/BlockchainEngine;
 	public abstract fun getBlockchainState ()Lnet/postchain/core/BlockchainState;
+	public abstract fun getSpecialTxExtensionBroadcaster ()Lnet/postchain/core/ExtensionBroadcaster;
 	public abstract fun isProcessRunning ()Z
 	public abstract fun isSigner ()Z
 	public abstract fun registerDiagnosticData (Lnet/postchain/debug/DiagnosticData;)V
@@ -1474,6 +1477,7 @@ public abstract interface class net/postchain/core/BlockchainProcess {
 }
 
 public final class net/postchain/core/BlockchainProcess$DefaultImpls {
+	public static fun getSpecialTxExtensionBroadcaster (Lnet/postchain/core/BlockchainProcess;)Lnet/postchain/core/ExtensionBroadcaster;
 	public static fun registerDiagnosticData (Lnet/postchain/core/BlockchainProcess;Lnet/postchain/debug/DiagnosticData;)V
 }
 
@@ -1555,6 +1559,10 @@ public final class net/postchain/core/ExecutionContextKt {
 	public static final field NODE_ID_AUTO I
 	public static final field NODE_ID_NA I
 	public static final field NODE_ID_READ_ONLY I
+}
+
+public abstract interface class net/postchain/core/ExtensionBroadcaster {
+	public abstract fun broadcast (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
 }
 
 public final class net/postchain/core/FailedConfigurationMismatchException : net/postchain/core/BadDataException {
@@ -2399,6 +2407,15 @@ public final class net/postchain/gtx/ArgumentMetadata {
 	public final fun getRequired ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/postchain/gtx/BroadcastAware {
+	public abstract fun initializeBroadcastContext (Lnet/postchain/gtx/BroadcastContext;)V
+	public abstract fun receiveBroadcast (Lnet/postchain/gtv/Gtv;)V
+}
+
+public abstract interface class net/postchain/gtx/BroadcastContext {
+	public abstract fun broadcast (Lnet/postchain/gtv/Gtv;)V
 }
 
 public abstract interface class net/postchain/gtx/GTXModule : net/postchain/core/Shutdownable {

@@ -36,6 +36,10 @@ class MutedCommunicationManager<PacketType> : CommunicationManager<PacketType> {
         throw ProgrammerMistake(errorMessage())
     }
 
+    override fun sendPacket(packet: PacketType, recipients: List<NodeRid>, allowedVersionsFilter: PacketVersionFilter?) {
+        throw ProgrammerMistake(errorMessage())
+    }
+
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
         throw ProgrammerMistake(errorMessage())
     }

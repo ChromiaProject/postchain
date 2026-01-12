@@ -12,7 +12,10 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.core.BlockchainContext
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessConnectable
 import net.postchain.core.EContext
+import net.postchain.core.ExtensionBroadcaster
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
@@ -29,7 +32,10 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       blockSigMaker: SigMaker,
                                       final override val module: GTXModule,
                                       val blockchainConfigurationOptions: BlockchainConfigurationOptions
-) : BaseBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker), GTXModuleAware {
+) : BaseBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker), GTXModuleAware, BlockchainProcessConnectable {
+
+    @Volatile
+    private var specialTxExtensionBroadcaster: ExtensionBroadcaster? = null
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
@@ -45,7 +51,11 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
             this.chainID,
             effectiveBlockchainRID,
             cryptoSystem,
-            txFactory)
+            txFactory
+    ) { extensionClass, data ->
+        specialTxExtensionBroadcaster?.broadcast(extensionClass, data)
+                ?: logger.warn("Unable to broadcast message, specialTxExtensionBroadcaster is not initialized")
+    }
 
 
     companion object : KLogging()
@@ -73,9 +83,11 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                 is CompositeGTXModule -> {
                     module.modules.filterIsInstance<SnapshotAware>()
                 }
+
                 is SnapshotAware -> {
                     listOf(module)
                 }
+
                 else -> emptyList()
             }
 
@@ -94,4 +106,12 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     }
 
     override fun isSuppressSpecialTransactionValidation() = blockchainConfigurationOptions.suppressSpecialTransactionValidation
+
+    override fun connectProcess(process: BlockchainProcess) {
+        specialTxExtensionBroadcaster = process.getSpecialTxExtensionBroadcaster()
+    }
+
+    override fun disconnectProcess(process: BlockchainProcess) {
+        specialTxExtensionBroadcaster = null
+    }
 }

@@ -3,6 +3,7 @@ package net.postchain.base
 import net.postchain.core.BlockEContext
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockData
+import net.postchain.gtv.Gtv
 
 enum class SpecialTransactionPosition {
     Begin, End
@@ -34,4 +35,6 @@ interface SpecialTransactionHandler {
      * @return true if it is appropriate to build a block now
      */
     fun shouldBuildBlock(): Boolean = false
+
+    fun receiveBroadcast(extensionClass: String, data: Gtv)
 }

@@ -27,6 +27,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.EbftVersion
+import net.postchain.ebft.message.SpecialTxExtension
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -686,6 +687,7 @@ class FastSynchronizer(
                             workerContext.appConfig.cryptoSystem)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
                             message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
+                    is SpecialTxExtension -> logger.trace { "Got special tx extension from peer $peerId, ignoring" }
 
                     else -> {
                         if (signers.contains(peerId)) {
