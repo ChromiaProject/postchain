@@ -9,6 +9,7 @@ import net.postchain.base.configuration.KEY_REVOLT
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
+import net.postchain.core.ExtensionBroadcaster
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.framework.AbstractBlockchainProcess
@@ -24,6 +25,7 @@ import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.SpecialTxExtension
 import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
@@ -70,6 +72,10 @@ class ValidatorBlockchainProcess(
             CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
+
+    private val signerPeers: List<NodeRid> = workerContext.blockchainConfiguration.signers
+            .filter { !it.contentEquals(workerContext.appConfig.pubKeyByteArray) }
+            .map { NodeRid(it) }
 
     init {
         val nodeStatusMetrics = NodeStatusMetrics(workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.blockchainRid)
@@ -134,12 +140,14 @@ class ValidatorBlockchainProcess(
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
                 workerContext.communicationManager,
-                blockchainConfiguration.signers
-                        .filter { !it.contentEquals(workerContext.appConfig.pubKeyByteArray) }
-                        .map { NodeRid(it) }
+                signerPeers
         )
 
         statusManager.recomputeStatus()
+    }
+
+    override fun getSpecialTxExtensionBroadcaster(): ExtensionBroadcaster = ExtensionBroadcaster {
+        extensionClass, data -> workerContext.communicationManager.sendPacket(SpecialTxExtension(extensionClass, data), signerPeers) { it >= 3 }
     }
 
     fun isInFastSyncMode() = syncManager.isInFastSync()

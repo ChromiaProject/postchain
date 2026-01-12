@@ -10,10 +10,15 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.DiagnosticData
+import net.postchain.gtv.Gtv
 
 interface Shutdownable {
     fun shutdown()
     //fun isShutdown() // TODO: Olle: shouldn't we have this too, so many are using a flag for this
+}
+
+fun interface ExtensionBroadcaster {
+    fun broadcast(extensionClass: String, data: Gtv)
 }
 
 /**
@@ -63,6 +68,7 @@ interface BlockchainProcess {
     fun isSigner(): Boolean
     fun getBlockchainState(): BlockchainState
     fun isProcessRunning(): Boolean
+    fun getSpecialTxExtensionBroadcaster(): ExtensionBroadcaster? = null
 }
 
 interface RemoteBlockchainProcess {

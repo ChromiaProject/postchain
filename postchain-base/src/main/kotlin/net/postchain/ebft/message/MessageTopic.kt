@@ -23,7 +23,8 @@ enum class MessageTopic(val value: Int) {
     GETLATESTSNAPSHOT(17),
     SNAPSHOTBLOCKHEADER(18),
     GETSNAPSHOTDATA(19),
-    SNAPSHOTDATA(20);
+    SNAPSHOTDATA(20),
+    SPECIAL_TX_EXTENSION(21);
 
     fun toGtv() = gtv(value.toLong())
 }

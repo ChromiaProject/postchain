@@ -11,6 +11,7 @@ interface CommunicationManager<PacketType> {
     fun getPackets(): MutableList<ReceivedPacket<PacketType>>
     fun sendPacket(packet: PacketType, recipient: NodeRid)
     fun sendPacket(packet: PacketType, recipients: List<NodeRid>)
+    fun sendPacket(packet: PacketType, recipients: List<NodeRid>, allowedVersionsFilter: PacketVersionFilter?)
 
     /**
      * @param packet is the data to send

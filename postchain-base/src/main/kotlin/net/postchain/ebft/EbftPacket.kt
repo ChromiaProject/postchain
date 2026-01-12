@@ -24,7 +24,7 @@ import org.jetbrains.annotations.TestOnly
 
 // Whenever an Ebft message is changed, in a non-backward compatible way,
 // bump the version and handle old versions accordingly
-const val EBFT_VERSION: Long = 2
+const val EBFT_VERSION: Long = 3
 
 class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketCodec<EbftMessage> {
 

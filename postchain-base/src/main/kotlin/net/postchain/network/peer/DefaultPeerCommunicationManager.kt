@@ -89,20 +89,28 @@ class DefaultPeerCommunicationManager<PacketType>(
     }
 
     override fun sendPacket(packet: PacketType, recipients: List<NodeRid>) {
+        sendPacket(packet, recipients, allowedVersionsFilter = null)
+    }
+
+    override fun sendPacket(packet: PacketType, recipients: List<NodeRid>, allowedVersionsFilter: PacketVersionFilter?) {
         val encodedPackets: MutableMap<Long, LazyPacket> = mutableMapOf()
         recipients.forEach {
-            val packetVersion = getPeerPacketVersion(it)
-            if (logger.isTraceEnabled) {
-                withLoggingContext(
-                        *baseLoggingContextWithSender,
-                        TARGET_NODE_TAG to it.toHex(),
-                        MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
-                ) {
-                    logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet, packetVersion)}, $packetVersion)" }
+            val peerPacketVersion = getPeerPacketVersion(it)
+            if (allowedVersionsFilter == null || allowedVersionsFilter(peerPacketVersion)) {
+                if (logger.isTraceEnabled) {
+                    withLoggingContext(
+                            *baseLoggingContextWithSender,
+                            TARGET_NODE_TAG to it.toHex(),
+                            MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
+                    ) {
+                        logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet, peerPacketVersion)}, $peerPacketVersion)" }
+                    }
                 }
+                val lazyPacket = encodedPackets.getOrPut(peerPacketVersion) { lazy { packetCodec.encodePacket(packet, peerPacketVersion) } }
+                sendEncodedPacket(lazyPacket, it)
+            } else {
+                logger.trace { "Will not broadcast packet ${packetToString(packet, packetCodec.getPacketVersion())} to peer $it due to peer packet version $peerPacketVersion" }
             }
-            val lazyPacket = encodedPackets.getOrPut(packetVersion) { lazy { packetCodec.encodePacket(packet, packetVersion) } }
-            sendEncodedPacket(lazyPacket, it)
         }
     }
 

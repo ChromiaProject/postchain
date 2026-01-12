@@ -34,6 +34,7 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.SNAPSHOTBLOCKHEADER.value -> SnapshotBlockHeader.buildFromGtv(data, 1)
                 MessageTopic.GETSNAPSHOTDATA.value -> GetSnapshotData.buildFromGtv(data, 1)
                 MessageTopic.SNAPSHOTDATA.value -> SnapshotData.buildFromGtv(data, 1)
+                MessageTopic.SPECIAL_TX_EXTENSION.value -> SpecialTxExtension(data[1].asString(), data[2])
                 else -> throw BadMessageException("Message topic $topic is not handled")
             }
         }

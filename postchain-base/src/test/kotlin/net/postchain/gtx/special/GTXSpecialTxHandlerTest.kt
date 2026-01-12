@@ -1,15 +1,24 @@
 package net.postchain.gtx.special
 
 import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.messageContains
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockEContext
+import net.postchain.core.ExtensionBroadcaster
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtx.BroadcastAware
+import net.postchain.gtx.BroadcastContext
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -26,6 +35,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
 class GTXSpecialTxHandlerTest {
 
@@ -44,7 +54,7 @@ class GTXSpecialTxHandlerTest {
         }
 
         assertFailure {
-            GTXSpecialTxHandler(module, 0L, mock(), mock(), mock())
+            GTXSpecialTxHandler(module, 0L, mock(), mock(), mock(), mock())
         }.isInstanceOf<ProgrammerMistake>().messageContains("Overlapping op")
     }
 
@@ -54,7 +64,7 @@ class GTXSpecialTxHandlerTest {
                 GtxBuilder(ZERO_RID, listOf(), cs, GtvMerkleHashCalculatorV2(cs)).finish().buildGtx().encode()
         ) as GTXTransaction
 
-        val sut = GTXSpecialTxHandler(mock(), 0L, ZERO_RID, cs, mock())
+        val sut = GTXSpecialTxHandler(mock(), 0L, ZERO_RID, cs, mock(), mock())
 
         // validate
         assertFailure {
@@ -75,7 +85,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
 
         assertEquals(true, sut.needsSpecialTransaction(mock()))
         assertNull(sut.createSpecialTransaction(mock(), mock()))
@@ -96,7 +106,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
 
         // needs
         assertEquals(true, sut.needsSpecialTransaction(mock()))
@@ -134,7 +144,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
 
         // needs
         assertEquals(true, sut.needsSpecialTransaction(mock()))
@@ -170,7 +180,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
 
         // needs
         assertEquals(true, sut.needsSpecialTransaction(mock()))
@@ -199,7 +209,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
 
         // needs
         assertEquals(true, sut.needsSpecialTransaction(SpecialTransactionPosition.Begin))
@@ -232,7 +242,7 @@ class GTXSpecialTxHandlerTest {
         }
         val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
-        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, mock())
         assertFalse(sut.isAllowedToSkipSpecialTransaction(SpecialTransactionPosition.Begin, mock()))
 
         // needs
@@ -244,5 +254,51 @@ class GTXSpecialTxHandlerTest {
         assertFailure {
             sut.validateSpecialTransaction(mock(), tx, mock())
         }.isInstanceOf<UserMistake>().messageContains("Skipping special operations is not allowed by handler")
+    }
+
+    @Test
+    fun `extension can broadcast message`() {
+        val ext1 = BroadcastAwareGTXSpecialTxExtension()
+        val ext2: GTXSpecialTxExtension = mock()
+        val module: GTXModule = mock {
+            on { getSpecialTxExtensions() } doReturn listOf(ext1, ext2)
+        }
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
+
+        val extensionBroadcaster = mock<ExtensionBroadcaster>()
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory, extensionBroadcaster)
+
+        sut.createSpecialTransaction(mock(), mock())
+        verify(extensionBroadcaster).broadcast(ext1.javaClass.name, gtv("send"))
+
+        sut.receiveBroadcast(ext1.javaClass.name, gtv("receive"))
+        assertThat(ext1.receivedBroadcast).isEqualTo("receive")
+    }
+
+    class BroadcastAwareGTXSpecialTxExtension : GTXSpecialTxExtension, BroadcastAware {
+        lateinit var broadcastContext: BroadcastContext
+
+        var receivedBroadcast: String? = null
+
+        override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {}
+
+        override fun getRelevantOps(): Set<String> = setOf("op1")
+
+        override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean = true
+
+        override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+            broadcastContext.broadcast(gtv("send"))
+            return listOf()
+        }
+
+        override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean = true
+
+        override fun initializeBroadcastContext(context: BroadcastContext) {
+            broadcastContext = context
+        }
+
+        override fun receiveBroadcast(data: Gtv) {
+            receivedBroadcast = data.asString()
+        }
     }
 }

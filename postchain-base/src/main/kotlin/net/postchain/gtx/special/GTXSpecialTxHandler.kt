@@ -12,10 +12,13 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.FaultyExtensionException
+import net.postchain.core.ExtensionBroadcaster
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.BroadcastAware
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -34,17 +37,24 @@ import net.postchain.logging.TRANSACTION_RID_TAG
  *
  * Special transactions are usually created by a [GTXSpecialTxExtension], which makes this extendable.
  */
-open class GTXSpecialTxHandler(val module: GTXModule,
-                               val chainID: Long,
-                               val blockchainRID: BlockchainRid,
-                               val cs: CryptoSystem,
-                               val factory: GTXTransactionFactory
+open class GTXSpecialTxHandler(
+        val module: GTXModule,
+        val chainID: Long,
+        val blockchainRID: BlockchainRid,
+        val cs: CryptoSystem,
+        val factory: GTXTransactionFactory,
+        val extensionBroadcaster: ExtensionBroadcaster,
 ) : SpecialTransactionHandler {
 
     private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
     private val opToExtension: Map<String, GTXSpecialTxExtension> = buildMap {
         for (ext in extensions) {
             ext.init(module, chainID, blockchainRID, cs)
+            if (ext is BroadcastAware) {
+                ext.initializeBroadcastContext { data ->
+                    extensionBroadcaster.broadcast(ext.javaClass.name, data)
+                }
+            }
             for (op in ext.getRelevantOps()) {
                 if (containsKey(op)) {
                     throw ProgrammerMistake("Overlapping op: $op")
@@ -182,5 +192,19 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
     override fun shouldBuildBlock(): Boolean =
             extensions.filterIsInstance<GTXBlockBuildingAffectingSpecialTxExtension>().any { it.shouldBuildBlock() }
+
+    override fun receiveBroadcast(extensionClass: String, data: Gtv) {
+        val extension = extensions.find { it.javaClass.name == extensionClass }
+        if (extension != null) {
+            if (extension is BroadcastAware) {
+                logger.debug { "Receiving extension broadcast for extension $extensionClass" }
+                extension.receiveBroadcast(data)
+            } else {
+                logger.warn("Got extension broadcast for non-broadcast aware extension $extensionClass")
+            }
+        } else {
+            logger.warn("Got extension broadcast for unknown extension $extensionClass")
+        }
+    }
 
 }

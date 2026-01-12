@@ -370,6 +370,13 @@ class SnapshotData(
     }
 }
 
+class SpecialTxExtension(val extensionClass: String, val data: Gtv) : EbftMessage(MessageTopic.SPECIAL_TX_EXTENSION) {
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(extensionClass), data)
+    }
+}
+
 data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
 
 class SnapshotRangeProof(
@@ -446,6 +453,7 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is BlockRange -> "BlockRange(startAtHeight=${message.startAtHeight}, isFull=${message.isFull}, noOfBlocks=${message.blocks.size})"
                 is AppliedConfig -> "AppliedConfig(configHash=${message.configHash.toHex()}, height=${message.height})"
                 is EbftVersion -> "EbftVersion(version=${message.ebftVersion})"
+                is SpecialTxExtension -> "SpecialTxExtension(extensionClass=${message.extensionClass}, data=${message.data})"
                 else -> "Unknown message type ${message.javaClass.canonicalName}"
             }
         }

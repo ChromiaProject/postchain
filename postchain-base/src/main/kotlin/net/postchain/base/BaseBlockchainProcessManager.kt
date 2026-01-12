@@ -24,6 +24,7 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessConnectable
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.BlockchainRestartNotifier
@@ -330,6 +331,7 @@ open class BaseBlockchainProcessManager(
         blockchainProcesses[chainId] = blockchainInfrastructure.createBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
                     try {
+                        (blockchainConfig as? BlockchainProcessConnectable)?.connectProcess(it)
                         extensions.forEach { ext -> ext.connectProcess(it) }
                     } catch (e: Exception) {
                         // Clean up the process
@@ -531,6 +533,7 @@ open class BaseBlockchainProcessManager(
     private fun disconnectProcessFromExtensions(process: BlockchainProcess) = extensions.forEach { ext ->
         try {
             ext.disconnectProcess(process)
+            (process.blockchainEngine.getConfiguration() as? BlockchainProcessConnectable)?.disconnectProcess(process)
         } catch (e: Exception) {
             // We just log this so shutdown can proceed
             logger.error(e) { "Unable to disconnect process from blockchain process manager extension" }
