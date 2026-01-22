@@ -99,7 +99,7 @@ abstract class BaseBlockQueries(
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {
-            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", chainId, e))
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed and database ${e.message}", chainId, e))
             return CompletableFuture.failedStage(e)
         }
 
