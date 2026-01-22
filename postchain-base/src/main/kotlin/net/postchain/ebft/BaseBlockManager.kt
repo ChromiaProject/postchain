@@ -100,7 +100,7 @@ class BaseBlockManager(
         }
     }
 
-    override fun onReceivedUnfinishedBlock(block: BlockData) {
+    override fun onReceivedUnfinishedBlock(block: BlockData, onLoadSuccess: () -> Unit) {
         synchronized(statusManager) {
             val theIntent = intent
             if (theIntent is FetchUnfinishedBlockIntent && theIntent.blockRID.contentEquals(block.header.blockRID)) {
@@ -115,6 +115,7 @@ class BaseBlockManager(
                         currentBlock = block
                         lastBlockTimestamp = blockTimestamp(block)
                     }
+                    onLoadSuccess()
                 }, { exception ->
                     val msg = "Can't load unfinished block ${theIntent.blockRID.toHex()}: " +
                             "${exception.message}"
