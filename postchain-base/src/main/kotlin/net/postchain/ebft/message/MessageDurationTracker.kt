@@ -53,7 +53,7 @@ class MessageDurationTracker(
             is BlockRange -> handleBlockRange(source, receivedMessage)
             is BlockSignature -> handleBlockSignature(source, receivedMessage)
             is CompleteBlock -> handleCompleteBlock(source, receivedMessage)
-            is UnfinishedBlock -> handleUnfinishedBlock(source, data)
+            is ProposedBlock -> handleProposedBlock(source, data)
             else -> null
         }
 
@@ -89,18 +89,18 @@ class MessageDurationTracker(
     private fun handleCompleteBlock(source: NodeRid, receivedMessage: CompleteBlock): Duration? =
             handleReceivedMessage<GetBlockAtHeight>(source, MessageTopic.GETBLOCKATHEIGHT) { receivedMessage.height == it.height }
 
-    private fun handleUnfinishedBlock(source: NodeRid, data: Any?): Duration? {
+    private fun handleProposedBlock(source: NodeRid, data: Any?): Duration? {
         val sentTopics = trackers[source] ?: return null
         val header = (data as? BaseBlockHeader) ?: return null
         val blockHeight = header.blockHeaderRec.getHeight()
         val blockRID = header.blockRID
 
         var responseTime: Duration? = null
-        val sentUnfinishedBlock = sentTopics.getOrDefault(MessageTopic.GETUNFINISHEDBLOCK, mutableListOf())
+        val sentProposedBlock = sentTopics.getOrDefault(MessageTopic.GETPROPOSEDBLOCK, mutableListOf())
         val sentBlockHeaderAndBlock = sentTopics.getOrDefault(MessageTopic.GETBLOCKHEADERANDBLOCK, mutableListOf())
 
-        for (trackedMessage in sentUnfinishedBlock) {
-            val message = trackedMessage.message as? GetUnfinishedBlock ?: continue
+        for (trackedMessage in sentProposedBlock) {
+            val message = trackedMessage.message as? GetProposedBlock ?: continue
             if (blockRID.contentEquals(message.blockRID)) {
                 responseTime = getElapsedTime(trackedMessage)
                 break
@@ -117,8 +117,8 @@ class MessageDurationTracker(
         }
 
         responseTime?.apply {
-            sentUnfinishedBlock.removeIf { trackedMessage ->
-                (trackedMessage.message as? GetUnfinishedBlock)?.let {
+            sentProposedBlock.removeIf { trackedMessage ->
+                (trackedMessage.message as? GetProposedBlock)?.let {
                     blockRID.contentEquals(it.blockRID)
                 } ?: false
             }

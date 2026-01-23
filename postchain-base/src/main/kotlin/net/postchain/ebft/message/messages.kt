@@ -77,14 +77,14 @@ class GetBlockAtHeight(val height: Long) : EbftMessage(MessageTopic.GETBLOCKATHE
     }
 }
 
-class GetUnfinishedBlock(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETUNFINISHEDBLOCK) {
+class GetProposedBlock(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETPROPOSEDBLOCK) {
 
     override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(blockRID))
     }
 }
 
-class UnfinishedBlock(val header: ByteArray, val transactions: List<ByteArray>) : EbftMessage(MessageTopic.UNFINISHEDBLOCK) {
+class ProposedBlock(val header: ByteArray, val transactions: List<ByteArray>) : EbftMessage(MessageTopic.PROPOSEDBLOCK) {
 
     override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(header), gtv(transactions.map { gtv(it) }))
@@ -166,7 +166,7 @@ class Status(
  * Requests that the peer reply with two messages
  *
  * 1. The BlockHeader at height
- * 2. The UnfinishedBlock at height
+ * 2. The ProposedBlock at height
  *
  * If the peer doesn't have that block, it will reply with the BlockHeader of its tip
  */
@@ -424,8 +424,8 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is GetBlockSignature -> "GetBlockSignature(blockRid=${message.blockRID.toHex()})"
                 is CompleteBlock -> "CompleteBlock(blockRid=${getBlockHeaderRid(message.data.header)}, height=${message.height})"
                 is GetBlockAtHeight -> "GetBlockAtHeight(height=${message.height})"
-                is GetUnfinishedBlock -> "GetUnfinishedBlock(blockRid=${message.blockRID.toHex()})"
-                is UnfinishedBlock -> "UnfinishedBlock(blockRid=${getBlockHeaderRid(message.header)})"
+                is GetProposedBlock -> "GetProposedBlock(blockRid=${message.blockRID.toHex()})"
+                is ProposedBlock -> "ProposedBlock(blockRid=${getBlockHeaderRid(message.header)})"
                 is Identification -> "Identification(pubkey=${message.pubKey.toHex()}, blockRid=${message.blockchainRID.toHex()}, timestamp=${message.timestamp})"
                 is Status -> when {
                     version >= 2 -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}" +

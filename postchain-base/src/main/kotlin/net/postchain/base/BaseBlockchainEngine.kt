@@ -183,11 +183,11 @@ open class BaseBlockchainEngine(
                 })
     }
 
-    override fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
+    override fun loadProposedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
         return if (useParallelDecoding)
-            loadUnfinishedBlockImpl(block, isSyncing, ::parallelTxDecoder)
+            loadProposedBlockImpl(block, isSyncing, ::parallelTxDecoder)
         else
-            loadUnfinishedBlockImpl(block, isSyncing, ::sequentialTxDecoder)
+            loadProposedBlockImpl(block, isSyncing, ::sequentialTxDecoder)
     }
 
     private fun sequentialTxDecoder(txs: List<ByteArray>): List<Transaction> = txs.map { smartDecodeTransaction(it) }
@@ -208,7 +208,7 @@ open class BaseBlockchainEngine(
         return tx
     }
 
-    private fun loadUnfinishedBlockImpl(
+    private fun loadProposedBlockImpl(
             block: BlockData,
             isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
@@ -267,7 +267,7 @@ open class BaseBlockchainEngine(
                 }
                 nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
                         ErrorDiagnosticValue(
-                                e.message ?: "Failed to load unfinished block",
+                                e.message ?: "Failed to load proposed block",
                                 System.currentTimeMillis(),
                                 blockBuilder.height
                         )
@@ -548,7 +548,7 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadLog(str: String, bTrace: BlockTrace?) {
-        logger.debug { "loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
+        logger.debug { "loadProposedBlockImpl() -- $str, coming from block: $bTrace" }
     }
 
     private fun buildLog(str: String) {

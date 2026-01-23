@@ -37,7 +37,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
@@ -555,19 +555,19 @@ class FastSynchronizerTest {
     }
 
     @Test
-    fun `UnfinishedBlock should call internal method`() {
+    fun `ProposedBlock should call internal method`() {
         // setup
-        val message = UnfinishedBlock(header, transactions)
+        val message = ProposedBlock(header, transactions)
         addMessage(message)
-        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA())
+        doNothing().whenever(sut).handleProposedBlock(isA(), isA())
         // execute
         sut.processMessages()
         // verify
-        verify(sut).handleUnfinishedBlock(nodeRid, message)
+        verify(sut).handleProposedBlock(nodeRid, message)
     }
 
     @Nested
-    inner class handleUnfinishedBlock {
+    inner class HandleProposedBlock {
         @Test
         fun `with wrong block header type should throw exception`() {
             // setup
@@ -575,16 +575,16 @@ class FastSynchronizerTest {
             doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
             // execute & verify
             assertThrows<BadMessageException> {
-                sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+                sut.handleProposedBlock(nodeRid, ProposedBlock(header, transactions))
             }
         }
 
         @Test
         fun `with missing job should blacklist peer`() {
             // execute
-            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            sut.handleProposedBlock(nodeRid, ProposedBlock(header, transactions))
             // verify
-            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get an unfinished block of height: $height from peer: $nodeRid ? We didn't ask for it")
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get an proposed block of height: $height from peer: $nodeRid ? We didn't ask for it")
         }
 
         @Test
@@ -593,7 +593,7 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.block = mock()
             // execute
-            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            sut.handleProposedBlock(nodeRid, ProposedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We got this block height = $height already, why send it again?. $job")
         }
@@ -603,9 +603,9 @@ class FastSynchronizerTest {
             // setup
             val job = addJob(height, nodeRid)
             // execute
-            sut.handleUnfinishedBlock(otherNodeRid, UnfinishedBlock(header, transactions))
+            sut.handleProposedBlock(otherNodeRid, ProposedBlock(header, transactions))
             // verify
-            verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: We didn't expect $otherNodeRid to send us an unfinished block (height = $height). We wanted ${job.peerId} to do it. $job")
+            verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: We didn't expect $otherNodeRid to send us an proposed block (height = $height). We wanted ${job.peerId} to do it. $job")
         }
 
         @Test
@@ -613,9 +613,9 @@ class FastSynchronizerTest {
             // setup
             val job = addJob(height, nodeRid)
             // execute
-            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            sut.handleProposedBlock(nodeRid, ProposedBlock(header, transactions))
             // verify
-            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We don't have a header yet, why does $nodeRid send us an unfinished block (height = $height )? $job")
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We don't have a header yet, why does $nodeRid send us an proposed block (height = $height )? $job")
         }
 
         @Test
@@ -624,9 +624,9 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.header = mock()
             // execute
-            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            sut.handleProposedBlock(nodeRid, ProposedBlock(header, transactions))
             // verify
-            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Peer: ${job.peerId} is sending us an unfinished block (height = $height) with a header that doesn't match the header we expected. $job")
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Peer: ${job.peerId} is sending us an proposed block (height = $height) with a header that doesn't match the header we expected. $job")
         }
 
         @Test
@@ -635,11 +635,11 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.witness = mock()
             job.header = baseBlockHeader
-            val message = UnfinishedBlock(header, transactions)
+            val message = ProposedBlock(header, transactions)
             doReturn(header).whenever(baseBlockHeader).rawData
             doNothing().whenever(sut).commitJobsAsNecessary(any())
             // execute
-            sut.handleUnfinishedBlock(nodeRid, message)
+            sut.handleProposedBlock(nodeRid, message)
             // verify
             verify(messageDurationTracker).receive(nodeRid, message, baseBlockHeader)
             assertThat(job.block).isNotNull()
@@ -675,16 +675,16 @@ class FastSynchronizerTest {
             // verify
             verify(peerStatuses).isMaybeLegacy(nodeRid)
             verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-            verify(sut, never()).handleUnfinishedBlock(isA(), isA(), isA(), isA())
+            verify(sut, never()).handleProposedBlock(isA(), isA(), isA(), isA())
         }
 
         @Test
-        fun `with legacy node and unfinished block should add header and witness to job and handle unfinished block`() {
+        fun `with legacy node and proposed block should add header and witness to job and handle proposed block`() {
             // setup
             addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
             doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
-            doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), isA(), anyList())
+            doNothing().whenever(sut).handleProposedBlock(isA(), isA(), isA(), anyList())
             val blockHeader: BaseBlockHeader = mock()
             doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
             // execute
@@ -692,7 +692,7 @@ class FastSynchronizerTest {
             // verify
             verify(peerStatuses).isMaybeLegacy(nodeRid)
             verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-            verify(sut).handleUnfinishedBlock(nodeRid, header, blockHeader, transactions)
+            verify(sut).handleProposedBlock(nodeRid, header, blockHeader, transactions)
         }
     }
 

@@ -17,7 +17,7 @@ import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.EbftMessage
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 import org.junit.jupiter.api.BeforeEach
@@ -196,7 +196,7 @@ class MessagingTest {
     }
 
     @Test
-    fun `sendBlockHeaderAndBlock with my height gte requested should send header and unfinished block`() {
+    fun `sendBlockHeaderAndBlock with my height gte requested should send header and proposed block`() {
         // setup
         val myHeight = 10L
         val requestedHeight = 10L
@@ -212,7 +212,7 @@ class MessagingTest {
             assertThat(bh.header).isEqualTo(header)
             assertThat(bh.witness).isEqualTo(witness)
             assertThat(bh.requestedHeight).isEqualTo(requestedHeight)
-            val ub = secondValue as UnfinishedBlock
+            val ub = secondValue as ProposedBlock
             assertThat(ub.header).isEqualTo(header)
             assertThat(ub.transactions).isEqualTo(transactions)
         }

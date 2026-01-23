@@ -25,7 +25,7 @@ import net.postchain.ebft.message.SnapshotBlockHeaderContextData
 import net.postchain.ebft.message.SnapshotData
 import net.postchain.ebft.message.SnapshotDatumData
 import net.postchain.ebft.message.SnapshotRangeProof
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
@@ -160,9 +160,9 @@ abstract class Messaging(
             tipHeader = header
         }
 
-        val unfinishedBlock = UnfinishedBlock(blockData.header.rawData, blockData.transactions)
-        logger.trace { "Replying with UnfinishedBlock to peer $peerID for height $requestedHeight" }
-        communicationManager.sendPacket(unfinishedBlock, peerID)
+        val proposedBlock = ProposedBlock(blockData.header.rawData, blockData.transactions)
+        logger.trace { "Replying with ProposedBlock to peer $peerID for height $requestedHeight" }
+        communicationManager.sendPacket(proposedBlock, peerID)
     }
 
     private fun sendHeader(peerID: NodeRid, header: ByteArray, witness: ByteArray, sentHeight: Long, requestedHeight: Long): BlockHeader {

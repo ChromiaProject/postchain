@@ -8,7 +8,7 @@ import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.CommitBlockIntent
 import net.postchain.ebft.DoNothingIntent
 import net.postchain.ebft.FetchCommitSignatureIntent
-import net.postchain.ebft.FetchUnfinishedBlockIntent
+import net.postchain.ebft.FetchProposedBlockIntent
 import net.postchain.ebft.NodeBlockState.HaveBlock
 import net.postchain.ebft.NodeBlockState.Prepared
 import net.postchain.ebft.NodeBlockState.WaitBlock
@@ -55,7 +55,7 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         reset(commManager)
 
         /**
-         * Input: Other nodes will fetch unfinished block from us and move to [HaveBlock] and broadcast their status.
+         * Input: Other nodes will fetch proposed block from us and move to [HaveBlock] and broadcast their status.
          * Expected outcome: Transfer to [Prepared] state and waiting on consensus to be in [Prepared].
          * State: [HaveBlock] -> [Prepared]
          * Intent: [DoNothingIntent] -> [DoNothingIntent]
@@ -100,9 +100,9 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         /**
          * Input: Receiving block signatures from node 2 and 3.
          * Expected outcome: Block is committed, and the node is in WaitBlock state and is not the primary node.
-         * Intent is [FetchUnfinishedBlockIntent] due to not having got [Status] messages from node 2 and 3 yet.
+         * Intent is [FetchProposedBlockIntent] due to not having got [Status] messages from node 2 and 3 yet.
          * State: [Prepared] -> [WaitBlock]
-         * Intent: [FetchCommitSignatureIntent] -> [CommitBlockIntent] -> [FetchUnfinishedBlockIntent]
+         * Intent: [FetchCommitSignatureIntent] -> [CommitBlockIntent] -> [FetchProposedBlockIntent]
          * Receive: [BlockSignature] from node 2 and 3
          * Send: Broadcast [Status]
          */
@@ -116,7 +116,7 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         // execute
         syncManager.update()
         // verify
-        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
+        verifyIntent(FetchProposedBlockIntent(blockRid0))
         verify(blockDatabase).commitBlock(isA())
         verifyStatus(blockRID = null, height = 2, serial = 6, round = 0, revolting = false, state = WaitBlock)
         reset(commManager)

@@ -50,5 +50,5 @@ And expects to receive in response:
 
 - `BlockHeader` - If the peer does not have the requested block it will send this message with height set to the latest
   height it has. Now we can mark this peer as drained at that height.
-- `UnfinishedBlock` - If the peer has the block at requested height.
+- `ProposedBlock` - If the peer has the block at requested height.
 - `CompleteBlock` - From legacy peers. If the peer has the block at requested height.

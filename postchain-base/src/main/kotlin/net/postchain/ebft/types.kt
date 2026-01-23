@@ -44,7 +44,7 @@ interface BlockWriter {
 
 interface BlockDatabase : BlockWriter {
     fun getQueuedBlockCount(): Int
-    fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> // returns block signature if successful
+    fun loadProposedBlock(block: BlockData): CompletionStage<Signature> // returns block signature if successful
     fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit>
     fun buildBlock(): CompletionStage<Pair<BlockData, Signature>>
 
@@ -97,7 +97,7 @@ class FetchBlockAtHeightIntent(val height: Long) : BlockIntent() {
     }
 }
 
-class FetchUnfinishedBlockIntent(val blockRID: ByteArray) : BlockIntent() {
+class FetchProposedBlockIntent(val blockRID: ByteArray) : BlockIntent() {
 
     fun isThisTheBlockWeAreWaitingFor(givenBlockRID: ByteArray?): Boolean {
         if (givenBlockRID == null) {
@@ -110,7 +110,7 @@ class FetchUnfinishedBlockIntent(val blockRID: ByteArray) : BlockIntent() {
     override fun equals(other: Any?): Boolean {
         if (!super.equals(other)) return false
         if (this === other) return true
-        other as FetchUnfinishedBlockIntent
+        other as FetchProposedBlockIntent
         if (!blockRID.contentEquals(other.blockRID)) return false
         return true
     }
@@ -139,7 +139,7 @@ data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<
 interface BlockManager {
     var currentBlock: BlockData?
     var lastBlockTimestamp: Long?
-    fun onReceivedUnfinishedBlock(block: BlockData, onLoadSuccess: () -> Unit = {}, onLoadFailure: (Throwable) -> Unit)
+    fun onReceivedProposedBlock(block: BlockData, onLoadSuccess: () -> Unit = {}, onLoadFailure: (Throwable) -> Unit)
     fun onReceivedBlockAtHeight(block: BlockDataWithWitness, height: Long)
     fun processBlockIntent(): BlockIntent
     fun getBlockIntent(): BlockIntent

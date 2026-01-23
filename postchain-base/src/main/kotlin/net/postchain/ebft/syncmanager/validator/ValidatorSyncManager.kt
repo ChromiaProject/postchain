@@ -26,7 +26,7 @@ import net.postchain.ebft.BlockManager
 import net.postchain.ebft.DoNothingIntent
 import net.postchain.ebft.FetchBlockAtHeightIntent
 import net.postchain.ebft.FetchCommitSignatureIntent
-import net.postchain.ebft.FetchUnfinishedBlockIntent
+import net.postchain.ebft.FetchProposedBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
@@ -45,11 +45,11 @@ import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
-import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.GetProposedBlock
 import net.postchain.ebft.message.SpecialTxExtension
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
@@ -105,7 +105,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 ?: -1
     }
     @Volatile
-    private var lastRequestedUnfinishedBlock: net.postchain.core.block.BlockData? = null
+    private var lastRequestedProposedBlock: net.postchain.core.block.BlockData? = null
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
@@ -224,20 +224,20 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             message.height)
                                 }
 
-                                is UnfinishedBlock -> {
+                                is ProposedBlock -> {
                                     val blockData = decodeBlockData(
                                             BlockData(message.header, message.transactions),
                                             blockchainConfiguration)
                                     messageDurationTracker.receive(xPeerId, message, blockData.header)
 
                                     val intent = processingIntent
-                                    if (intent is FetchUnfinishedBlockIntent && intent.blockRID.contentEquals(blockData.header.blockRID)) {
-                                        lastRequestedUnfinishedBlock = blockData
-                                        blockManager.onReceivedUnfinishedBlock(blockData, {
-                                            lastRequestedUnfinishedBlock = null
+                                    if (intent is FetchProposedBlockIntent && intent.blockRID.contentEquals(blockData.header.blockRID)) {
+                                        lastRequestedProposedBlock = blockData
+                                        blockManager.onReceivedProposedBlock(blockData, {
+                                            lastRequestedProposedBlock = null
                                         }, { exception ->
                                             if ((exception as? BadBlockException)?.validationResult == ValidationResult.Result.INVALID_ROOT_HASH) {
-                                                lastRequestedUnfinishedBlock = null
+                                                lastRequestedProposedBlock = null
                                             }
                                         })
                                     }
@@ -250,7 +250,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
                                 }
 
-                                is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
+                                is GetProposedBlock -> sendProposedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
                                 is Transaction -> handleTransaction(xPeerId, message)
                                 is BlockHeader -> {
@@ -392,14 +392,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     /**
-     * Send message to node with the current unfinished block.
+     * Send message to node with the current proposed block.
      *
      * @param nodeIndex index of node to send block to
      */
-    private fun sendUnfinishedBlock(nodeIndex: Int) {
+    private fun sendProposedBlock(nodeIndex: Int) {
         val currentBlock = blockManager.currentBlock
         if (currentBlock != null) {
-            communicationManager.sendPacket(UnfinishedBlock(currentBlock.header.rawData, currentBlock.transactions.toList()),
+            communicationManager.sendPacket(ProposedBlock(currentBlock.header.rawData, currentBlock.transactions.toList()),
                     validatorAtIndex(nodeIndex))
         }
     }
@@ -448,32 +448,32 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     /**
-     * Either send a message to fetch latest unfinished block, or process the cached one if we already got it.
+     * Either send a message to fetch latest proposed block, or process the cached one if we already got it.
      */
-    private fun fetchOrProcessUnfinishedBlock(blockRID: ByteArray) {
-        val lastUnfinishedBlock = this.lastRequestedUnfinishedBlock
-        if (lastUnfinishedBlock != null && blockRID.contentEquals(lastUnfinishedBlock.header.blockRID)) {
-            blockManager.onReceivedUnfinishedBlock(lastUnfinishedBlock) {
-                lastRequestedUnfinishedBlock = null
+    private fun fetchOrProcessProposedBlock(blockRID: ByteArray) {
+        val lastProposedBlock = this.lastRequestedProposedBlock
+        if (lastProposedBlock != null && blockRID.contentEquals(lastProposedBlock.header.blockRID)) {
+            blockManager.onReceivedProposedBlock(lastProposedBlock) {
+                lastRequestedProposedBlock = null
             }
         } else {
-            lastRequestedUnfinishedBlock = null
-            fetchUnfinishedBlock(blockRID)
+            lastRequestedProposedBlock = null
+            fetchProposedBlock(blockRID)
         }
     }
 
     /**
-     * Send message to random peer for fetching latest unfinished block at the same height as us
+     * Send message to random peer for fetching latest proposed block at the same height as us
      *
-     * @param blockRID identifier of the unfinished block
+     * @param blockRID identifier of the proposed block
      */
-    private fun fetchUnfinishedBlock(blockRID: ByteArray) {
+    private fun fetchProposedBlock(blockRID: ByteArray) {
         val height = statusManager.myStatus.height
         val nodeIndex = selectRandomNode {
             it.height == height && (it.blockRID?.contentEquals(blockRID) ?: false)
         } ?: return
-        logger.debug { "Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
-        val message = GetUnfinishedBlock(blockRID)
+        logger.debug { "Fetching proposed block with RID ${blockRID.toHex()} from node $nodeIndex " }
+        val message = GetProposedBlock(blockRID)
         val peer = validatorAtIndex(nodeIndex)
         messageDurationTracker.send(peer, message)
         communicationManager.sendPacket(message, peer)
@@ -503,7 +503,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
 
             is FetchCommitSignatureIntent -> fetchCommitSignatures(intent.blockRID, intent.nodes)
-            is FetchUnfinishedBlockIntent -> fetchOrProcessUnfinishedBlock(intent.blockRID)
+            is FetchProposedBlockIntent -> fetchOrProcessProposedBlock(intent.blockRID)
             else -> throw ProgrammerMistake("Unrecognized intent: ${intent::class}")
         }
         processingIntent = intent
