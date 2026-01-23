@@ -51,7 +51,7 @@ object DockerTools : KLogging() {
         })
 
         if (error != null) {
-            throw error as ProgrammerMistake
+            throw error
         }
 
         return result

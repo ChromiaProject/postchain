@@ -8,9 +8,9 @@ import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
 
 data class TxDetail(
-        @Name("rid") val rid: ByteArray,
-        @Name("hash") val hash: ByteArray,
-        @Name("data") @Nullable val data: ByteArray?
+        @param:Name("rid") val rid: ByteArray,
+        @param:Name("hash") val hash: ByteArray,
+        @param:Name("data") @param:Nullable val data: ByteArray?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -15,25 +15,25 @@ import net.postchain.gtv.mapper.RawGtv
 import net.postchain.gtv.mapper.toObject
 
 data class GtxConfigurationData(
-        @RawGtv
+        @param:RawGtv
         val rawGtv: Gtv,
-        @Name(KEY_GTX_TX_SIZE)
-        @DefaultValue(defaultLong = (25 * 1024 * 1024)) // 25 mb
+        @param:Name(KEY_GTX_TX_SIZE)
+        @param:DefaultValue(defaultLong = (25 * 1024 * 1024)) // 25 mb
         val maxTxSize: Long,
-        @Name(KEY_GTX_MAX_TX_SIGNATURES)
-        @DefaultValue(defaultLong = 100)
+        @param:Name(KEY_GTX_MAX_TX_SIGNATURES)
+        @param:DefaultValue(defaultLong = 100)
         val maxTxSignatures: Long,
-        @Name(KEY_GTX_MODULES)
-        @Nullable
+        @param:Name(KEY_GTX_MODULES)
+        @param:Nullable
         private val modulesRaw: List<String>?,
-        @Name(KEY_GTX_ALLOWOVERRIDES)
-        @DefaultValue(defaultBoolean = false)
+        @param:Name(KEY_GTX_ALLOWOVERRIDES)
+        @param:DefaultValue(defaultBoolean = false)
         val allowOverrides: Boolean,
-        @Name(KEY_GTX_SLOW_OP_THRESHOLD)
-        @DefaultValue(defaultLong = -1)
+        @param:Name(KEY_GTX_SLOW_OP_THRESHOLD)
+        @param:DefaultValue(defaultLong = -1)
         val slowOpThreshold: Long,
-        @Name(KEY_GTX_SLOW_PRIORITIZATION_QUERY_THRESHOLD)
-        @DefaultValue(defaultLong = -1)
+        @param:Name(KEY_GTX_SLOW_PRIORITIZATION_QUERY_THRESHOLD)
+        @param:DefaultValue(defaultLong = -1)
         val slowPrioritizationQueryThreshold: Long,
 ) {
     val modules = modulesRaw ?: listOf()

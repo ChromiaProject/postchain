@@ -17,18 +17,18 @@ import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
 data class BlockchainConfigurationData(
-        @RawGtv
+        @param:RawGtv
         val rawConfig: Gtv,
 
-        @Name(KEY_SIGNERS)
+        @param:Name(KEY_SIGNERS)
         val signers: List<ByteArray>,
-        @Name(KEY_SYNC)
-        @Nullable
+        @param:Name(KEY_SYNC)
+        @param:Nullable
         val synchronizationInfrastructure: String?,
-        @Name(KEY_SYNC_EXT)
-        @Nullable
+        @param:Name(KEY_SYNC_EXT)
+        @param:Nullable
         val synchronizationInfrastructureExtension: List<String>?,
-        @Name(KEY_CONFIGURATIONFACTORY)
+        @param:Name(KEY_CONFIGURATIONFACTORY)
         val configurationFactory: String,
         /**
          * NB: The default value is set so that the TX queue will fill up fast, b/c the client should display this
@@ -36,46 +36,46 @@ data class BlockchainConfigurationData(
          * Alex spoke about making TX resend automatic, after a pause, when 503 error is returned, so that no action
          * from the user's side has to be taken to eventually get the TX into the queue.
          */
-        @Name(KEY_QUEUE_CAPACITY)
-        @DefaultValue(defaultLong = 2500) // 5 seconds (if 500 tps)
+        @param:Name(KEY_QUEUE_CAPACITY)
+        @param:DefaultValue(defaultLong = 2500) // 5 seconds (if 500 tps)
         val txQueueSize: Long,
-        @Name(KEY_QUEUE_TX_RECHECK_INTERVAL)
-        @DefaultValue(defaultLong = 5 * 60 * 1000) // 5 minutes
+        @param:Name(KEY_QUEUE_TX_RECHECK_INTERVAL)
+        @param:DefaultValue(defaultLong = 5 * 60 * 1000) // 5 minutes
         val txQueueRecheckInterval: Long,
 
-        @Name(KEY_BLOCKSTRATEGY_NAME)
-        @Nested(KEY_BLOCKSTRATEGY)
-        @DefaultValue(defaultString = "net.postchain.base.BaseBlockBuildingStrategy")
+        @param:Name(KEY_BLOCKSTRATEGY_NAME)
+        @param:Nested(KEY_BLOCKSTRATEGY)
+        @param:DefaultValue(defaultString = "net.postchain.base.BaseBlockBuildingStrategy")
         val blockStrategyName: String,
-        @Name(KEY_BLOCKSTRATEGY)
-        @Nullable
+        @param:Name(KEY_BLOCKSTRATEGY)
+        @param:Nullable
         val blockStrategy: Gtv?,
-        @Name(KEY_HISTORIC_BRID)
-        @Nullable
+        @param:Name(KEY_HISTORIC_BRID)
+        @param:Nullable
         private val historicBridAsByteArray: ByteArray?,
-        @Name(KEY_DEPENDENCIES)
-        @Nullable
+        @param:Name(KEY_DEPENDENCIES)
+        @param:Nullable
         private val blockchainDependenciesRaw: Gtv?,
-        @Name(KEY_GTX)
-        @Nullable
+        @param:Name(KEY_GTX)
+        @param:Nullable
         val gtx: Gtv?,
-        @Name(KEY_CONFIG_CONSENSUS_STRATEGY)
-        @Nullable
+        @param:Name(KEY_CONFIG_CONSENSUS_STRATEGY)
+        @param:Nullable
         private val configConsensusStrategyString: String?,
-        @Name(KEY_MAX_BLOCK_FUTURE_TIME)
-        @DefaultValue(defaultLong = 60 * 1000) // 1 minute
+        @param:Name(KEY_MAX_BLOCK_FUTURE_TIME)
+        @param:DefaultValue(defaultLong = 60 * 1000) // 1 minute
         val maxBlockFutureTime: Long,
-        @Name(KEY_ADD_PRIMARY_KEY_TO_HEADER)
-        @DefaultValue(defaultBoolean = false)
+        @param:Name(KEY_ADD_PRIMARY_KEY_TO_HEADER)
+        @param:DefaultValue(defaultBoolean = false)
         val addPrimaryKeyToHeader: Boolean,
-        @Name(KEY_FEATURES)
-        @DefaultEmpty
+        @param:Name(KEY_FEATURES)
+        @param:DefaultEmpty
         val features: Map<String, Gtv>,
-        @Name(KEY_SNAPSHOT)
-        @Nullable
+        @param:Name(KEY_SNAPSHOT)
+        @param:Nullable
         val snapshot: Gtv?,
-        @Name(KEY_QUERY_TIMEOUT_SECONDS)
-        @DefaultValue(defaultLong = 60)
+        @param:Name(KEY_QUERY_TIMEOUT_SECONDS)
+        @param:DefaultValue(defaultLong = 60)
         val queryTimeoutSeconds: Long,
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }

@@ -188,7 +188,7 @@ data class ContainerNodeConfig(
                         getEnvOrLongProperty("POSTCHAIN_STORAGE_CLEANUP_INTERVAL_MS", KEY_STORAGE_CLEANUP_INTERVAL_MS, 60_000),
                         logConf,
                         System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
-                        System.getenv("POSTCHAIN_DIRECTORY_CONTAINER")?.toString() ?: "",
+                        System.getenv("POSTCHAIN_DIRECTORY_CONTAINER") ?: "",
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),

@@ -34,11 +34,11 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun illegalAnnotations() {
-        data class RawGtvClass(@RawGtv val gtv: Gtv)
+        data class RawGtvClass(@param:RawGtv val gtv: Gtv)
         assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(RawGtvClass(gtv(1))) }
-        data class NestedClass(@Nested val nestedValue: Long)
+        data class NestedClass(@param:Nested val nestedValue: Long)
         assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(NestedClass(1)) }
-        data class TransientClass(@Transient("foo") val transientValue: Long)
+        data class TransientClass(@param:Transient("foo") val transientValue: Long)
         assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(TransientClass(1)) }
     }
 

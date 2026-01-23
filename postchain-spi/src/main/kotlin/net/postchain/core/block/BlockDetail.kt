@@ -9,13 +9,13 @@ import net.postchain.gtv.mapper.Name
  * ATM it is mainly used to reply to explorer's queries
  */
 data class BlockDetail(
-        @Name("rid") val rid: ByteArray,
-        @Name("prevBlockRID") val prevBlockRID: ByteArray,
-        @Name("header") val header: ByteArray,
-        @Name("height") val height: Long,
-        @Name("transactions") val transactions: List<TxDetail>,
-        @Name("witness") val witness: ByteArray,
-        @Name("timestamp") val timestamp: Long
+        @param:Name("rid") val rid: ByteArray,
+        @param:Name("prevBlockRID") val prevBlockRID: ByteArray,
+        @param:Name("header") val header: ByteArray,
+        @param:Name("height") val height: Long,
+        @param:Name("transactions") val transactions: List<TxDetail>,
+        @param:Name("witness") val witness: ByteArray,
+        @param:Name("timestamp") val timestamp: Long
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

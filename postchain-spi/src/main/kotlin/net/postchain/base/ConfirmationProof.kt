@@ -13,9 +13,9 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
  * @param txIndex is the index of the proven transaction in the block (i.e. our "path").
  */
 class ConfirmationProof(
-        @Name("hash") val hash: ByteArray,
-        @Name("blockHeader") val blockHeader: ByteArray,
-        @Name("witness") val witness: BaseBlockWitness,
-        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree,
-        @Name("txIndex") val txIndex: Long
+        @param:Name("hash") val hash: ByteArray,
+        @param:Name("blockHeader") val blockHeader: ByteArray,
+        @param:Name("witness") val witness: BaseBlockWitness,
+        @param:Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree,
+        @param:Name("txIndex") val txIndex: Long
 )

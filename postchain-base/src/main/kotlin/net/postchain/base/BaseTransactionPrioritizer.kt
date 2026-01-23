@@ -16,52 +16,52 @@ const val PRIORITIZE_QUERY_NAME_V1 = "gtx_api.priority_check_v1"
 const val PRIORITIZE_QUERY_NAME_V2 = "gtx_api.priority_check_v2"
 
 class PrioritizeQueryV1Request(
-        @Name("tx_body")
+        @param:Name("tx_body")
         val txBody: GtxBody,
 
-        @Name("tx_size")
+        @param:Name("tx_size")
         val txSize: Long,
 
-        @Name("tx_enter_timestamp")
+        @param:Name("tx_enter_timestamp")
         val txEnterTimestamp: Long,
 
-        @Name("current_timestamp")
+        @param:Name("current_timestamp")
         val currentTimestamp: Long
 )
 
 class PrioritizeQueryV2Request(
-        @Name("tx_body")
+        @param:Name("tx_body")
         val txBody: GtxBody,
 
-        @Name("tx_size")
+        @param:Name("tx_size")
         val txSize: Long,
 
-        @Name("tx_enter_timestamp")
+        @param:Name("tx_enter_timestamp")
         val txEnterTimestamp: Long,
 
-        @Name("current_timestamp")
+        @param:Name("current_timestamp")
         val currentTimestamp: Long,
 
-        @Name("compound_ops")
+        @param:Name("compound_ops")
         val compoundOps: Set<String>
 )
 
 class TxPriorityStateV1(
         /** id of account which wants to push the tx forward */
-        @Name("account_id")
-        @Nullable
+        @param:Name("account_id")
+        @param:Nullable
         override val accountId: WrappedByteArray?,
 
         /** number of points currently associated with the account */
-        @Name("account_points")
+        @param:Name("account_points")
         override val accountPoints: Long,
 
         /** number of points which this tx costs */
-        @Name("tx_cost_points")
+        @param:Name("tx_cost_points")
         override val txCostPoints: Long,
 
         /** priority, higher is better */
-        @Name("priority")
+        @param:Name("priority")
         override val priority: BigDecimal
 ) : TransactionPriorityState
 

@@ -55,14 +55,14 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun nullablePropertyWithAnnotationIsNull() {
-        data class SimpleNullable(@Name("missing") @Nullable val foo: Long?)
+        data class SimpleNullable(@param:Name("missing") @param:Nullable val foo: Long?)
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf("missing" to GtvNull)), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
     }
 
     @Test
     fun invalidNullableAnnotationUsage() {
-        data class SimpleNullable(@Name("missing") @Nullable val foo: Long)
+        data class SimpleNullable(@param:Name("missing") @param:Nullable val foo: Long)
 
         val e = assertThrows<IllegalArgumentException> {
             GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)
@@ -72,7 +72,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun nullablePropertyWithoutAnnotation() {
-        data class SimpleNullable(@Name("missing") val foo: Long?)
+        data class SimpleNullable(@param:Name("missing") val foo: Long?)
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf("missing" to GtvNull)), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf("missing" to gtv(17L))), SimpleNullable::class)).isEqualTo(SimpleNullable(17L))
@@ -97,14 +97,14 @@ internal class GtvObjectMapperTest {
     @Test
     fun testAllPrimitiveTypes() {
         data class AllTypes(
-                @Name("string") val s: String,
-                @Name("long") val l: Long,
-                @Name("enum") val e: SimpleEnum,
-                @Name("byte") val b: ByteArray, // Do not run isEqualTo
-                @Name("wbyte") val w: WrappedByteArray,
-                @Name("row") val r: RowId,
-                @Name("pubkey") val pk: PubKey,
-                @Name("blockchain_rid") val brid: BlockchainRid,
+                @param:Name("string") val s: String,
+                @param:Name("long") val l: Long,
+                @param:Name("enum") val e: SimpleEnum,
+                @param:Name("byte") val b: ByteArray, // Do not run isEqualTo
+                @param:Name("wbyte") val w: WrappedByteArray,
+                @param:Name("row") val r: RowId,
+                @param:Name("pubkey") val pk: PubKey,
+                @param:Name("blockchain_rid") val brid: BlockchainRid,
         )
 
         val actual = gtv(mapOf(
@@ -130,7 +130,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun testMissingEnumValue() {
         data class MissingEnumValue(
-                @Name("enum") val e: SimpleEnum,
+                @param:Name("enum") val e: SimpleEnum,
         )
 
         assertFailure {
@@ -143,7 +143,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun testEnumAsInteger() {
         data class WithEnumValue(
-                @Name("enum") val e: SimpleEnum,
+                @param:Name("enum") val e: SimpleEnum,
         )
 
         val actual = gtv(mapOf("enum" to gtv(1))).toObject<WithEnumValue>()
@@ -153,7 +153,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun testMissingIntegerEnumValue() {
         data class MissingIntegerEnumValue(
-                @Name("enum") val e: SimpleEnum,
+                @param:Name("enum") val e: SimpleEnum,
         )
 
         assertFailure {
@@ -165,7 +165,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun bigIntegerType() {
-        data class SimpleBigInteger(@Name("myBigInt") @DefaultValue(defaultBigInteger = "15") val myBigInteger: BigInteger)
+        data class SimpleBigInteger(@param:Name("myBigInt") @param:DefaultValue(defaultBigInteger = "15") val myBigInteger: BigInteger)
         assertThat(gtv(mapOf("myBigInt" to gtv(BigInteger("9999209385237856329573295739345354354354353")))).toObject<SimpleBigInteger>())
                 .isEqualTo(SimpleBigInteger(BigInteger("9999209385237856329573295739345354354354353")))
         assertThat(gtv(mapOf()).toObject<SimpleBigInteger>()).isEqualTo(SimpleBigInteger(BigInteger("15")))
@@ -173,14 +173,14 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun booleanType() {
-        data class SimpleBoolean(@Name("myBoolean") @DefaultValue(defaultBoolean = false) val myBoolean: Boolean)
+        data class SimpleBoolean(@param:Name("myBoolean") @param:DefaultValue(defaultBoolean = false) val myBoolean: Boolean)
         assertThat(gtv(mapOf("myBoolean" to gtv(1L))).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(true))
         assertThat(gtv(mapOf()).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(false))
     }
 
     @Test
     fun decimalType() {
-        data class SimpleDecimal(@Name("myDecimal") @DefaultValue(defaultDecimal = "12.34") val myDecimal: BigDecimal)
+        data class SimpleDecimal(@param:Name("myDecimal") @param:DefaultValue(defaultDecimal = "12.34") val myDecimal: BigDecimal)
         assertThat(gtv(mapOf("myDecimal" to gtv("23.45"))).toObject<SimpleDecimal>())
                 .isEqualTo(SimpleDecimal(BigDecimal("23.45")))
         assertThat(gtv(mapOf()).toObject<SimpleDecimal>()).isEqualTo(SimpleDecimal(BigDecimal("12.34")))
@@ -188,9 +188,9 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun testCollectionTypes() {
-        data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
-        data class BasicWithSet(@Name("list") val l: Set<Long>) // Do not run isEqualTo
-        data class BasicWithCollection(@Name("list") val l: Collection<Long>) // Do not run isEqualTo
+        data class BasicWithList(@param:Name("list") val l: List<Long>) // Do not run isEqualTo
+        data class BasicWithSet(@param:Name("list") val l: Set<Long>) // Do not run isEqualTo
+        data class BasicWithCollection(@param:Name("list") val l: Collection<Long>) // Do not run isEqualTo
 
         assertThat(gtv(mapOf("list" to gtv(gtv(1))))
                 .toObject<BasicWithList>().l).containsExactly(1L)
@@ -205,14 +205,14 @@ internal class GtvObjectMapperTest {
     @Test
     fun gtvIsNull() {
         data class GtvIsNull(
-                @Name("g") val g: Gtv
+                @param:Name("g") val g: Gtv
         )
         assertThat(gtv("g" to GtvNull).toObject<GtvIsNull>().g).isEqualTo(GtvNull)
     }
 
     @Test
     fun mapOfGtv() {
-        data class MapOfGtv(@Name("map") val map: Map<String, Gtv>)
+        data class MapOfGtv(@param:Name("map") val map: Map<String, Gtv>)
 
         assertThat(gtv(mapOf("map" to gtv("foo" to gtv(1), "bar" to gtv(2))))
                 .toObject<MapOfGtv>().map).isEqualTo(mapOf("foo" to gtv(1), "bar" to gtv(2)))
@@ -220,7 +220,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun mapOfMapOfGtv() {
-        data class MapOfMapOfGtv(@Name("mapMap") val mapMap: Map<String, Map<String, Gtv>>)
+        data class MapOfMapOfGtv(@param:Name("mapMap") val mapMap: Map<String, Map<String, Gtv>>)
 
         assertThat(gtv(mapOf("mapMap" to gtv("foo" to gtv("ooo" to gtv(1)), "bar" to gtv("boo" to gtv(2)))))
                 .toObject<MapOfMapOfGtv>().mapMap).isEqualTo(mapOf("foo" to mapOf("ooo" to gtv(1)), "bar" to mapOf("boo" to gtv(2))))
@@ -228,7 +228,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listOfGtv() {
-        data class ListOfGtv(@Name("list") val list: List<Gtv>)
+        data class ListOfGtv(@param:Name("list") val list: List<Gtv>)
 
         assertThat(gtv(mapOf("list" to gtv(gtv(1), gtv(2))))
                 .toObject<ListOfGtv>().list).isEqualTo(listOf(gtv(1), gtv(2)))
@@ -236,7 +236,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listOfListOfGtv() {
-        data class ListOfListOfGtv(@Name("list") val list: List<List<Gtv>>)
+        data class ListOfListOfGtv(@param:Name("list") val list: List<List<Gtv>>)
 
         val expected = listOf(listOf(gtv(1), gtv(2)), listOf(gtv(3), gtv(4)))
         val actual = gtv(mapOf("list" to gtv(gtv(gtv(1), gtv(2)), gtv(gtv(3), gtv(4)))))
@@ -246,7 +246,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun setOfGtv() {
-        data class SetOfGtv(@Name("set") val set: Set<Gtv>)
+        data class SetOfGtv(@param:Name("set") val set: Set<Gtv>)
 
         assertThat(gtv(mapOf("set" to gtv(gtv(1), gtv(2))))
                 .toObject<SetOfGtv>().set).isEqualTo(setOf(gtv(1), gtv(2)))
@@ -254,29 +254,29 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun defaultEmptyMap() {
-        data class DefaultEmptyMap(@Name("map") @DefaultEmpty val map: Map<String, Gtv>)
+        data class DefaultEmptyMap(@param:Name("map") @param:DefaultEmpty val map: Map<String, Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyMap>().map).isEqualTo(mapOf())
     }
 
     @Test
     fun defaultEmptyList() {
-        data class DefaultEmptyList(@Name("list") @DefaultEmpty val list: List<Gtv>)
+        data class DefaultEmptyList(@param:Name("list") @param:DefaultEmpty val list: List<Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().list).isEqualTo(listOf())
     }
 
     @Test
     fun defaultEmptySet() {
-        data class DefaultEmptyList(@Name("set") @DefaultEmpty val set: Set<Gtv>)
+        data class DefaultEmptyList(@param:Name("set") @param:DefaultEmpty val set: Set<Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().set).isEqualTo(setOf())
     }
 
     @Test
     fun defaultObject() {
-        data class Obj(@Name("s") @DefaultValue(defaultString = "foo") val s: String)
-        data class DefaultObject(@Name("obj") @DefaultEmpty val obj: Obj)
+        data class Obj(@param:Name("s") @param:DefaultValue(defaultString = "foo") val s: String)
+        data class DefaultObject(@param:Name("obj") @param:DefaultEmpty val obj: Obj)
 
         assertThat(gtv(mapOf()).toObject<DefaultObject>().obj).isEqualTo(Obj(s = "foo"))
     }
@@ -293,7 +293,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listTypes() {
-        data class ComplexList(@Name("str") val stringList: List<ByteArray>) // Do not run isEqualTo
+        data class ComplexList(@param:Name("str") val stringList: List<ByteArray>) // Do not run isEqualTo
 
         val g = gtv(mapOf("str" to gtv(gtv("a".toByteArray()), gtv("b".toByteArray()))))
         val actual = GtvObjectMapper.fromGtv(g, ComplexList::class).stringList
@@ -303,7 +303,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listDict() {
-        data class ListDict(@Name("dict") val dict: List<Simple>) // Do not run isEqualTo
+        data class ListDict(@param:Name("dict") val dict: List<Simple>) // Do not run isEqualTo
 
         val g = gtv(mapOf("dict" to gtv(gtv(mapOf("key" to gtv(1))))))
         val actual = GtvObjectMapper.fromGtv(g, ListDict::class)
@@ -312,7 +312,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listList() {
-        data class ListOfList(@Name("listlist") val listOfList: List<List<Simple>>) // Do not run isEqualTo
+        data class ListOfList(@param:Name("listlist") val listOfList: List<List<Simple>>) // Do not run isEqualTo
 
         val simple = gtv(mapOf("key" to gtv(1L)))
         val listOfList = gtv(gtv(simple))
@@ -322,7 +322,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun nestedDict() {
-        data class NestedDict(@Name("nestedDict") val nested: BasicDict)
+        data class NestedDict(@param:Name("nestedDict") val nested: BasicDict)
 
         val actual = gtv(mapOf(
                 "nestedDict" to gtv(mapOf(
@@ -349,7 +349,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun saveRawData() {
-        data class WithRawData(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+        data class WithRawData(@param:RawGtv val raw: Gtv, @param:Name("a") val dummy: Long)
 
         val rawGtv = gtv("a" to gtv(1))
         assertThat(rawGtv.toObject<WithRawData>()).isEqualTo(WithRawData(rawGtv, 1))
@@ -358,7 +358,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun storeAsUnconverted() {
-        data class UnConverted(@Name("asGtv") val g: Gtv)
+        data class UnConverted(@param:Name("asGtv") val g: Gtv)
 
         val actual = gtv(mapOf("asGtv" to gtv(1))).toObject<UnConverted>()
         assertThat(actual).isEqualTo(UnConverted(gtv(1)))
@@ -367,9 +367,9 @@ internal class GtvObjectMapperTest {
     @Test
     fun defaultValue() {
         data class WithDefaultValue(
-                @Name("defaultLong") @DefaultValue(defaultLong = 5L) val l: Long,
-                @Name("defaultString") @DefaultValue(defaultString = "foo") val s: String,
-                @Name("defaultByteArray") @DefaultValue(defaultByteArray = [0x2E]) val b: ByteArray,
+                @param:Name("defaultLong") @param:DefaultValue(defaultLong = 5L) val l: Long,
+                @param:Name("defaultString") @param:DefaultValue(defaultString = "foo") val s: String,
+                @param:Name("defaultByteArray") @param:DefaultValue(defaultByteArray = [0x2E]) val b: ByteArray,
         )
 
         val emptyGtv = gtv(mapOf())
@@ -387,7 +387,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun defaultValueIsNotPrimitive() {
         data class NonPrimitiveDefault(
-                @Name("foo") @DefaultEmpty val foo: Simple
+                @param:Name("foo") @param:DefaultEmpty val foo: Simple
         )
 
         assertThrows<IllegalArgumentException> {
@@ -398,17 +398,17 @@ internal class GtvObjectMapperTest {
     @Test
     fun explicitPath() {
         data class B(
-                @Name("name") val name: String,
-                @Name("value") val value: Long
+                @param:Name("name") val name: String,
+                @param:Name("value") val value: Long
         )
 
         data class A(
-                @Name("name")
-                @Nested("b")
+                @param:Name("name")
+                @param:Nested("b")
                 val bName: String,
-                @Name("b") val bRaw: Gtv,
-                @Name("b") val b: B,
-                @RawGtv val raw: Gtv
+                @param:Name("b") val bRaw: Gtv,
+                @param:Name("b") val b: B,
+                @param:RawGtv val raw: Gtv
         )
 
         val bDict = gtv(mapOf(
@@ -424,7 +424,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun assignGtvDict() {
-        data class SimpleDict(@Name("dict") val dict: GtvDictionary)
+        data class SimpleDict(@param:Name("dict") val dict: GtvDictionary)
 
         val a = gtv(mapOf(
                 "dict" to gtv(mapOf())
@@ -434,7 +434,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun assignGtvArray() {
-        data class SimpleArray(@Name("array") val array: GtvArray)
+        data class SimpleArray(@param:Name("array") val array: GtvArray)
 
         val a = gtv(mapOf(
                 "array" to gtv(listOf())
@@ -445,8 +445,8 @@ internal class GtvObjectMapperTest {
     @Test
     fun invalidPath() {
         data class C(
-                @Name("name")
-                @Nested("b")
+                @param:Name("name")
+                @param:Nested("b")
                 val name: String
         )
 
@@ -460,9 +460,9 @@ internal class GtvObjectMapperTest {
     @Test
     fun nestedMissingPath() {
         data class C(
-                @Name("name")
-                @Nested("b")
-                @Nullable
+                @param:Name("name")
+                @param:Nested("b")
+                @param:Nullable
                 val name: String?
         )
         assertThat(gtv(mapOf()).toObject<C>().name).isNull()
@@ -471,8 +471,8 @@ internal class GtvObjectMapperTest {
     @Test
     fun multiLevelPath() {
         data class Multi(
-                @Name("name")
-                @Nested("a", "b", "c")
+                @param:Name("name")
+                @param:Nested("a", "b", "c")
                 val name: String
         )
 
@@ -496,7 +496,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun unknownMap() {
-        data class ValidMapType(@Name("foo") val map: Map<String, Simple>)
+        data class ValidMapType(@param:Name("foo") val map: Map<String, Simple>)
 
         val g = gtv(mapOf(
                 "foo" to gtv(mapOf(
@@ -506,7 +506,7 @@ internal class GtvObjectMapperTest {
 
         assertThat(g.toObject<ValidMapType>().map["any"]?.value).isEqualTo(1L)
 
-        data class WrongMapType(@Name("foo") val map: Map<Int, Simple>)
+        data class WrongMapType(@param:Name("foo") val map: Map<Int, Simple>)
         assertThrows<IllegalArgumentException> {
             g.toObject<WrongMapType>()
         }
@@ -536,7 +536,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun nameParameterOverrideParameterNameIsPresent() {
-        data class Simple(@Name("bar") val foo: Long)
+        data class Simple(@param:Name("bar") val foo: Long)
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf("bar" to gtv(17L))), Simple::class)).isEqualTo(Simple(17L))
         assertThat(GtvObjectMapper.toGtvDictionary(Simple(17L))).isEqualTo(gtv(mapOf("bar" to gtv(17L))))
     }
@@ -544,7 +544,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun emptyMapTest() {
         data class MyConfig(
-                @Name("collections")
+                @param:Name("collections")
                 val collections: Map<String, String> = emptyMap(),
         )
         val emptyGtvDict = GtvObjectMapper.toGtvDictionary(MyConfig())
