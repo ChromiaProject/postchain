@@ -48,7 +48,7 @@ class ObjectToGtvDictionaryTest {
 
     companion object {
 
-        data class NullableType(@Nullable @Name("foo") val foo: Long?)
+        data class NullableType(@param:Nullable @param:Name("foo") val foo: Long?)
 
         @JvmStatic
         fun acceptedTypes() = listOf(

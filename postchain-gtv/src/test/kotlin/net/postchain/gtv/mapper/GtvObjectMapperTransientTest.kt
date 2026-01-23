@@ -7,8 +7,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class ClassWithTransientField(@Transient("transientValue") val longValue: Long)
-class ClassWithNullableTransientField(@Transient("transientValue") @Nullable val longValue: Long?)
+class ClassWithTransientField(@param:Transient("transientValue") val longValue: Long)
+class ClassWithNullableTransientField(@param:Transient("transientValue") @param:Nullable val longValue: Long?)
 
 class GtvObjectMapperTransientTest {
 
@@ -35,8 +35,8 @@ class GtvObjectMapperTransientTest {
     @Test
     fun transientNested() {
         class ClassWithTransientInnerField(
-                @Name("b") val b: String,
-                @Name("a") val a: ClassWithTransientField
+                @param:Name("b") val b: String,
+                @param:Name("a") val a: ClassWithTransientField
         )
         val gtv = gtv(mapOf(
                 "a" to gtv(mapOf()),

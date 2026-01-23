@@ -374,10 +374,10 @@ class SnapshotTest : SnapshotBaseIT() {
 
             if (prevPage != null) {
                 val leafsPerNode = 1L shl level
-                val relPos = ((pos - prevPage!!.left * leafsPerNode) shr level).toInt()
+                val relPos = ((pos - prevPage.left * leafsPerNode) shr level).toInt()
                 val childIndex = relPos % 2
-                val leftHash = prevPage!!.getChildHash(level % levelsPerPage, ds::hash, childIndex)
-                val rightHash = prevPage!!.getChildHash(level % levelsPerPage, ds::hash, childIndex + 1)
+                val leftHash = prevPage.getChildHash(level % levelsPerPage, ds::hash, childIndex)
+                val rightHash = prevPage.getChildHash(level % levelsPerPage, ds::hash, childIndex + 1)
                 val nodeHash = ds.hash(leftHash, rightHash)
                 if (nodeHash.toHex() != currentHash.toHex()) {
                     println("Node hash does not match proof hash")

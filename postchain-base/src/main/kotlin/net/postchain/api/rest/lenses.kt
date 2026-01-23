@@ -287,8 +287,8 @@ data class BlockchainNodeState(val state: String)
 object Empty
 
 data class BlockSignature(
-        @Name("subjectID") val subjectID: ByteArray,
-        @Name("data") val data: ByteArray
+        @param:Name("subjectID") val subjectID: ByteArray,
+        @param:Name("data") val data: ByteArray
 ) {
     companion object {
         fun fromSignature(signature: Signature): BlockSignature =

@@ -81,7 +81,7 @@ internal class GtvYamlTest {
     @MethodSource("allGtvTypes")
     fun classTest(yaml: String, expectedGtv: Gtv) {
         data class GtvClass(
-                @Name("g") val g: Gtv
+                @param:Name("g") val g: Gtv
         )
 
         val actual = GtvObjectMapper.fromGtv(GtvYaml().load("g: $yaml"), GtvClass::class)
@@ -91,8 +91,8 @@ internal class GtvYamlTest {
     @Test
     fun byteArrayTest() {
         class Binary(
-                @Name("b") val b: ByteArray,
-                @Name("wb") val wb: WrappedByteArray
+                @param:Name("b") val b: ByteArray,
+                @param:Name("wb") val wb: WrappedByteArray
         )
 
         val actual = GtvObjectMapper.fromGtv(GtvYaml().load("b: x\"AB\"\nwb: x\"AC\""), Binary::class)
@@ -141,26 +141,26 @@ internal class GtvYamlTest {
     @Test
     fun allPrimitivesTest() {
         data class AllPrimitives(
-                @Name("l") val l: Long,
-                @Name("nol") val nol: String,
-                @Name("bi") val bi: BigInteger,
-                @Name("nobi") val nobi: String,
-                @Name("t") val t: Boolean,
-                @Name("nt") val nt: String,
-                @Name("f") val f: Boolean,
-                @Name("nf") val nf: String,
-                @Name("ba") val ba: ByteArray,
-                @Name("wba") val wba: WrappedByteArray,
-                @Name("noba") val noba: String,
-                @Name("s") val s: String,
-                @Name("n") @Nullable val n: String?,
-                @Name("nn") val nn: String,
-                @Name("gtv") val gtv: Gtv,
-                @Name("li") val li: List<Long>,
-                @Name("se") val se: Set<String>,
-                @Name("ma") val ma: Map<String, Gtv>,
-                @Name("def1") @DefaultValue(defaultString = "default1") val def1: String,
-                @Name("def2") @DefaultValue(defaultString = "default2") val def2: String
+                @param:Name("l") val l: Long,
+                @param:Name("nol") val nol: String,
+                @param:Name("bi") val bi: BigInteger,
+                @param:Name("nobi") val nobi: String,
+                @param:Name("t") val t: Boolean,
+                @param:Name("nt") val nt: String,
+                @param:Name("f") val f: Boolean,
+                @param:Name("nf") val nf: String,
+                @param:Name("ba") val ba: ByteArray,
+                @param:Name("wba") val wba: WrappedByteArray,
+                @param:Name("noba") val noba: String,
+                @param:Name("s") val s: String,
+                @param:Name("n") @param:Nullable val n: String?,
+                @param:Name("nn") val nn: String,
+                @param:Name("gtv") val gtv: Gtv,
+                @param:Name("li") val li: List<Long>,
+                @param:Name("se") val se: Set<String>,
+                @param:Name("ma") val ma: Map<String, Gtv>,
+                @param:Name("def1") @param:DefaultValue(defaultString = "default1") val def1: String,
+                @param:Name("def2") @param:DefaultValue(defaultString = "default2") val def2: String
         )
 
         val actual = GtvObjectMapper.fromGtv(GtvYaml().load(allPrimitivesYaml), AllPrimitives::class)
@@ -189,21 +189,21 @@ internal class GtvYamlTest {
     @Test
     fun allPrimitivesGtvTest() {
         data class AllPrimitivesGtv(
-                @Name("l") val l: Gtv,
-                @Name("nol") val nol: Gtv,
-                @Name("bi") val bi: Gtv,
-                @Name("nobi") val nobi: Gtv,
-                @Name("t") val t: Gtv,
-                @Name("nt") val nt: Gtv,
-                @Name("f") val f: Gtv,
-                @Name("nf") val nf: Gtv,
-                @Name("ba") val ba: Gtv,
-                @Name("wba") val wba: Gtv,
-                @Name("s") val s: Gtv,
-                @Name("n") val n: Gtv,
-                @Name("nn") val nn: Gtv,
-                @Name("gtv") val gtv: Gtv,
-                @Name("ma") val ma: Map<String, Gtv>
+                @param:Name("l") val l: Gtv,
+                @param:Name("nol") val nol: Gtv,
+                @param:Name("bi") val bi: Gtv,
+                @param:Name("nobi") val nobi: Gtv,
+                @param:Name("t") val t: Gtv,
+                @param:Name("nt") val nt: Gtv,
+                @param:Name("f") val f: Gtv,
+                @param:Name("nf") val nf: Gtv,
+                @param:Name("ba") val ba: Gtv,
+                @param:Name("wba") val wba: Gtv,
+                @param:Name("s") val s: Gtv,
+                @param:Name("n") val n: Gtv,
+                @param:Name("nn") val nn: Gtv,
+                @param:Name("gtv") val gtv: Gtv,
+                @param:Name("ma") val ma: Map<String, Gtv>
         )
 
         val actual = GtvObjectMapper.fromGtv(GtvYaml().load(allPrimitivesYaml), AllPrimitivesGtv::class)

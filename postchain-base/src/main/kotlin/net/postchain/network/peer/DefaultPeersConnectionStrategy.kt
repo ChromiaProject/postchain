@@ -153,13 +153,13 @@ class DefaultPeersConnectionStrategy(
         latestEstablishedConnections[peerId] = clock.instant()
     }
 
-    override fun isConnectionAllowed(chainID: Long, registeredPeerIds: Set<NodeRid>, peerId: NodeRid): Boolean {
+    override fun isConnectionAllowed(chainID: Long, networkNodes: Set<NodeRid>, peerId: NodeRid): Boolean {
 
-        if (peerId in registeredPeerIds) return true
+        if (peerId in networkNodes) return true
 
         if (connectionConfig.maxUnknownPeerConnectionsPerChain <= 0) return true
 
-        val unknownPeers = connectionManager.getConnectedNodes(chainID).subtract(registeredPeerIds)
+        val unknownPeers = connectionManager.getConnectedNodes(chainID).subtract(networkNodes)
         return unknownPeers.size < connectionConfig.maxUnknownPeerConnectionsPerChain
     }
 

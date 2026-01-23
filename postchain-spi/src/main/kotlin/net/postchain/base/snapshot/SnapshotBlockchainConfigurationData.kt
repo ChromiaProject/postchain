@@ -12,19 +12,19 @@ import net.postchain.gtv.mapper.RawGtv
 import net.postchain.gtv.mapper.toObject
 
 data class SnapshotBlockchainConfigurationData(
-    @RawGtv
+    @param:RawGtv
     val rawGtv: Gtv,
 
-    @Name(KEY_SNAPSHOT_INTERVAL)
-    @DefaultValue(defaultLong = 100) // TODO: What is reasonable?
+    @param:Name(KEY_SNAPSHOT_INTERVAL)
+    @param:DefaultValue(defaultLong = 100) // TODO: What is reasonable?
     val snapshotInterval: Long,
 
-    @Name(KEY_SNAPSHOT_LEVELS_PER_PAGE)
-    @DefaultValue(defaultLong = 2)
+    @param:Name(KEY_SNAPSHOT_LEVELS_PER_PAGE)
+    @param:DefaultValue(defaultLong = 2)
     private val _levelsPerPage: Long,
 
-    @Name(KEY_SNAPSHOT_TO_KEEP)
-    @DefaultValue(defaultLong = 10)
+    @param:Name(KEY_SNAPSHOT_TO_KEEP)
+    @param:DefaultValue(defaultLong = 10)
     private val _snapshotsToKeep: Long
 ) {
     val levelsPerPage: Int

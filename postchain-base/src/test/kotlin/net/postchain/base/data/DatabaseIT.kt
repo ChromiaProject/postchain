@@ -410,7 +410,7 @@ class DatabaseIT {
                 val readAccess = DatabaseAccess.of(readCtx)
                 val transactionInfo = readAccess.getTransactionInfo(readCtx, txRID, includeTxData = true)
                 assertThat(transactionInfo!!.txRID).isContentEqualTo(txRID)
-                assertThat(Gtx.decode(transactionInfo!!.txData!!).gtxBody.operations[0].asOpData().args[1].asString()).isEqualTo("first")
+                assertThat(Gtx.decode(transactionInfo.txData!!).gtxBody.operations[0].asOpData().args[1].asString()).isEqualTo("first")
             }
         }
     }
