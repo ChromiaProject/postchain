@@ -73,23 +73,23 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testLoadUnfinishedEmptyBlock() {
+    fun testLoadProposedEmptyBlock() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_2.xml")
 
         val blockData = createBlockWithTxAndCommit(node0, 0)
 
-        loadUnfinishedAndCommit(node1, blockData)
+        loadProposedAndCommit(node1, blockData)
         assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
         assertEquals(0, riDsAtHeight0.size)
     }
 
     @Test
-    fun testLoadUnfinishedBlock2tx() {
+    fun testLoadProposedBlock2tx() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_2.xml")
 
         val blockData = createBlockWithTxAndCommit(node0, 2)
-        loadUnfinishedAndCommit(node1, blockData)
+        loadProposedAndCommit(node1, blockData)
 
         assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
@@ -97,12 +97,12 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testMultipleLoadUnfinishedBlocks() {
+    fun testMultipleLoadProposedBlocks() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_2.xml")
 
         for (i in 0..10) {
             val blockData = createBlockWithTxAndCommit(node0, 2, i * 2)
-            loadUnfinishedAndCommit(node1, blockData)
+            loadProposedAndCommit(node1, blockData)
 
             assertEquals(i.toLong(), getLastHeight(node1))
             val riDsAtHeighti = getTxRidsAtHeight(node1, i.toLong())
@@ -111,7 +111,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testLoadUnfinishedBlockTxFail() {
+    fun testLoadProposedBlockTxFail() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_2.xml")
 
         val blockData = createBlockWithTxAndCommit(node0, 2)
@@ -120,7 +120,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         // Make the tx invalid on follower. Should discard whole block
         bc.transactionFactory.specialTxs[0] = ErrorTransaction(0, true, false)
         try {
-            loadUnfinishedAndCommit(node1, blockData)
+            loadProposedAndCommit(node1, blockData)
             fail()
         } catch (userMistake: UserMistake) {
             // Expected
@@ -130,7 +130,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
 
         bc.transactionFactory.specialTxs.clear()
         // And we can create a new valid block afterwards.
-        loadUnfinishedAndCommit(node1, blockData)
+        loadProposedAndCommit(node1, blockData)
 
         assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
@@ -138,13 +138,13 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testLoadUnfinishedBlockInvalidHeader() {
+    fun testLoadProposedBlockInvalidHeader() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_2.xml")
 
         val blockData = createBlockWithTxAndCommit(node0, 2)
         blockData.header.prevBlockRID[0]++
         try {
-            loadUnfinishedAndCommit(node1, blockData)
+            loadProposedAndCommit(node1, blockData)
             fail()
         } catch (userMistake: BadDataException) {
             // Expected
@@ -195,8 +195,8 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         return engine.buildBlock().first
     }
 
-    private fun loadUnfinishedAndCommit(node: PostchainTestNode, blockData: BlockData) {
-        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadUnfinishedBlock(blockData, false)
+    private fun loadProposedAndCommit(node: PostchainTestNode, blockData: BlockData) {
+        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadProposedBlock(blockData, false)
         if (exception != null) {
             throw exception
         } else {

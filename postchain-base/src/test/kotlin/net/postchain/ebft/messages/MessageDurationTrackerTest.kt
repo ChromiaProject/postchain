@@ -19,9 +19,9 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
-import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.GetProposedBlock
 import net.postchain.ebft.message.MessageDurationTracker
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
@@ -170,14 +170,14 @@ class MessageDurationTrackerTest {
     }
 
     @Nested
-    inner class UnfinishedBlock {
+    inner class ProposedBlock {
         @Test
-        fun `should work with GetUnfinishedBlock`() {
+        fun `should work with GetProposedBlock`() {
             // setup
-            sut.send(nodeRid1, GetUnfinishedBlock(baseBlockHeader.blockRID))
+            sut.send(nodeRid1, GetProposedBlock(baseBlockHeader.blockRID))
             addTime(10)
             // execute & verify
-            assertThat(sut.receive(nodeRid1, UnfinishedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(10)
+            assertThat(sut.receive(nodeRid1, ProposedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(10)
             // verify
             verify(timer).record(10, TimeUnit.MILLISECONDS)
         }
@@ -188,20 +188,20 @@ class MessageDurationTrackerTest {
             sut.send(nodeRid1, GetBlockHeaderAndBlock(baseBlockHeader.blockHeaderRec.getHeight()))
             addTime(10)
             // execute & verify
-            assertThat(sut.receive(nodeRid1, UnfinishedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(10)
+            assertThat(sut.receive(nodeRid1, ProposedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(10)
             // verify
             verify(timer).record(10, TimeUnit.MILLISECONDS)
         }
 
         @Test
-        fun `should work with both GetUnfinishedBlock and GetBlockHeaderAndBlock`() {
+        fun `should work with both GetProposedBlock and GetBlockHeaderAndBlock`() {
             // setup
-            sut.send(nodeRid1, GetUnfinishedBlock(baseBlockHeader.blockRID))
+            sut.send(nodeRid1, GetProposedBlock(baseBlockHeader.blockRID))
             addTime(10)
             sut.send(nodeRid1, GetBlockHeaderAndBlock(baseBlockHeader.blockHeaderRec.getHeight()))
             addTime(10)
             // execute & verify
-            assertThat(sut.receive(nodeRid1, UnfinishedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(20)
+            assertThat(sut.receive(nodeRid1, ProposedBlock(header0.rawData, emptyList()), baseBlockHeader)!!.inWholeMilliseconds).isEqualTo(20)
             // verify
             verify(timer).record(20, TimeUnit.MILLISECONDS)
         }

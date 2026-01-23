@@ -946,7 +946,7 @@ fun getBlockBuildingStrategy(
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="97.58984375" x="75.00393417050964" xml:space="preserve" y="3.0">BlockManager<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">currentBlock: BlockData?</y:AttributeLabel>
-            <y:MethodLabel xml:space="preserve">fun onReceivedUnfinishedBlock(
+            <y:MethodLabel xml:space="preserve">fun onReceivedProposedBlock(
       block: BlockData)
 fun onReceivedBlockAtHeight(
       block: BlockDataWithWitness, 
@@ -988,7 +988,7 @@ intent: BlockIntent</y:AttributeLabel>
             <y:AttributeLabel xml:space="preserve"/>
             <y:MethodLabel xml:space="preserve">fun addBlock(block: BlockDataWithWitness
  ): Promise&lt;Unit, Exception&gt; 
-fun loadUnfinishedBlock(block: BlockData
+fun loadProposedBlock(block: BlockData
  ): Promise&lt;Signature, Exception&gt; 
 fun commitBlock(signatures: Array&lt;Signature?&gt;
  ): Promise&lt;Unit, Exception&gt;
@@ -1335,7 +1335,7 @@ fun signDigest(
             <y:MethodLabel xml:space="preserve">fun initializeDB()
 fun addBlock(
       block: BlockDataWithWitness)
-fun loadUnfinishedBlock(
+fun loadProposedBlock(
       block: BlockData
  ): ManagedBlockBuilder
 fun buildBlock(
@@ -1377,11 +1377,11 @@ storage: Storage
             <y:MethodLabel xml:space="preserve">-fun makeBlockBuilder(
  ): ManagedBlockBuilder 
 
--fun parallelLoadUnfinishedBlock(
+-fun parallelLoadProposedBlock(
        block: BlockData
  ): ManagedBlockBuilder
 
--fun sequentialLoadUnfinishedBlock(
+-fun sequentialLoadProposedBlock(
       block: BlockData
  ): ManagedBlockBuilder </y:MethodLabel>
           </y:UML>

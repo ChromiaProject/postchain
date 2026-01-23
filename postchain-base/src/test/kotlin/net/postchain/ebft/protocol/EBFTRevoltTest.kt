@@ -4,12 +4,12 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.DoNothingIntent
-import net.postchain.ebft.FetchUnfinishedBlockIntent
+import net.postchain.ebft.FetchProposedBlockIntent
 import net.postchain.ebft.NodeBlockState.HaveBlock
 import net.postchain.ebft.NodeBlockState.WaitBlock
-import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.GetProposedBlock
 import net.postchain.ebft.message.Status
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
@@ -62,11 +62,11 @@ class EBFTRevoltTest : EBFTProtocolBase() {
     fun `Primary is malicious and attempts to produce an invalid block`() {
         /**
          * Input: Receiving [HaveBlock] status from primary block builder (node 0).
-         * Expected outcome: Send request for unfinished block.
+         * Expected outcome: Send request for proposed block.
          * State: [WaitBlock] -> [WaitBlock]
-         * Intent: [DoNothingIntent] -> [FetchUnfinishedBlockIntent]
+         * Intent: [DoNothingIntent] -> [FetchProposedBlockIntent]
          * Receive: [Status] with block info from node 0
-         * Send: [GetUnfinishedBlock] to (random) node 0
+         * Send: [GetProposedBlock] to (random) node 0
          */
         // setup
         verifyIntent(DoNothingIntent)
@@ -77,8 +77,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         // execute
         syncManager.update()
         // verify
-        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
-        argumentCaptor<GetUnfinishedBlock> {
+        verifyIntent(FetchProposedBlockIntent(blockRid0))
+        argumentCaptor<GetProposedBlock> {
             verify(commManager).sendPacket(capture(), eq(nodeRid0))
             assertThat(firstValue.blockRID).isEqualTo(blockRid0)
         }
@@ -86,38 +86,38 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         reset(commManager)
 
         /**
-         * Input: Receiving [UnfinishedBlock] from primary block builder (node 0) with bad block.
-         * Expected outcome: Stay in [WaitBlock] state and keep intent [FetchUnfinishedBlockIntent].
+         * Input: Receiving [ProposedBlock] from primary block builder (node 0) with bad block.
+         * Expected outcome: Stay in [WaitBlock] state and keep intent [FetchProposedBlockIntent].
          * State: [WaitBlock] -> [WaitBlock]
-         * Intent: [FetchUnfinishedBlockIntent] -> [FetchUnfinishedBlockIntent]
-         * Receive: [UnfinishedBlock] from node 0 with bad block
+         * Intent: [FetchProposedBlockIntent] -> [FetchProposedBlockIntent]
+         * Receive: [ProposedBlock] from node 0 with bad block
          */
         // setup
         doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
-        doReturn(CompletableFuture.failedFuture<Exception>(Exception())).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(CompletableFuture.failedFuture<Exception>(Exception())).whenever(blockDatabase).loadProposedBlock(isA())
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
+                ReceivedPacket(nodeRid0, 1, ProposedBlock(header0.rawData, emptyList()))
         )
         // execute
         syncManager.update()
         // verify
-        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
+        verifyIntent(FetchProposedBlockIntent(blockRid0))
         verify(commManager, never()).sendPacket(isA(), eq(nodeRid0))
         reset(commManager)
 
         /**
-         * Input: We do not get a valid [UnfinishedBlock] in time, so we revolt.
+         * Input: We do not get a valid [ProposedBlock] in time, so we revolt.
          * Expected outcome: Stay in the same state as we try to start revolt, but no other nodes have joined.
          * State: [WaitBlock] -> [WaitBlock]
-         * Intent: [FetchUnfinishedBlockIntent] -> [FetchUnfinishedBlockIntent]
+         * Intent: [FetchProposedBlockIntent] -> [FetchProposedBlockIntent]
          * Send: Broadcast [Status]
          */
         // execute
         statusManager.onStartRevolting()
         syncManager.update()
         // verify
-        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
+        verifyIntent(FetchProposedBlockIntent(blockRid0))
         verifyStatus(blockRID = null, height = 0, serial = 1, round = 0, revolting = true, state = WaitBlock)
         reset(commManager)
 
@@ -125,7 +125,7 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          * Input: We receive revolt [Status] from other non-primary nodes.
          * Expected outcome: Change primary node to node1 (us)
          * State: [WaitBlock] -> [WaitBlock]
-         * Intent: [FetchUnfinishedBlockIntent] -> [BuildBlockIntent]
+         * Intent: [FetchProposedBlockIntent] -> [BuildBlockIntent]
          * Receive: Revolt from other nodes.
          * Send: Broadcast [Status]
          */

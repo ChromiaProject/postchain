@@ -240,7 +240,7 @@ class BaseStatusManager(
     @Synchronized
     override fun onReceivedBlock(blockRID: ByteArray, mySignature: Signature): Boolean {
         val theIntent = intent
-        return if (theIntent is FetchUnfinishedBlockIntent) {
+        return if (theIntent is FetchProposedBlockIntent) {
             if (theIntent.isThisTheBlockWeAreWaitingFor(blockRID)) {
                 acceptBlock(blockRID, mySignature)
                 true
@@ -557,9 +557,9 @@ class BaseStatusManager(
                 val primaryBlockRID = this.nodeStatuses[this.primaryIndex()].blockRID
                 if (primaryBlockRID != null) {
                     val _intent = intent
-                    if (!(_intent is FetchUnfinishedBlockIntent &&
+                    if (!(_intent is FetchProposedBlockIntent &&
                                     _intent.isThisTheBlockWeAreWaitingFor(primaryBlockRID))) {
-                        intent = FetchUnfinishedBlockIntent(primaryBlockRID)
+                        intent = FetchProposedBlockIntent(primaryBlockRID)
                         return true
                     }
                 } else {

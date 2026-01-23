@@ -1451,7 +1451,7 @@ public abstract interface class net/postchain/core/BlockchainEngine : net/postch
 	public abstract fun getTransactionQueue ()Lnet/postchain/core/TransactionQueue;
 	public abstract fun hasBuiltFirstBlockAfterConfigUpdate ()Z
 	public abstract fun isRunning ()Z
-	public abstract fun loadUnfinishedBlock (Lnet/postchain/core/block/BlockData;Z)Lkotlin/Pair;
+	public abstract fun loadProposedBlock (Lnet/postchain/core/block/BlockData;Z)Lkotlin/Pair;
 	public abstract fun persistBlock (Lnet/postchain/core/block/BlockDataWithWitness;)Lkotlin/Pair;
 }
 

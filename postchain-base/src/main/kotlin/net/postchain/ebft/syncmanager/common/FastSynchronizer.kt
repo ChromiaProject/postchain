@@ -36,7 +36,7 @@ import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
@@ -50,7 +50,7 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  * from random peers simultaneously.
  *
  * The peers respond to the requests using a BlockHeader immediately followed
- * by an UnfinishedBlock, but if they don't have the block, they respond with
+ * by an ProposedBlock, but if they don't have the block, they respond with
  * their latest BlockHeader and the height that was requested. If they
  * don't have any blocks at all, they reply with a BlockHeader with empty header
  * and witness.
@@ -524,30 +524,30 @@ class FastSynchronizer(
         return true
     }
 
-    internal fun handleUnfinishedBlock(peerId: NodeRid, message: UnfinishedBlock) {
+    internal fun handleProposedBlock(peerId: NodeRid, message: ProposedBlock) {
         val header = message.header
         val decodedHeader = blockchainConfiguration.decodeBlockHeader(header)
         if (decodedHeader !is BaseBlockHeader) {
             throw BadMessageException("Expected BaseBlockHeader")
         }
         messageDurationTracker.receive(peerId, message, decodedHeader)
-        handleUnfinishedBlock(peerId, header, decodedHeader, message.transactions)
+        handleProposedBlock(peerId, header, decodedHeader, message.transactions)
     }
 
     /**
      * Non-private for testing purposes
      */
-    internal fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, decodedHeader: BaseBlockHeader, txs: List<ByteArray>) {
+    internal fun handleProposedBlock(peerId: NodeRid, header: ByteArray, decodedHeader: BaseBlockHeader, txs: List<ByteArray>) {
         val height = getHeight(decodedHeader)
         val job = jobs[height]
         if (job == null) {
-            peerStatuses.maybeBlacklist(peerId, "Sync: Why did we get an unfinished block of height: $height from peer: $peerId ? We didn't ask for it")
+            peerStatuses.maybeBlacklist(peerId, "Sync: Why did we get an proposed block of height: $height from peer: $peerId ? We didn't ask for it")
             return
         }
         unfinishedTrace("Received for $job")
         var bTrace: BlockTrace? = null
         if (logger.isDebugEnabled) {
-            logger.trace { "handleUnfinishedBlock() - Creating block trace with height: $height " }
+            logger.trace { "handleProposedBlock() - Creating block trace with height: $height " }
 
             bTrace = BlockTrace.build(decodedHeader.blockRID, height)
         }
@@ -560,17 +560,17 @@ class FastSynchronizer(
         }
 
         if (peerId != job.peerId) {
-            peerStatuses.maybeBlacklist(peerId, "Sync: We didn't expect $peerId to send us an unfinished block (height = $height). We wanted ${job.peerId} to do it. $job")
+            peerStatuses.maybeBlacklist(peerId, "Sync: We didn't expect $peerId to send us an proposed block (height = $height). We wanted ${job.peerId} to do it. $job")
             return
         }
 
         if (expectedHeader == null) {
-            peerStatuses.maybeBlacklist(peerId, "Sync: We don't have a header yet, why does $peerId send us an unfinished block (height = $height )? $job")
+            peerStatuses.maybeBlacklist(peerId, "Sync: We don't have a header yet, why does $peerId send us an proposed block (height = $height )? $job")
             return
         }
 
         if (!(expectedHeader.rawData contentEquals header)) {
-            peerStatuses.maybeBlacklist(peerId, "Sync: Peer: ${job.peerId} is sending us an unfinished block (height = $height) with a header that doesn't match the header we expected. $job")
+            peerStatuses.maybeBlacklist(peerId, "Sync: Peer: ${job.peerId} is sending us an proposed block (height = $height) with a header that doesn't match the header we expected. $job")
             return
         }
 
@@ -627,7 +627,7 @@ class FastSynchronizer(
         if (decodedHeader !is BaseBlockHeader) {
             throw BadMessageException("Expected BaseBlockHeader")
         }
-        handleUnfinishedBlock(peerId, header, decodedHeader, blockData.transactions)
+        handleProposedBlock(peerId, header, decodedHeader, blockData.transactions)
     }
 
     /**
@@ -678,7 +678,7 @@ class FastSynchronizer(
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message)
-                    is UnfinishedBlock -> handleUnfinishedBlock(peerId, message)
+                    is ProposedBlock -> handleProposedBlock(peerId, message)
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
@@ -731,7 +731,7 @@ class FastSynchronizer(
     }
 
     private fun unfinishedTrace(message: String, e: Exception? = null) {
-        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
+        logger.trace(e) { "handleProposedBlock() -- $message" }
     }
 
     private fun currentTimeMillis() = clock.millis()

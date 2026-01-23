@@ -454,7 +454,7 @@ storage: BaseStorage
             <y:MethodLabel xml:space="preserve">fun initializeDB()
 fun addBlock(
       block: BlockDataWithWitness)
-fun loadUnfinishedBlock(
+fun loadProposedBlock(
       block: BlockData
  ): ManagedBlockBuilder
 fun buildBlock(
@@ -529,11 +529,11 @@ storage: Storage
             <y:MethodLabel xml:space="preserve">-fun makeBlockBuilder(
  ): ManagedBlockBuilder 
 
--fun parallelLoadUnfinishedBlock(
+-fun parallelLoadProposedBlock(
        block: BlockData
  ): ManagedBlockBuilder
 
--fun sequentialLoadUnfinishedBlock(
+-fun sequentialLoadProposedBlock(
       block: BlockData
  ): ManagedBlockBuilder </y:MethodLabel>
           </y:UML>
@@ -645,7 +645,7 @@ restartHandler: RestartHandler
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="97.58984375" x="70.55158018261318" xml:space="preserve" y="3.0">BlockManager<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">    var currentBlock: BlockData?</y:AttributeLabel>
-            <y:MethodLabel xml:space="preserve">fun onReceivedUnfinishedBlock(
+            <y:MethodLabel xml:space="preserve">fun onReceivedProposedBlock(
       block: BlockData)
 fun onReceivedBlockAtHeight(
       block: BlockDataWithWitness, 
@@ -713,14 +713,14 @@ fun dispatchMessages()
 -fun sendBlockAtHeight(
        nodeIndex: Int, 
        height: Long) 
--fun sendUnfinishedBlock(nodeIndex: Int)
+-fun sendProposedBlock(nodeIndex: Int)
 -fun selectRandomNode(
        match: (NodeStatus) -&gt; Boolean): Int? 
 -fun fetchBlockAtHeight(height: Long) 
 -fun fetchCommitSignatures(
        blockRID: ByteArray, 
        nodes: Array&lt;Int&gt;) 
--fun fetchUnfinishedBlock(blockRID: ByteArray)     
+-fun fetchProposedBlock(blockRID: ByteArray)
 fun processIntent()     
 fun logStatus() 
 </y:MethodLabel>
@@ -855,7 +855,7 @@ CommitBlockIntent
 BuildBlockIntent
 FetchBlockAtHeightIntent(
   val height: Long)
-FetchUnfinishedBlockIntent(
+FetchProposedBlockIntent(
   val blockRID: ByteArray) 
 FetchCommitSignatureIntent(
   val blockRID: ByteArray, 
@@ -874,8 +874,8 @@ FetchCommitSignatureIntent(
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="153.35400390625" x="77.81888619808842" xml:space="preserve" y="3.0">Message/ EbfMessage<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
-            <y:AttributeLabel xml:space="preserve">  getUnfinishedBlockChosen = 0;
-  unfinishedBlockChosen = 1;
+            <y:AttributeLabel xml:space="preserve">  GetProposedBlockChosen = 0;
+  preparedBlockChosen = 1;
   getBlockAtHeightChosen = 2;
   completeBlockChosen = 3;
   statusChosen = 4;
@@ -896,7 +896,7 @@ FetchCommitSignatureIntent(
           <y:Geometry height="62.67516288490424" width="178.62391584367788" x="-2457.2515771813546" y="-362.39769871125026"/>
           <y:Fill color="#FFCC00" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="135.0537109375" x="21.78510245308894" xml:space="preserve" y="3.0">GetUnfinishedBlock<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="135.0537109375" x="21.78510245308894" xml:space="preserve" y="3.0">GetProposedBlock<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">blockRID: byte[] </y:AttributeLabel>
             <y:MethodLabel xml:space="preserve"/>
@@ -1043,7 +1043,7 @@ revolting: Boolean</y:AttributeLabel>
           <y:Geometry height="72.35195252720303" width="191.79510174569668" x="-2004.727261547739" y="-636.6137469283572"/>
           <y:Fill color="#FFCC00" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="112.47509765625" x="39.66000204472334" xml:space="preserve" y="3.0">UnfinishedBlock<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="112.47509765625" x="39.66000204472334" xml:space="preserve" y="3.0">ProposedBlock<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">header: byte[]
 transactions: Vector&lt;byte[]&gt; </y:AttributeLabel>

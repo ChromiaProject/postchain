@@ -28,7 +28,7 @@ nodes at all times. The states are as follows:
   - Status messages which are sent between nodes and include the round in which a node is participating (__round__),
   the RID of the current block (__RID__, can be null), the current height of the blockchain (__height__), and whether
   it is revolting (__revolting__).
-  - Requests for the current unfinished block, for nodes that are synchronized to the last complete block, and are
+  - Requests for the current proposed block, for nodes that are synchronized to the last complete block, and are
   joining the consensus process.
   - Requests for blocks at a specific height in the blockchain. A node that is out of sync must be able to fetch
   complete blocks and bring itself back up to speed.

@@ -100,13 +100,13 @@ class BaseBlockManager(
         }
     }
 
-    override fun onReceivedUnfinishedBlock(block: BlockData, onLoadSuccess: () -> Unit, onLoadFailure: (Throwable) -> Unit) {
+    override fun onReceivedProposedBlock(block: BlockData, onLoadSuccess: () -> Unit, onLoadFailure: (Throwable) -> Unit) {
         synchronized(statusManager) {
             val theIntent = intent
-            if (theIntent is FetchUnfinishedBlockIntent && theIntent.blockRID.contentEquals(block.header.blockRID)) {
+            if (theIntent is FetchProposedBlockIntent && theIntent.blockRID.contentEquals(block.header.blockRID)) {
                 runDBOp({
                     blockTrace(theIntent)
-                    blockDB.loadUnfinishedBlock(block)
+                    blockDB.loadProposedBlock(block)
                 }, { signature ->
                     withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
                         logger.info("Signed block ${block.header.blockRID.toHex()}")
@@ -117,7 +117,7 @@ class BaseBlockManager(
                     }
                     onLoadSuccess()
                 }, { exception ->
-                    val msg = "Can't load unfinished block ${theIntent.blockRID.toHex()}: " +
+                    val msg = "Can't load proposed block ${theIntent.blockRID.toHex()}: " +
                             "${exception.message}"
                     handleLoadBlockException(exception, msg, block.header)
                     onLoadFailure(exception)
