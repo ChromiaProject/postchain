@@ -5,6 +5,7 @@ package net.postchain.ebft.syncmanager.validator
 import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.BaseBlockHeader
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
@@ -63,6 +64,8 @@ import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkleHash
 import net.postchain.managed.CHAIN0
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.metrics.SyncMetrics
@@ -226,10 +229,22 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     val blockData = decodeBlockData(
                                             BlockData(message.header, message.transactions),
                                             blockchainConfiguration)
-                                    lastRequestedUnfinishedBlock = blockData
                                     messageDurationTracker.receive(xPeerId, message, blockData.header)
-                                    blockManager.onReceivedUnfinishedBlock(blockData) {
-                                        lastRequestedUnfinishedBlock = null
+
+                                    val blockHeaderRootHash = BaseBlockHeader(blockData.header.rawData,
+                                            blockchainConfiguration.merkleHashCalculator).blockHeaderRec.gtvMerkleRootHash
+                                    val blockTxRootHash = gtv(blockData.transactions.map {
+                                        val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(it)
+                                        gtv(tx.getHash())
+                                    }).merkleHash(blockchainConfiguration.merkleHashCalculator)
+
+                                    if (blockTxRootHash.contentEquals(blockHeaderRootHash.bytearray)) {
+                                        lastRequestedUnfinishedBlock = blockData
+                                        blockManager.onReceivedUnfinishedBlock(blockData) {
+                                            lastRequestedUnfinishedBlock = null
+                                        }
+                                    } else {
+                                        logger.warn("Unfinished block received from $xPeerId is invalid due to block transaction root hash mismatch")
                                     }
                                 }
 
