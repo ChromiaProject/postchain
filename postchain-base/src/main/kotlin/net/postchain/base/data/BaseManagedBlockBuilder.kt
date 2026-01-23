@@ -120,8 +120,8 @@ class BaseManagedBlockBuilder(
         return runOpSafely { blockBuilder.finalizeBlock(timestamp) }
     }
 
-    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
-        runOpSafely { blockBuilder.finalizeAndValidate(blockHeader, skipValidationFields) }
+    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>, skipRootHashValidation: Boolean) {
+        runOpSafely { blockBuilder.finalizeAndValidate(blockHeader, skipValidationFields, skipRootHashValidation) }
     }
 
     override fun getBlockData(): BlockData {

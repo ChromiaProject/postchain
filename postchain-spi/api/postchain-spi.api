@@ -549,7 +549,7 @@ public class net/postchain/base/data/BaseBlockBuilder : net/postchain/base/Abstr
 	protected fun buildBlockchainDependencies (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/base/BlockchainDependencies;
 	protected fun checkSpecialTransaction (Lnet/postchain/core/Transaction;)V
 	protected fun computeMerkleRootHash ()[B
-	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;)V
+	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;Z)V
 	public fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
 	public fun finalizeExtensions (Ljava/util/Map;)Ljava/util/Map;
 	public final fun getBlockSigMaker ()Lnet/postchain/crypto/SigMaker;
@@ -836,7 +836,7 @@ public final class net/postchain/base/data/DatumInfo {
 
 public final class net/postchain/base/data/GenericBlockHeaderValidator {
 	public static final field INSTANCE Lnet/postchain/base/data/GenericBlockHeaderValidator;
-	public final fun advancedValidateAgainstKnownBlocks (Lnet/postchain/core/block/BlockHeader;Lnet/postchain/core/block/InitialBlockData;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;JJJILjava/util/Map;[[BZLjava/util/Set;)Lnet/postchain/core/ValidationResult;
+	public final fun advancedValidateAgainstKnownBlocks (Lnet/postchain/core/block/BlockHeader;Lnet/postchain/core/block/InitialBlockData;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;JJJILjava/util/Map;[[BZLjava/util/Set;Z)Lnet/postchain/core/ValidationResult;
 	public final fun basicValidationAgainstKnownBlocks (Lnet/postchain/core/BlockRid;Lnet/postchain/core/BlockRid;JLnet/postchain/core/BlockRid;JLkotlin/jvm/functions/Function1;)Lnet/postchain/core/ValidationResult;
 	public final fun multiValidationAgainstKnownBlocks (Lnet/postchain/common/BlockchainRid;Ljava/util/Map;Lnet/postchain/base/data/MinimalBlockHeaderInfo;Lkotlin/jvm/functions/Function1;)Lnet/postchain/core/ValidationResult;
 }
@@ -859,7 +859,7 @@ public final class net/postchain/base/data/MinimalBlockHeaderInfo {
 public final class net/postchain/base/data/PersistOnlyBlockBuilder : net/postchain/base/AbstractBlockBuilder {
 	public fun <init> (Lnet/postchain/core/ExecutionContext;Lnet/postchain/common/BlockchainRid;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/BlockWitnessProvider;[B)V
 	public fun appendTransaction (Lnet/postchain/core/Transaction;)V
-	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;)V
+	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;Z)V
 	public fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
 	public fun getBlockWitnessBuilder ()Lnet/postchain/core/block/BlockWitnessBuilder;
 	public fun processEmittedEvent (Lnet/postchain/core/TxEContext;Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
@@ -1325,8 +1325,10 @@ public final class net/postchain/core/AsyncQueryResponseStatus : java/lang/Enum 
 }
 
 public final class net/postchain/core/BadBlockException : net/postchain/core/BadDataException {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;Lnet/postchain/core/ValidationResult$Result;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;Lnet/postchain/core/ValidationResult$Result;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Lnet/postchain/core/ValidationResult$Result;)V
+	public final fun getValidationResult ()Lnet/postchain/core/ValidationResult$Result;
 }
 
 public final class net/postchain/core/BadBlockRIDAtHeightException : net/postchain/core/BadDataException {
@@ -1850,7 +1852,7 @@ public abstract interface class net/postchain/core/block/BlockBuilder {
 	public abstract fun appendTransaction (Lnet/postchain/core/Transaction;)V
 	public abstract fun begin (Lnet/postchain/core/block/BlockHeader;)V
 	public abstract fun commit (Lnet/postchain/core/block/BlockWitness;)V
-	public abstract fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;)V
+	public abstract fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;Z)V
 	public abstract fun finalizeBlock ()Lnet/postchain/core/block/BlockHeader;
 	public abstract fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
 	public abstract fun getBTrace ()Lnet/postchain/core/block/BlockTrace;
@@ -1861,7 +1863,7 @@ public abstract interface class net/postchain/core/block/BlockBuilder {
 }
 
 public final class net/postchain/core/block/BlockBuilder$DefaultImpls {
-	public static synthetic fun finalizeAndValidate$default (Lnet/postchain/core/block/BlockBuilder;Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;ILjava/lang/Object;)V
+	public static synthetic fun finalizeAndValidate$default (Lnet/postchain/core/block/BlockBuilder;Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;ZILjava/lang/Object;)V
 	public static fun finalizeBlock (Lnet/postchain/core/block/BlockBuilder;)Lnet/postchain/core/block/BlockHeader;
 	public static synthetic fun finalizeBlock$default (Lnet/postchain/core/block/BlockBuilder;JILjava/lang/Object;)Lnet/postchain/core/block/BlockHeader;
 }

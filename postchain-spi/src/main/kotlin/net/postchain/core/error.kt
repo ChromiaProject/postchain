@@ -10,7 +10,9 @@ open class PmEngineIsAlreadyClosed(message: String, val chainId: Long, cause: Ex
  * Used when the format of some data is incorrect
  */
 abstract class BadDataException(message: String, cause: Exception? = null) : RuntimeException(message, cause)
-class BadBlockException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class BadBlockException(message: String, cause: Exception? = null, val validationResult: ValidationResult.Result? = null) : BadDataException(message, cause) {
+    constructor(message: String, validationResult: ValidationResult.Result) : this(message, null, validationResult)
+}
 class BadBlockRIDAtHeightException(message: String, cause: Exception? = null) : BadDataException(message, cause)
 class BadConfigurationException(message: String, cause: Exception? = null) : BadDataException(message, cause)
 class BadMessageException(message: String, cause: Exception? = null) : BadDataException(message, cause)
