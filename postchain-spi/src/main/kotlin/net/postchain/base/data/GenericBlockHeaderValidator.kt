@@ -158,7 +158,8 @@ object GenericBlockHeaderValidator {
             extraData: Map<String, Gtv>,
             subjects: Array<ByteArray>,
             checkPrimaryField: Boolean,
-            skipValidationFields: Set<String>
+            skipValidationFields: Set<String>,
+            skipRootHashValidation: Boolean
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 
@@ -187,7 +188,7 @@ object GenericBlockHeaderValidator {
             !header.checkCorrectNumberOfDependencies(nrOfDependencies) ->
                 ValidationResult(ValidationResult.Result.MISSING_BLOCKCHAIN_DEPENDENCY, "checkIfAllBlockchainDependenciesArePresent() is false")
 
-            !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
+            !skipRootHashValidation && !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
 
             header.extraData.minus(skipValidationFields) != extraData.minus(skipValidationFields) ->
@@ -200,5 +201,4 @@ object GenericBlockHeaderValidator {
             else -> basicResult // = "OK"
         }
     }
-
 }

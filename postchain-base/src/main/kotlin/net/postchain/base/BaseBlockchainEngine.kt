@@ -14,6 +14,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.SpecialTransactionFailed
 import net.postchain.common.exception.UserMistake
@@ -23,6 +24,7 @@ import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.AsyncQueryQueue
+import net.postchain.core.BadBlockException
 import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -34,6 +36,7 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
+import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
@@ -48,6 +51,9 @@ import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkleHash
 import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import net.postchain.metrics.DelayTimer
@@ -227,6 +233,12 @@ open class BaseBlockchainEngine(
                 var netStart = -1L
                 var netEnd = -1L
                 var numberOfTxs = 0
+
+                val merkleRootHash = computeMerkleRootHash(decodedTxs, blockchainConfiguration.merkleHashCalculator)
+                if (!(block.header as BaseBlockHeader).blockHeaderRec.getMerkleRootHash().contentEquals(merkleRootHash)) {
+                    throw BadBlockException("header.blockHeaderRec.rootHash != computeMerkleRootHash()", ValidationResult.Result.INVALID_ROOT_HASH)
+                }
+
                 decodedTxs.forEach { tx ->
                     if (!tx.isSpecial()) {
                         numberOfTxs++
@@ -241,7 +253,7 @@ open class BaseBlockchainEngine(
                 if (netStart == -1L) netStart = nanoTime()
                 if (netEnd == -1L) netEnd = nanoTime()
 
-                blockBuilder.finalizeAndValidate(block.header)
+                blockBuilder.finalizeAndValidate(block.header, skipRootHashValidation = true)
                 val grossEnd = nanoTime()
 
                 val prettyBlockHeader = prettyBlockHeader(
@@ -545,5 +557,10 @@ open class BaseBlockchainEngine(
 
     private fun buildLog(str: String, bTrace: BlockTrace?) {
         logger.debug { "buildBlock() -- $str, for block: $bTrace" }
+    }
+
+    private fun computeMerkleRootHash(txs: List<Transaction>, merkleHashCalculator: GtvMerkleHashCalculatorBase): Hash {
+        val digestsGtv = gtv(txs.map { gtv(it.getHash()) })
+        return digestsGtv.merkleHash(merkleHashCalculator)
     }
 }

@@ -80,7 +80,7 @@ interface BlockBuilder {
     fun appendTransaction(tx: Transaction)
     fun finalizeBlock(): BlockHeader = finalizeBlock(System.currentTimeMillis())
     fun finalizeBlock(timestamp: Long = System.currentTimeMillis()): BlockHeader
-    fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String> = emptySet())
+    fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String> = emptySet(), skipRootHashValidation: Boolean = false)
     fun getBlockData(): BlockData
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
     fun commit(blockWitness: BlockWitness)

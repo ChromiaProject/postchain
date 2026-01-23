@@ -5,7 +5,6 @@ package net.postchain.ebft.syncmanager.validator
 import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
-import net.postchain.base.BaseBlockHeader
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
@@ -16,8 +15,10 @@ import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.BadBlockException
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.core.ValidationResult
 import net.postchain.crypto.Signature
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.BlockIntent
@@ -64,8 +65,6 @@ import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkleHash
 import net.postchain.managed.CHAIN0
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.metrics.SyncMetrics
@@ -231,20 +230,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             blockchainConfiguration)
                                     messageDurationTracker.receive(xPeerId, message, blockData.header)
 
-                                    val blockHeaderRootHash = BaseBlockHeader(blockData.header.rawData,
-                                            blockchainConfiguration.merkleHashCalculator).blockHeaderRec.gtvMerkleRootHash
-                                    val blockTxRootHash = gtv(blockData.transactions.map {
-                                        val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(it)
-                                        gtv(tx.getHash())
-                                    }).merkleHash(blockchainConfiguration.merkleHashCalculator)
-
-                                    if (blockTxRootHash.contentEquals(blockHeaderRootHash.bytearray)) {
+                                    val intent = processingIntent
+                                    if (intent is FetchUnfinishedBlockIntent && intent.blockRID.contentEquals(blockData.header.blockRID)) {
                                         lastRequestedUnfinishedBlock = blockData
-                                        blockManager.onReceivedUnfinishedBlock(blockData) {
+                                        blockManager.onReceivedUnfinishedBlock(blockData, {
                                             lastRequestedUnfinishedBlock = null
-                                        }
-                                    } else {
-                                        logger.warn("Unfinished block received from $xPeerId is invalid due to block transaction root hash mismatch")
+                                        }, { exception ->
+                                            if ((exception as? BadBlockException)?.validationResult == ValidationResult.Result.INVALID_ROOT_HASH) {
+                                                lastRequestedUnfinishedBlock = null
+                                            }
+                                        })
                                     }
                                 }
 
@@ -462,6 +457,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 lastRequestedUnfinishedBlock = null
             }
         } else {
+            lastRequestedUnfinishedBlock = null
             fetchUnfinishedBlock(blockRID)
         }
     }

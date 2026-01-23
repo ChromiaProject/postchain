@@ -139,7 +139,7 @@ data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<
 interface BlockManager {
     var currentBlock: BlockData?
     var lastBlockTimestamp: Long?
-    fun onReceivedUnfinishedBlock(block: BlockData, onLoadSuccess: () -> Unit = {})
+    fun onReceivedUnfinishedBlock(block: BlockData, onLoadSuccess: () -> Unit = {}, onLoadFailure: (Throwable) -> Unit)
     fun onReceivedBlockAtHeight(block: BlockDataWithWitness, height: Long)
     fun processBlockIntent(): BlockIntent
     fun getBlockIntent(): BlockIntent

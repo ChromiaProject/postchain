@@ -52,7 +52,7 @@ class PersistOnlyBlockBuilder(
         throw ProgrammerMistake("You can't finalize a persist only block builder")
     }
 
-    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
+    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>, skipRootHashValidation: Boolean) {
         val header = blockHeader as BaseBlockHeader
         // We can't do advanced validation here because we don't apply txs
         val validationResult = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(
