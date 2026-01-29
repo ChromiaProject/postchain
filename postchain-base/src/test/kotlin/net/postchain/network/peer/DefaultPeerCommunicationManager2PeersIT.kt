@@ -170,10 +170,12 @@ class DefaultPeerCommunicationManager2PeersIT {
                 }
 
         // Consume version packet
-        Thread.sleep(1 * 1000)
-        val packets = context2.communicationManager.getPackets()
-        assertThat(packets).hasSize(1)
-        assertThat(packets.first().message).isInstanceOf(EbftVersion::class.java)
+        await().atMost(Duration.FIVE_SECONDS)
+                .untilAsserted {
+                    val packets = context2.communicationManager.getPackets()
+                    assertThat(packets).hasSize(1)
+                    assertThat(packets.first().message).isInstanceOf(EbftVersion::class.java)
+                }
 
         context1.connectionManager.sendPacket(lazy { message }, context1.chainId, NodeRid(keyPair2.pubKey.data))
 
