@@ -530,13 +530,20 @@ open class BaseBlockchainProcessManager(
         } ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
-    private fun disconnectProcessFromExtensions(process: BlockchainProcess) = extensions.forEach { ext ->
+    private fun disconnectProcessFromExtensions(process: BlockchainProcess) {
+        extensions.forEach { ext ->
+            try {
+                ext.disconnectProcess(process)
+            } catch (e: Exception) {
+                // We just log this so shutdown can proceed
+                logger.error(e) { "Unable to disconnect process from blockchain process manager extension" }
+            }
+        }
         try {
-            ext.disconnectProcess(process)
             (process.blockchainEngine.getConfiguration() as? BlockchainProcessConnectable)?.disconnectProcess(process)
         } catch (e: Exception) {
             // We just log this so shutdown can proceed
-            logger.error(e) { "Unable to disconnect process from blockchain process manager extension" }
+            logger.error(e) { "Unable to disconnect process from blockchain configuration" }
         }
     }
 

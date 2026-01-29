@@ -10,6 +10,10 @@ import net.postchain.gtx.data.OpData
 /**
  * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.
  *
+ * If the implementation implements `net.postchain.gtx.BroadcastAware`,
+ * its `initializeBroadcastContext` method will be invoked after the `init` method (before any other method is invoked),
+ * and its `receiveBroadcast` method will be invoked when a broadcast is received from another node in the cluster.
+ *
  * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
  * (examples: BBB Ext and Sync Ext).
  * To see how it all goes together, see: doc/extension_classes.graphml
