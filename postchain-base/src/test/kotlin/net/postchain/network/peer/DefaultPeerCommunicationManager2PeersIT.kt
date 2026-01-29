@@ -16,6 +16,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.ebft.EBFT_VERSION
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -169,7 +170,12 @@ class DefaultPeerCommunicationManager2PeersIT {
                 }
 
         // Consume version packet
-        assertThat(context2.communicationManager.getPackets()).hasSize(1)
+        await().atMost(Duration.FIVE_SECONDS)
+                .untilAsserted {
+                    val packets = context2.communicationManager.getPackets()
+                    assertThat(packets).hasSize(1)
+                    assertThat(packets.first().message).isInstanceOf(EbftVersion::class.java)
+                }
 
         context1.connectionManager.sendPacket(lazy { message }, context1.chainId, NodeRid(keyPair2.pubKey.data))
 
