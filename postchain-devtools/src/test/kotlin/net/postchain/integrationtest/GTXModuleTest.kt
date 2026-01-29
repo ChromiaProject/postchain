@@ -5,18 +5,21 @@ package net.postchain.integrationtest
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.getModules
 import net.postchain.gtx.PatchOpsGTXModule
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class GTXModuleTest : IntegrationTestSetup() {
 
     @Test
-    fun testShutdown() {
-        val nodes = createNodes(1, "/net/postchain/devtools/blockchain_module_shutdown.xml")
+    fun testLifecycle() {
+        val nodes = createNodes(1, "/net/postchain/devtools/blockchain_module_lifecycle.xml")
         val node = nodes[0]
-        val module = node.getModules().find { it is ShutdownTestModule } as ShutdownTestModule
+        val module = node.getModules().find { it is LifecycleTestModule } as LifecycleTestModule
+        assertTrue(module.hasDb)
+        assertTrue(module.hasContext)
+        assertTrue(module.hasSTX)
         assertFalse(module.hasShutdown)
         node.shutdown()
         assertTrue(module.hasShutdown)

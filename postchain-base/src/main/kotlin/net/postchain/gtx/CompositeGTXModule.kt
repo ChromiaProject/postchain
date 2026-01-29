@@ -35,7 +35,9 @@ class CompositeGTXModule(
     lateinit var qmap: Map<String, GTXModule>
     lateinit var ops: Set<String>
     lateinit var _queries: Set<String>
-    lateinit var _specialTxExtensions: List<GTXSpecialTxExtension>
+    val _specialTxExtensions: List<GTXSpecialTxExtension> by lazy {
+        modules.flatMap { it.getSpecialTxExtensions() }
+    }
     lateinit var _metadata: GTXModuleMetadata
     lateinit var _compositeMetadata: ApiMetadata
 
@@ -87,7 +89,6 @@ class CompositeGTXModule(
         val _wrappingOpMap = mutableMapOf<String, GTXModule>()
         val _opmap = mutableMapOf<String, GTXModule>()
         val _qmap = mutableMapOf<String, GTXModule>()
-        val _stxs = mutableListOf<GTXSpecialTxExtension>()
         for (m in modules) {
             for (op in m.getOperations()) {
                 if (m is OperationWrapper && op in m.getWrappingOperations()) {
@@ -102,7 +103,6 @@ class CompositeGTXModule(
                 if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated query: $q")
                 _qmap[q] = m
             }
-            _stxs.addAll(m.getSpecialTxExtensions())
             if (m is OperationWrapper) m.injectDelegateTransactorMaker { opData ->
                 if (opData.opName in opmap.keys) {
                     opmap[opData.opName]!!.makeTransactor(opData)
@@ -116,7 +116,6 @@ class CompositeGTXModule(
         qmap = _qmap.toMap()
         ops = wrappingOpMap.keys + opmap.keys
         _queries = qmap.keys
-        _specialTxExtensions = _stxs.toList()
 
         val metadataCollection = modules.filterIsInstance<MetadataProvider>().map { it.javaClass.canonicalName to it.getMetadata() }
         _metadata = GTXModuleMetadata(

@@ -19,6 +19,9 @@ const val NON_STRICT_QUERY_ARGUMENT = "~non-strict"
 
 /**
  * The GTX Module is the basis of a "Dapp".
+ *
+ * If the module implements `net.postchain.gtx.PostchainContextAware`,
+ * its `initializeContext` method will be invoked after `initializeDB` (before other methods are invoked).
  */
 interface GTXModule : Shutdownable {
     fun makeTransactor(opData: ExtOpData): Transactor
