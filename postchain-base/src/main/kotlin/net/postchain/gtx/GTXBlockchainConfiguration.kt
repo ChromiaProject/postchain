@@ -45,18 +45,19 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
             slowOpThreshold = if (gtxConfig.slowOpThreshold < 0) Duration.INFINITE else gtxConfig.slowOpThreshold.milliseconds,
     )
 
-    private val specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
-            = GTXSpecialTxHandler(
-            module,
-            this.chainID,
-            effectiveBlockchainRID,
-            cryptoSystem,
-            txFactory
-    ) { extensionClass, data ->
-        specialTxExtensionBroadcaster?.broadcast(extensionClass, data)
-                ?: logger.warn("Unable to broadcast message, specialTxExtensionBroadcaster is not initialized")
+    // Note: this is NOT the same as the variable in Base.
+    private val specTxHandler: GTXSpecialTxHandler by lazy {
+        GTXSpecialTxHandler(
+                module,
+                this.chainID,
+                effectiveBlockchainRID,
+                cryptoSystem,
+                txFactory
+        ) { extensionClass, data ->
+            specialTxExtensionBroadcaster?.broadcast(extensionClass, data)
+                    ?: logger.warn("Unable to broadcast message, specialTxExtensionBroadcaster is not initialized")
+        }
     }
-
 
     companion object : KLogging()
 
@@ -108,10 +109,12 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     override fun isSuppressSpecialTransactionValidation() = blockchainConfigurationOptions.suppressSpecialTransactionValidation
 
     override fun connectProcess(process: BlockchainProcess) {
+        specTxHandler.connectProcess(process)
         specialTxExtensionBroadcaster = process.getSpecialTxExtensionBroadcaster()
     }
 
     override fun disconnectProcess(process: BlockchainProcess) {
         specialTxExtensionBroadcaster = null
+        specTxHandler.disconnectProcess(process)
     }
 }

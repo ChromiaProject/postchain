@@ -14,6 +14,10 @@ import net.postchain.gtx.data.OpData
  * its `initializeBroadcastContext` method will be invoked after the `init` method (before any other method is invoked),
  * and its `receiveBroadcast` method will be invoked when a broadcast is received from another node in the cluster.
  *
+ * If the implementation implements `net.postchain.core.BlockchainProcessConnectable`,
+ * its `connectProcess` method will be invoked after the `init` and `getRelevantOps` methods (before other methods are invoked),
+ * and its `disconnectProcess` method will be invoked before the instance is disposed.
+ *
  * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
  * (examples: BBB Ext and Sync Ext).
  * To see how it all goes together, see: doc/extension_classes.graphml
