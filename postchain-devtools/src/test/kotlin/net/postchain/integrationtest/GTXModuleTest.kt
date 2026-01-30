@@ -20,8 +20,13 @@ class GTXModuleTest : IntegrationTestSetup() {
         assertTrue(module.hasDb)
         assertTrue(module.hasContext)
         assertTrue(module.hasSTX)
+        assertTrue(module.hasExtInit)
+        assertTrue(module.hasExtRelevantOps)
+        assertTrue(module.hasExtConnect)
+        assertFalse(module.hasExtDisconnect)
         assertFalse(module.hasShutdown)
         node.shutdown()
+        assertTrue(module.hasExtDisconnect)
         assertTrue(module.hasShutdown)
     }
 

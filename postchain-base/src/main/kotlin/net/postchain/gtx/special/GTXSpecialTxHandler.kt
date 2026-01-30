@@ -11,8 +11,10 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
-import net.postchain.core.FaultyExtensionException
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessConnectable
 import net.postchain.core.ExtensionBroadcaster
+import net.postchain.core.FaultyExtensionException
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
@@ -44,7 +46,7 @@ open class GTXSpecialTxHandler(
         val cs: CryptoSystem,
         val factory: GTXTransactionFactory,
         val extensionBroadcaster: ExtensionBroadcaster,
-) : SpecialTransactionHandler {
+) : SpecialTransactionHandler, BlockchainProcessConnectable {
 
     private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
     private val opToExtension: Map<String, GTXSpecialTxExtension> = buildMap {
@@ -205,6 +207,14 @@ open class GTXSpecialTxHandler(
         } else {
             logger.warn("Got extension broadcast for unknown extension $extensionClass")
         }
+    }
+
+    override fun connectProcess(process: BlockchainProcess) {
+        extensions.filterIsInstance<BlockchainProcessConnectable>().forEach { it.connectProcess(process) }
+    }
+
+    override fun disconnectProcess(process: BlockchainProcess) {
+        extensions.filterIsInstance<BlockchainProcessConnectable>().forEach { it.disconnectProcess(process) }
     }
 
 }
