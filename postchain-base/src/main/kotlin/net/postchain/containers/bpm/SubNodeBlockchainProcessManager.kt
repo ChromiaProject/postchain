@@ -56,7 +56,7 @@ class SubNodeBlockchainProcessManager(
             blockchainState: BlockchainState
     ) {
         val subConnectionManager = connectionManager as SubConnectionManager
-        subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, postchainContext.blockQueriesProvider, subConnectionManager))
+        subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, blockchainConfig.blockchainRid, engine.getBlockQueries(), subConnectionManager))
         super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, engine, restartNotifier, blockchainState)
     }
 
