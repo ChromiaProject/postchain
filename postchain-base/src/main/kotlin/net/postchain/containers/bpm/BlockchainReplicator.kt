@@ -219,7 +219,7 @@ class BlockchainReplicator(
     private fun done() {
         withLoggingContext(loggingContext) {
             done.set(true)
-            executor.shutdown()
+            shutdown()
             logger.info { "Replication job $processName is done" }
         }
     }
@@ -229,10 +229,15 @@ class BlockchainReplicator(
     fun cancel() {
         withLoggingContext(loggingContext) {
             cancelled.set(true)
-            executor.shutdown()
+            shutdown()
             logger.info { "Replication job $processName has been cancelled" }
         }
     }
 
     fun isCancelled() = cancelled.get()
+
+    fun shutdown() {
+        executor.shutdownNow()
+        executor.awaitTermination(2000, TimeUnit.MILLISECONDS)
+    }
 }
