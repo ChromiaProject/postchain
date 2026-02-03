@@ -4,6 +4,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.managed.DirectoryDataSource
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyList
@@ -43,6 +44,11 @@ class BlockchainReplicatorTest {
                 importHeight
             }
         }
+    }
+
+    @AfterEach
+    fun tearDown() {
+        blockchainReplicator.shutdown()
     }
 
     @Test
