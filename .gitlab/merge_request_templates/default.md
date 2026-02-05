@@ -1,4 +1,4 @@
-/assign_reviewer @eugene.tykulov @mikael.staldal.cw @robert_wideberg @johan.nilsson
+/assign_reviewer @eugene.tykulov @robert_wideberg
 
 Description...
 
