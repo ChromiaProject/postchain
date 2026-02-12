@@ -17,3 +17,7 @@ postchain-distribution/lib
 /postchain-containerized/containers/
 /containers/
 .flattened-pom.xml
+
+# Claude Code local files
+*CLAUDE.local*
+.claude/*.local.*
