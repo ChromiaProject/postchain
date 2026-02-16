@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import net.postchain.PostchainContext
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -17,6 +18,7 @@ import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.mastersub.subnode.SubQueryHandler
+import java.time.Duration
 
 class SubNodeBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -27,6 +29,8 @@ class SubNodeBlockchainProcessManager(
         blockchainInfrastructure,
         blockchainConfigProvider
 ) {
+
+    val masterSubQueryTimeout: Duration
 
     init {
         connectionManager as DefaultSubConnectionManager
@@ -46,6 +50,8 @@ class SubNodeBlockchainProcessManager(
                 initManagedEnvironment(masterDataSource)
             }
         }
+
+        masterSubQueryTimeout = Duration.ofMillis(ContainerNodeConfig.fromAppConfig(appConfig).masterSubQueryTimeoutMs)
     }
 
     override fun createAndRegisterBlockchainProcess(
@@ -56,7 +62,7 @@ class SubNodeBlockchainProcessManager(
             blockchainState: BlockchainState
     ) {
         val subConnectionManager = connectionManager as SubConnectionManager
-        subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, blockchainConfig.blockchainRid, engine.getBlockQueries(), subConnectionManager))
+        subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, blockchainConfig.blockchainRid, engine.getBlockQueries(), subConnectionManager, masterSubQueryTimeout))
         super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, engine, restartNotifier, blockchainState)
     }
 
