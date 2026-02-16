@@ -16,6 +16,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsQueryFailure
 import net.postchain.network.mastersub.protocol.MsQueryRequest
 import net.postchain.network.mastersub.protocol.MsQueryResponse
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -23,10 +24,13 @@ class MasterQueryHandler(
         private val respondToQuery: (MsMessage) -> Unit,
         private val masterSubQueryManager: MasterSubQueryManager,
         private val dataSource: ManagedNodeDataSource,
-        private val blockQueriesProvider: BlockQueriesProvider
+        private val blockQueriesProvider: BlockQueriesProvider,
+        private val masterSubQueryTimeout: Duration
 ) : MsMessageHandler {
 
     companion object : KLogging()
+
+    private val queryLockTimeout = masterSubQueryTimeout.dividedBy(2)
 
     override fun onMessage(message: MsMessage) {
         when (message) {
@@ -49,7 +53,7 @@ class MasterQueryHandler(
                             message.requestId,
                             message.targetBlockchainRid,
                             ::MsQueryResponse,
-                            { blockQueries -> blockQueries.query(message.name, message.args) },
+                            { blockQueries -> blockQueries.queryWithTimeout(message.name, message.args, masterSubQueryTimeout, queryLockTimeout) },
                             {
                                 masterSubQueryManager.query(
                                         message.targetBlockchainRid,
