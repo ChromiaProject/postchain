@@ -222,28 +222,26 @@ class ContainerManagedBlockchainProcessManager(
                         startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                         blockchainReplicators[bcInfo.chainId]?.cancel()
                     } else {
-                        val chain = chains.first()
-                        val info = directoryDataSource.getMigratingBlockchainNodeInfo(chain.brid)
+                        val info = directoryDataSource.getMigratingBlockchainNodeInfo(chains.first().brid)
                         if (info != null) {
                             val srcChain = chains.firstOrNull { it.containerName.directoryContainer == info.sourceContainer }
                             val dstChain = chains.firstOrNull { it.containerName.directoryContainer == info.destinationContainer }
                             if (srcChain != null && dstChain != null) {
                                 // If replication is completed, start only dst chain, otherwise start both chain and replication
                                 if (completedReplications[info.migrationRid]?.first == srcChain) {
-                                    startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[chains.first().chainId])
+                                    startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[bcInfo.chainId])
                                 } else {
-                                    startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
-                                    blockchainReplicators.getOrPut(chain.chainId) {
-                                        BlockchainReplicator(info.migrationRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
-                                            logger.info { "Blockchain replication started: migrationRid: ${info.migrationRid}, srcChain: $srcChain, dstChain: $dstChain" }
-                                        }
+                                    startSubnodeChains(bcInfo, chains, subnodeLaunched[bcInfo.chainId])
+                                    blockchainReplicators.getOrPut(bcInfo.chainId) {
+                                        logger.info { "Blockchain replication started: migrationRid: ${info.migrationRid}, srcChain: $srcChain, dstChain: $dstChain" }
+                                        BlockchainReplicator(info.migrationRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer)
                                     }
                                 }
                             } else {
-                                startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
+                                startSubnodeChains(bcInfo, chains, subnodeLaunched[bcInfo.chainId])
                             }
                         } else {
-                            startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
+                            startSubnodeChains(bcInfo, chains, subnodeLaunched[bcInfo.chainId])
                         }
                     }
                 }
