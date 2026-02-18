@@ -26,7 +26,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
     private val upToHeight = 20L
     private val blocks = 10L
 
-    private val exportResult = ExportResult(fromHeight, upToHeight, blocks)
+    private val exportResult = ExportResult(fromHeight, upToHeight, blocks, configsExported = true)
 
     private lateinit var command: ExportBlockchainCommand
 
@@ -52,7 +52,9 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), false, fromHeight, upToHeight)
-        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: exported to configurationsFile")
+        testTerminal.assertContains("  - Blocks: 10 blocks (10..20) exported to blocksFile")
     }
 
     @Test
@@ -70,7 +72,9 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), false, fromHeight, upToHeight)
-        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: exported to configurationsFile")
+        testTerminal.assertContains("  - Blocks: 10 blocks (10..20) exported to blocksFile")
     }
 
     @Test
@@ -87,7 +91,9 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), null, false, fromHeight, upToHeight)
-        testTerminal.assertContains("Export of configurations to configurationsFile completed")
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: exported to configurationsFile")
+        testTerminal.assertContains("  - Blocks: not requested")
     }
 
     @Test
@@ -102,7 +108,9 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), null, false, 0L, Long.MAX_VALUE)
-        testTerminal.assertContains("Export of configurations to configurationsFile completed")
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: exported to configurationsFile")
+        testTerminal.assertContains("  - Blocks: not requested")
     }
 
     @Test
@@ -118,6 +126,30 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), false, 0L, Long.MAX_VALUE)
-        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: exported to configurationsFile")
+        testTerminal.assertContains("  - Blocks: 10 blocks (10..20) exported to blocksFile")
+    }
+
+    @Test
+    fun `Export managed blockchain shows configurations skipped`() {
+        // setup - managed blockchain (configs not exported)
+        val managedExportResult = ExportResult(fromHeight, upToHeight, blocks, configsExported = false)
+        doReturn(managedExportResult).whenever(postchainService).exportBlockchain(anyLong(), anyOrNull(), anyOrNull(), anyOrNull(), anyBoolean(), anyLong(), anyLong())
+
+        // execute
+        command.parse(
+                arrayOf(
+                        "-cid", chainId.toString(),
+                        "--configurations-file", configurationsFile,
+                        "--blocks-file", blocksFile,
+                        "--target", "localhost:1234"
+                )
+        )
+        // verify
+        verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), false, 0L, Long.MAX_VALUE)
+        testTerminal.assertContains("Export completed:")
+        testTerminal.assertContains("  - Configurations: skipped (managed blockchain)")
+        testTerminal.assertContains("  - Blocks: 10 blocks (10..20) exported to blocksFile")
     }
 }

@@ -27,7 +27,7 @@ class CommandExportBlockchain : CliktCommand(name = "export") {
 
     private val nodeConfigFile by nodeConfigOption()
 
-    private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to")
+    private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to. Note: Only exports local configurations (manual mode). To export managed blockchain configs, use management-console tool.")
             .path(mustExist = false, canBeDir = false).required()
 
     private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
@@ -55,8 +55,25 @@ class CommandExportBlockchain : CliktCommand(name = "export") {
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
             val chainId = resolveChainId(appConfig, chainRef)
             StorageBuilder.buildStorage(appConfig, allowUpgrade = false).use { storage ->
-                ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
+                val result = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
                         fromHeight = fromHeight, upToHeight = upToHeight)
+
+                echo("Export completed:")
+                if (result.configsExported) {
+                    echo("  - Configurations: exported to ${configurationsFile.toAbsolutePath()}")
+                } else {
+                    echo("  - Configurations: skipped (managed blockchain)")
+                }
+                val blocksFilePath = blocksFile
+                if (blocksFilePath != null) {
+                    if (result.numBlocks > 0) {
+                        echo("  - Blocks: ${result.numBlocks} blocks (${result.fromHeight}..${result.toHeight}) exported to ${blocksFilePath.toAbsolutePath()}")
+                    } else {
+                        echo("  - Blocks: no blocks exported to ${blocksFilePath.toAbsolutePath()}")
+                    }
+                } else {
+                    echo("  - Blocks: not requested")
+                }
             }
         }
     }

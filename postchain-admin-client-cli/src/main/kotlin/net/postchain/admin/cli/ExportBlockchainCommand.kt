@@ -32,7 +32,7 @@ class ExportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
             name = "Chain reference"
     ).single().required()
 
-    private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to")
+    private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to. Note: Only exports local configurations (manual mode). To export managed blockchain configs, use management-console tool.")
             .required()
 
     private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
@@ -58,15 +58,21 @@ class ExportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
                     .setUpToHeight(upToHeight)
                     .let { if (blocksFile != null) it.setBlocksFile(blocksFile) else it }
             val reply = channel.exportBlockchain(requestBuilder.build())
-            val message = if (blocksFile != null) {
-                if (reply.numBlocks > 0)
-                    "Export of ${reply.numBlocks} blocks ${reply.fromHeight}..${reply.upHeight} to $configurationsFile and $blocksFile completed"
-                else
-                    "No blocks to export to $configurationsFile"
+            echo("Export completed:")
+            if (reply.configsExported) {
+                echo("  - Configurations: exported to $configurationsFile")
             } else {
-                "Export of configurations to $configurationsFile completed"
+                echo("  - Configurations: skipped (managed blockchain)")
             }
-            echo(message)
+            if (blocksFile != null) {
+                if (reply.numBlocks > 0) {
+                    echo("  - Blocks: ${reply.numBlocks} blocks (${reply.fromHeight}..${reply.upHeight}) exported to $blocksFile")
+                } else {
+                    echo("  - Blocks: no blocks to export")
+                }
+            } else {
+                echo("  - Blocks: not requested")
+            }
         } catch (e: StatusRuntimeException) {
             throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
