@@ -42,7 +42,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 object ImporterExporter : KLogging() {
+    
     /**
+     * Exports blockchain configurations and blocks to files.
+     * For managed blockchains, configurations are skipped and only blocks are exported.
+     *
      * @param storage             storage
      * @param chainId             chain to export
      * @param configurationsFile  file to export blockchain configurations to
@@ -53,7 +57,10 @@ object ImporterExporter : KLogging() {
      * @param upToHeight          only export configurations and blocks up to and including this height,
      *                            set to `Long.MAX_VALUE` to continue to last block
      * @param logNBlocks          log every N block
+     * @return ExportResult containing fromHeight, toHeight, numBlocks exported, and configsExported flag
+     *         indicating whether configurations were exported (false for managed blockchains)
      */
+    @Suppress("LoggingSimilarMessage")
     fun exportBlockchain(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path?, overwrite: Boolean,
                          fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE, logNBlocks: Int = 100): ExportResult =
             withReadConnection(storage, chainId) { ctx ->
@@ -79,28 +86,32 @@ object ImporterExporter : KLogging() {
                     val nonNullConfigurations = chainConfigurations.mapNotNull { (height, config) ->
                         if (config == null) null else height to config
                     }
-                    if (chainConfigurations.size != nonNullConfigurations.size) {
-                        logger.info("Exporting a managed blockchain, skipping configuration file generation...")
+                    val configsExported = if (chainConfigurations.size != nonNullConfigurations.size) {
+                        logger.warn("Exporting a managed blockchain, skipping configuration file generation. Use management-console tool to export managed blockchain configs.")
+                        false
                     } else {
                         exportConfigurations(configurationsFile, blockchainRid, nonNullConfigurations, fromHeight = fromHeight, upToHeight = upToHeight)
+                        true
                     }
 
                     if (blocksFile != null) {
                         val (firstBlock, lastBlock, numBlocks) = exportBlocks(blocksFile, db, ctx, fromHeight, upToHeight, logNBlocks)
-                        val message = if (numBlocks > 0)
-                            "Export of $numBlocks blocks $firstBlock..$lastBlock to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()} completed"
-                        else
-                            "No blocks to export to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}"
-
-                        logger.info(message)
-                        ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
+                        ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks, configsExported = configsExported)
                     } else {
-                        logger.info("Export of configurations to ${configurationsFile.toAbsolutePath()} completed")
-                        ExportResult(fromHeight = fromHeight, toHeight = upToHeight, numBlocks = 0)
+                        ExportResult(fromHeight = fromHeight, toHeight = upToHeight, numBlocks = 0, configsExported = configsExported)
                     }
                 }
             }
 
+    /**
+     * Exports blockchain configurations to a file.
+     *
+     * @param configurationsFile  file to export configurations to
+     * @param blockchainRid       blockchain RID to write at the beginning of the file
+     * @param configurations      list of configuration pairs (height, configurationData)
+     * @param fromHeight          starting block height (inclusive) for filtering configurations
+     * @param upToHeight          ending block height (inclusive) for filtering configurations
+     */
     private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, configurations: List<Pair<Long, WrappedByteArray>>, fromHeight: Long, upToHeight: Long) {
         BufferedOutputStream(FileOutputStream(configurationsFile.toFile())).use { output ->
             output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(blockchainRid.data)))
@@ -116,10 +127,22 @@ object ImporterExporter : KLogging() {
         }
     }
 
-    private fun exportBlocks(blocksFile: Path, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long, logNBlocks: Int): ExportResult {
+    /**
+     * Exports blocks to a file and returns export statistics.
+     *
+     * @param blocksFile      file to export blocks to
+     * @param db              database access instance
+     * @param ctx             execution context
+     * @param fromHeight      starting block height (inclusive)
+     * @param upToHeight      ending block height (inclusive)
+     * @param logNBlocks      log progress every N blocks
+     * @return Triple of (firstBlockHeight, lastBlockHeight, totalBlockCount)
+     */
+    private fun exportBlocks(blocksFile: Path, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long, logNBlocks: Int): Triple<Long, Long, Long> {
         var firstBlock = -1L
         var lastBlock = -1L
         var numBlocks = 0L
+
         BufferedOutputStream(FileOutputStream(blocksFile.toFile())).use { output ->
             db.getAllBlocksWithTransactions(ctx, fromHeight = fromHeight, upToHeight = upToHeight) {
                 if (firstBlock == -1L) firstBlock = it.blockHeight
@@ -131,12 +154,19 @@ object ImporterExporter : KLogging() {
 
             output.write(GtvEncoder.encodeGtv(GtvNull))
         }
-        return ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
+
+        return Triple(firstBlock, lastBlock, numBlocks)
     }
 
     /**
-     * @param blockCountLimit     Maximum number of blocks to read
-     * @param blocksSizeLimit     Maximum total size of blocks to read
+     * Exports a range of blocks starting from the specified height, subject to count and size limits.
+     *
+     * @param storage             storage instance to read from
+     * @param chainId             chain to export blocks from
+     * @param height              starting block height (inclusive)
+     * @param blockCountLimit     maximum number of blocks to read (null for no limit)
+     * @param blocksSizeLimit     maximum total size of blocks to read in bytes (default: MAX_PACKAGE_CONTENT_BYTES)
+     * @return list of encoded block entries as GTV objects
      */
     fun exportBlocks(storage: Storage, chainId: Long, height: Long, blockCountLimit: Int?, blocksSizeLimit: Int = MAX_PACKAGE_CONTENT_BYTES): List<Gtv> {
 
@@ -188,14 +218,18 @@ object ImporterExporter : KLogging() {
     }
 
     /**
+     * Imports blockchain configurations and blocks from files.
+     *
      * @param nodeKeyPair         KeyPair of the node
      * @param cryptoSystem        CryptoSystem of the node
      * @param storage             storage
-     * @param chainId             chain to export
+     * @param chainId             chain to import
      * @param configurationsFile  file to import blockchain configurations from
      * @param blocksFile          file to import blocks and transactions from
      * @param incremental         import new configurations and blocks to existing blockchain
      * @param logNBlocks          log every N block
+     * @param skipPrimaryFieldValidation  skip validation of the primary header field during block import
+     * @return ImportResult containing fromHeight, toHeight, lastSkippedBlock, firstImportedBlock, numBlocks, and blockchainRid
      */
     fun importBlockchain(
             nodeKeyPair: KeyPair,
@@ -343,6 +377,17 @@ object ImporterExporter : KLogging() {
                 blockchainRid = blockchainRid)
     }
 
+    /**
+     * Imports a list of blocks into an existing blockchain.
+     *
+     * @param storage             storage instance to write to
+     * @param chainId             chain to import blocks into
+     * @param blockData           list of encoded block entries as GTV objects
+     * @param nodeKeyPair         KeyPair of the node
+     * @param cryptoSystem        CryptoSystem of the node
+     * @param skipPrimaryFieldValidation  skip validation of the primary header field during block import
+     * @return LongRange representing the height range of imported blocks (startHeight..endHeight)
+     */
     fun importBlocks(
             storage: Storage,
             chainId: Long,
