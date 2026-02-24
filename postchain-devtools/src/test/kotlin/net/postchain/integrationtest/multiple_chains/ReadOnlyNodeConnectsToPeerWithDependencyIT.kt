@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
  * 2. The read only node reads A and
  * 3. The read only node also has chain B where B depends on A.
  */
-class ReadOnlyNodeConnectsToPeerWithDependencyTest : GtxTxIntegrationTestSetup() {
+class ReadOnlyNodeConnectsToPeerWithDependencyIT : GtxTxIntegrationTestSetup() {
 
     companion object : KLogging()
 

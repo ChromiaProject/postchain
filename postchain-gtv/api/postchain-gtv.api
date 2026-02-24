@@ -18,6 +18,7 @@ public abstract interface class net/postchain/gtv/Gtv {
 	public abstract fun asBigInteger ()Ljava/math/BigInteger;
 	public abstract fun asBoolean ()Z
 	public abstract fun asByteArray (Z)[B
+	public static synthetic fun asByteArray$default (Lnet/postchain/gtv/Gtv;ZILjava/lang/Object;)[B
 	public abstract fun asDict ()Ljava/util/Map;
 	public abstract fun asInteger ()J
 	public abstract fun asPrimitive ()Ljava/lang/Object;
@@ -120,8 +121,6 @@ public final class net/postchain/gtv/GtvDictionary : net/postchain/gtv/GtvCollec
 	public fun asDict ()Ljava/util/Map;
 	public fun asPrimitive ()Ljava/lang/Object;
 	public final fun component1 ()Ljava/util/Map;
-	public final fun copy (Ljava/util/Map;)Lnet/postchain/gtv/GtvDictionary;
-	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvDictionary;Ljava/util/Map;ILjava/lang/Object;)Lnet/postchain/gtv/GtvDictionary;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun get (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
 	public final fun getDict ()Ljava/util/Map;

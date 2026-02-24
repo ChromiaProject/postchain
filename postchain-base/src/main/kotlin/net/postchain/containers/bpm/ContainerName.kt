@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm
 
+@ConsistentCopyVisibility
 data class ContainerName private constructor(
         val directoryContainer: String,
         val dockerContainer: String,

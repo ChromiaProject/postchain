@@ -10,7 +10,7 @@ import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import org.junit.jupiter.api.Test
 
-class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
+class SinglePeerDoubleChainsDependencyIT : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging() {
 

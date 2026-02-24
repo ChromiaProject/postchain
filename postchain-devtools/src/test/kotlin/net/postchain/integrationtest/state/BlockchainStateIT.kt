@@ -21,7 +21,7 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 import kotlin.reflect.KClass
 
-class BlockchainStateTest : ManagedModeTest() {
+class BlockchainStateIT : ManagedModeTest() {
 
     @Test
     fun `Test switching blockchain state`() {

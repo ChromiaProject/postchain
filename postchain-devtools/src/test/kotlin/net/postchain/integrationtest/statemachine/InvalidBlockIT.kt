@@ -1,6 +1,9 @@
 package net.postchain.integrationtest.statemachine
 
-import net.postchain.devtools.*
+import net.postchain.devtools.IntegrationTest
+import net.postchain.devtools.PostchainTestNode
+import net.postchain.devtools.assertChainStarted
+import net.postchain.devtools.enqueueTxs
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.integrationtest.reconfiguration.TxChartHelper
 import org.awaitility.Awaitility.await
@@ -9,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 
-class InvalidBlockTest : IntegrationTest() {
+class InvalidBlockIT : IntegrationTest() {
 
     @Test
     fun node_receivesIncorrectBlock_then_processesItCorrectly_and_nodesReachConsensus() {
