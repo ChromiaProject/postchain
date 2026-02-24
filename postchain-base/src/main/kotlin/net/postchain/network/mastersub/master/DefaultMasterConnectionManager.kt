@@ -16,6 +16,7 @@ import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import net.postchain.network.mastersub.protocol.MsCodec
 import net.postchain.network.mastersub.protocol.MsMessage
+import java.time.Duration
 
 /**
  * Enables the master node to pass on messages to one sub-node.
@@ -45,6 +46,8 @@ class DefaultMasterConnectionManager(
 
     override lateinit var dataSource: ManagedNodeDataSource
     private val queryConnections = mutableMapOf<Int, MasterConnection>()
+
+    private val masterSubQueryTimeout = Duration.ofMillis(containerNodeConfig.masterSubQueryTimeoutMs)
 
     @Synchronized
     override fun initSubChainConnection(subChainConfig: SubChainConfig) {
@@ -113,7 +116,7 @@ class DefaultMasterConnectionManager(
             queryConnections[descriptor.containerIID] = connection
             logger.debug { "Connected query runner for container: ${descriptor.containerIID}" }
             return MasterQueryHandler({ message -> connection.sendPacket(lazy { MsCodec.encode(message) }) },
-                    masterSubQueryManager, dataSource, blockQueriesProvider)
+                    masterSubQueryManager, dataSource, blockQueriesProvider, masterSubQueryTimeout)
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
             withLoggingContext(

@@ -13,22 +13,26 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsQueryFailure
 import net.postchain.network.mastersub.protocol.MsQueryRequest
 import net.postchain.network.mastersub.protocol.MsQueryResponse
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
 class SubQueryHandler(private val chainId: Long,
                       private val blockchainRid: BlockchainRid,
                       private val blockQueries: BlockQueries,
-                      private val subConnectionManager: SubConnectionManager) : MsMessageHandler {
+                      private val subConnectionManager: SubConnectionManager,
+                      private val masterSubQueryTimeout: Duration) : MsMessageHandler {
 
     companion object : KLogging()
+
+    private val queryLockTimeout = masterSubQueryTimeout.dividedBy(2)
 
     override fun onMessage(message: MsMessage) {
         when (message) {
             is MsQueryRequest -> {
                 logger.trace { "Received query from master with target blockchain-rid ${message.targetBlockchainRid} and request id ${message.requestId}" }
                 buildQuery(message.requestId, message.targetBlockchainRid, ::MsQueryResponse) {
-                    blockQueries.query(message.name, message.args)
+                    blockQueries.queryWithTimeout(message.name, message.args, masterSubQueryTimeout, queryLockTimeout)
                 }
             }
 

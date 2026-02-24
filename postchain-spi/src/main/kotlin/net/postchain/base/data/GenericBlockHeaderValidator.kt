@@ -178,6 +178,8 @@ object GenericBlockHeaderValidator {
         }
 
         // The "advanced" checks
+        val headerData = header.extraData.minus(skipValidationFields)
+        val expectedData = extraData.minus(skipValidationFields)
         return when {
             maxBlockFutureTime > -1 && header.timestamp - currentTimestamp > maxBlockFutureTime ->
                 ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp ${header.timestamp} is too far in the future")
@@ -191,8 +193,13 @@ object GenericBlockHeaderValidator {
             !skipRootHashValidation && !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
 
-            header.extraData.minus(skipValidationFields) != extraData.minus(skipValidationFields) ->
-                ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: ${header.extraData.keys} vs. ${extraData.keys}")
+            headerData != expectedData -> {
+                val mismatchingKeys = (headerData.keys + expectedData.keys).filter { headerData[it] != expectedData[it] }
+                val detail = mismatchingKeys.joinToString(", ") { key ->
+                    "$key: ${headerData[key]?.shortString()} != ${expectedData[key]?.shortString()}"
+                }
+                ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: $detail")
+            }
 
             // Important to do this check after extra data check since config mismatch could also lead to this validation error
             PRIMARY_HEADER_KEY !in skipValidationFields && checkPrimaryField && !header.checkPrimaryExtraHeader(subjects) ->

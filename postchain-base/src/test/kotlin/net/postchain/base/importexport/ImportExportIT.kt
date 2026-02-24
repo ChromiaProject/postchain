@@ -79,7 +79,7 @@ class ImportExportIT {
             ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, null,
                     overwrite = false, logNBlocks = 1)
-            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = Long.MAX_VALUE, numBlocks = 0))
+            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = Long.MAX_VALUE, numBlocks = 0, configsExported = true))
         }
 
         FileInputStream(configurationsFile.toFile()).use {
@@ -106,7 +106,7 @@ class ImportExportIT {
 
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, logNBlocks = 1)
-            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 2, numBlocks = 3))
+            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 2, numBlocks = 3, configsExported = true))
             blocks
         }
 
@@ -141,7 +141,7 @@ class ImportExportIT {
             ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, fromHeight = 1, logNBlocks = 1)
-            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 1, toHeight = 2, numBlocks = 2))
+            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 1, toHeight = 2, numBlocks = 2, configsExported = true))
             blocks
         }
 
@@ -174,7 +174,7 @@ class ImportExportIT {
             ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, upToHeight = 1, logNBlocks = 1)
-            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 1, numBlocks = 2))
+            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 1, numBlocks = 2, configsExported = true))
             blocks
         }
 

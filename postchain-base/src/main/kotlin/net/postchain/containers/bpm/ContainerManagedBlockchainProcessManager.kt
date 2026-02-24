@@ -412,7 +412,7 @@ class ContainerManagedBlockchainProcessManager(
         val brid = getBridByChainId(chainId)
         return directoryDataSource.getBlockchainContainersForNode(brid).take(2) // Support max 2 containers for now
                 .map { container ->
-                    val containerName = ContainerName.create(appConfig.pubKey, container, getContainerIid(container))
+                    val containerName = ContainerName.create(appConfig.pubKey, container, getOrCreateContainerIid(container))
                     chains.computeIfAbsent(chainId to containerName) {
                         Chain(chainId, brid, containerName)
                     }
@@ -423,7 +423,7 @@ class ContainerManagedBlockchainProcessManager(
         DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
     }
 
-    private fun getContainerIid(name: String): Int = blockBuilderStorage.withWriteConnection { ctx ->
+    private fun getOrCreateContainerIid(name: String): Int = blockBuilderStorage.withWriteConnection { ctx ->
         DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
     }
 

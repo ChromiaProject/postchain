@@ -112,17 +112,17 @@ class BlockchainReplicator(
         withLoggingContext(loggingContext) {
 
             if (container == null) {
-                logger.debug { "$roleStr container is not launched" }
+                logger.info { "$roleStr container is not launched" }
                 return null
             }
 
             if (!container.isSubnodeHealthy()) {
-                logger.debug { "$roleStr container is not ready" }
+                logger.info { "$roleStr container is not ready" }
                 return null
             }
 
             if (!container.isBlockchainRunning(chainId)) {
-                logger.debug { "Chain $chainId in the $roleStr container is not running" }
+                logger.info { "Chain $chainId in the $roleStr container is not running" }
                 return null
             }
         }

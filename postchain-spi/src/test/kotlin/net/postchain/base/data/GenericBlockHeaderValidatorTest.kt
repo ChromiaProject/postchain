@@ -1,9 +1,17 @@
 package net.postchain.base.data
 
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
+import net.postchain.base.BaseBlockHeader
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockRid
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ValidationResult
+import net.postchain.core.block.InitialBlockData
+import net.postchain.crypto.sha256Digest
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -95,6 +103,78 @@ class GenericBlockHeaderValidatorTest {
         val res = GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(myBcRid, headerMap, prevHeader, ::getBlockRid)
 
         assertEquals(res.result, ValidationResult.Result.SPLIT, "Must detect split")
+    }
+
+    @Test
+    fun testExtraDataValueMismatchMessage() {
+        val extraData1 = mapOf("key1" to gtv("value1"), "key2" to gtv("value2"))
+        val extraData2 = mapOf("key1" to gtv("value1"), "key2" to gtv("mismatch"))
+
+        val bcRid = BlockchainRid.buildRepeat(0)
+        val initialBlockData = InitialBlockData(bcRid, 1L, 1L, ByteArray(32), 1L, 1000L, null)
+        val rootHash = ByteArray(32)
+        val timestamp = 1000L
+
+        val calculator = GtvMerkleHashCalculatorV2(::sha256Digest)
+        val header = BaseBlockHeader.make(calculator, initialBlockData, rootHash, timestamp, extraData1)
+
+        val result = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
+                blockHeader = header,
+                initialBlockData = initialBlockData,
+                expectedMerkleRootHash = { rootHash },
+                blockRidFromHeight = { _ -> null },
+                currentBlockTimestamp = 500L,
+                currentTimestamp = 1000L,
+                maxBlockFutureTime = 1000L,
+                nrOfDependencies = 0,
+                extraData = extraData2,
+                subjects = arrayOf(),
+                checkPrimaryField = false,
+                skipValidationFields = setOf(),
+                skipRootHashValidation = true
+        )
+
+        assertThat(result.result).isEqualTo(ValidationResult.Result.INVALID_EXTRA_DATA)
+        println("Actual error message: ${result.message}")
+
+        // Assert improved message
+        assertThat(result.message).contains("key2: \"value2\" != \"mismatch\"")
+    }
+
+    @Test
+    fun testExtraDataKeyMismatchMessage() {
+        val extraData1 = mapOf("key1" to gtv("value1"), "headerOnly" to gtv("extra"))
+        val extraData2 = mapOf("key1" to gtv("value1"), "expectedOnly" to gtv("missing"))
+
+        val bcRid = BlockchainRid.buildRepeat(0)
+        val initialBlockData = InitialBlockData(bcRid, 1L, 1L, ByteArray(32), 1L, 1000L, null)
+        val rootHash = ByteArray(32)
+        val timestamp = 1000L
+
+        val calculator = GtvMerkleHashCalculatorV2(::sha256Digest)
+        val header = BaseBlockHeader.make(calculator, initialBlockData, rootHash, timestamp, extraData1)
+
+        val result = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
+                blockHeader = header,
+                initialBlockData = initialBlockData,
+                expectedMerkleRootHash = { rootHash },
+                blockRidFromHeight = { _ -> null },
+                currentBlockTimestamp = 500L,
+                currentTimestamp = 1000L,
+                maxBlockFutureTime = 1000L,
+                nrOfDependencies = 0,
+                extraData = extraData2,
+                subjects = arrayOf(),
+                checkPrimaryField = false,
+                skipValidationFields = setOf(),
+                skipRootHashValidation = true
+        )
+
+        assertThat(result.result).isEqualTo(ValidationResult.Result.INVALID_EXTRA_DATA)
+        println("Actual error message: ${result.message}")
+
+        assertThat(result.message).contains("expectedOnly: null != \"missing\"")
+        assertThat(result.message).contains("headerOnly: \"extra\" != null")
     }
 
     /**

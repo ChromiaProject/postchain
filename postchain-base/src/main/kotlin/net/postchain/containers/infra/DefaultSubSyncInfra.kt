@@ -43,7 +43,7 @@ class DefaultSubSyncInfra(
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
     ): CommunicationManager<EbftMessage> {
-        return if (isMigrationWithinNodeToCurrentContainer(blockchainConfigProvider, blockchainConfig))
+        return if (isOngoingWithinNodeMigrationToThisContainer(blockchainConfigProvider, blockchainConfig))
             MutedCommunicationManager()
         else
             super.buildXCommunicationManager(blockchainConfigProvider, blockchainConfig, relevantPeerCommConfig, blockchainRid)
@@ -60,7 +60,7 @@ class DefaultSubSyncInfra(
             if (containerNodeConfig.directoryContainer == migratingInfo.sourceContainer) { // src container
                 migratingInfo.finalHeight != -1L
             } else { // dst container
-                shouldContinueMigration(blockchainConfig.chainID, migratingInfo.finalHeight)
+                shouldDestinationContainerContinueMigration(blockchainConfig.chainID, migratingInfo.finalHeight)
             }
         } else if (migratingInfo.isSourceNode) {
             migratingInfo.finalHeight != -1L
@@ -89,8 +89,10 @@ class DefaultSubSyncInfra(
                     if (containerNodeConfig.directoryContainer == info.sourceContainer) // src container
                         FORCE_READONLY
                     else { // dst container
-                        if (shouldContinueMigration(blockchainConfig.chainID, info.finalHeight))
-                            FORCE_READONLY else VALIDATOR_OR_REPLICA
+                        if (shouldDestinationContainerContinueMigration(blockchainConfig.chainID, info.finalHeight))
+                            FORCE_READONLY
+                        else
+                            VALIDATOR_OR_REPLICA
                     }
                 }
 
@@ -105,7 +107,7 @@ class DefaultSubSyncInfra(
         }
     }
 
-    private fun isMigrationWithinNodeToCurrentContainer(
+    private fun isOngoingWithinNodeMigrationToThisContainer(
             blockchainConfigProvider: BlockchainConfigurationProvider,
             blockchainConfig: BlockchainConfiguration
     ): Boolean {
@@ -113,14 +115,14 @@ class DefaultSubSyncInfra(
                 ?.getMigratingBlockchainNodeInfo(blockchainConfig.chainID, blockchainConfig.blockchainRid)
                 ?: return false
 
-        val withinNode = info.isSourceNode && info.isDestinationNode
-        val iAmInDestinationContainer = containerNodeConfig.directoryContainer == info.destinationContainer
-        val continueMigration = shouldContinueMigration(blockchainConfig.chainID, info.finalHeight)
+        val isWithinNodeMigration = info.isSourceNode && info.isDestinationNode
+        val isDestinationContainer = containerNodeConfig.directoryContainer == info.destinationContainer
+        val isMigrationOngoing = shouldDestinationContainerContinueMigration(blockchainConfig.chainID, info.finalHeight)
 
-        return withinNode && iAmInDestinationContainer && continueMigration
+        return isWithinNodeMigration && isDestinationContainer && isMigrationOngoing
     }
 
-    private fun shouldContinueMigration(chainId: Long, finalHeight: Long): Boolean {
+    private fun shouldDestinationContainerContinueMigration(chainId: Long, finalHeight: Long): Boolean {
         return finalHeight == -1L || withReadConnection(postchainContext.sharedStorage, chainId) {
             DatabaseAccess.of(it).getLastBlockHeight(it) < finalHeight
         }

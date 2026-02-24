@@ -219,6 +219,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     .setFromHeight(exportResult.fromHeight)
                     .setUpHeight(exportResult.toHeight)
                     .setNumBlocks(exportResult.numBlocks)
+                    .setConfigsExported(exportResult.configsExported)
                     .build())
             responseObserver.onCompleted()
         } catch (e: UserMistake) {
