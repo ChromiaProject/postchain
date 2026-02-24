@@ -113,10 +113,10 @@ The project uses the IntelliJ IDEA "obsolete" Kotlin code style, as specified in
 
 ### Kotlin Version
 
-The project uses Kotlin 2.0.0 with JVM target 21:
+The project uses Kotlin 2.3.0 with JVM target 21:
 
 ```xml
-<kotlin.version>2.0.0</kotlin.version>
+<kotlin.version>2.3.0</kotlin.version>
 <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
 ```
 

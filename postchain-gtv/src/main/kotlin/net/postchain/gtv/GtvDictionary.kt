@@ -6,6 +6,7 @@ import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.gtv.gtvmessages.DictPair
 import net.postchain.gtv.gtvmessages.RawGtv
 
+@ConsistentCopyVisibility
 data class GtvDictionary private constructor(val dict: Map<String, Gtv>) : GtvCollection() {
 
     override val type = GtvType.DICT

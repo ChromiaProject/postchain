@@ -11,7 +11,7 @@ import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 
-class SinglePeerMultipleChainsOperationsTest : ConfigFileBasedIntegrationTest() {
+class SinglePeerMultipleChainsOperationsIT : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 
