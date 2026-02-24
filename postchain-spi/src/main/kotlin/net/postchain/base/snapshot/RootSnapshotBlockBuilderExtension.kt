@@ -2,6 +2,7 @@ package net.postchain.base.snapshot
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
@@ -23,12 +24,14 @@ class RootSnapshotBlockBuilderExtension(
 
     private lateinit var bctx: BlockEContext
     private lateinit var snapshotBuilder: RootSnapshotBlockBuilder
-    private var includeRootSnapshot = false
+    private var includeRootSnapshot = true
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         bctx = blockEContext
         snapshotBuilder = RootSnapshotBlockBuilder(blockEContext, levelsPerPage, snapshotsToKeep, baseBB.cryptoSystem)
-        includeRootSnapshot = bctx.height >= includeRootSnapshotFromHeight.get()
+        if (BlockchainConfigurationData.forceSnapshot()) {
+            includeRootSnapshot = bctx.height >= includeRootSnapshotFromHeight.get()
+        }
     }
 
     @Suppress("removal")
