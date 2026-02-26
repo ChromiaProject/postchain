@@ -14,7 +14,7 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class UnknownPeerConnectionTest : ReconnectionTest() {
+class UnknownPeerConnectionIT : ReconnectionTest() {
 
     private val nodeConfigs = (0 until 4).map { "classpath:/net/postchain/reconnection/unknown-peers/node$it.properties" }
     private val blockchainConfig = "/net/postchain/devtools/reconnection/blockchain_config_2.xml"

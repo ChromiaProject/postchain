@@ -245,11 +245,11 @@ public abstract interface class net/postchain/crypto/Digester {
 }
 
 public abstract interface class net/postchain/crypto/Key {
-	public abstract fun getData ()[B
-	public abstract fun getKey ()[B
+	public fun getData ()[B
+	public fun getKey ()[B
 	public abstract fun getWData ()Lnet/postchain/common/types/WrappedByteArray;
-	public abstract fun hex ()Ljava/lang/String;
-	public abstract fun toShortHex ()Ljava/lang/String;
+	public fun hex ()Ljava/lang/String;
+	public fun toShortHex ()Ljava/lang/String;
 }
 
 public final class net/postchain/crypto/Key$DefaultImpls {

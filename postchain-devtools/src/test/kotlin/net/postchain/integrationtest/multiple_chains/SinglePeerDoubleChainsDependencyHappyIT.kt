@@ -2,11 +2,11 @@ package net.postchain.integrationtest.multiple_chains
 
 import mu.KLogging
 import net.postchain.devtools.TxCache
-import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
+import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.junit.jupiter.api.Test
 
-class SinglePeerDoubleChainsDependencyHappyTest : GtxTxIntegrationTestSetup() {
+class SinglePeerDoubleChainsDependencyHappyIT : GtxTxIntegrationTestSetup() {
 
     companion object : KLogging()
 

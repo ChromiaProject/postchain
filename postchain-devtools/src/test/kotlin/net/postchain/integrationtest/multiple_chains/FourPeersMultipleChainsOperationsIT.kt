@@ -13,7 +13,7 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
-class FourPeersMultipleChainsOperationsTest : ConfigFileBasedIntegrationTest() {
+class FourPeersMultipleChainsOperationsIT : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 
