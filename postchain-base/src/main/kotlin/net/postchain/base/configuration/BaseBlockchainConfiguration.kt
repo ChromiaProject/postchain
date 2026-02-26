@@ -218,7 +218,8 @@ abstract class BaseBlockchainConfiguration(
             effectiveBlockchainRID,
             blockStore,
             blockWitnessProvider,
-            configHash
+            configHash,
+            merkleHashCalculator
     )
 
     /**
