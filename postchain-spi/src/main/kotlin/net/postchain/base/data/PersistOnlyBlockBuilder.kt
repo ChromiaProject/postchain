@@ -20,18 +20,23 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkleHash
 
 class PersistOnlyBlockBuilder(
         ectx: EContext,
         blockchainRID: BlockchainRid,
         store: BlockStore,
         override val blockWitnessProvider: BlockWitnessProvider,
-        private val configHash: ByteArray
+        private val configHash: ByteArray,
+        private val merkleHashCalculator: GtvMerkleHashCalculatorBase,
 ) : AbstractBlockBuilder(ectx, blockchainRID, store, true) {
 
     override fun computeMerkleRootHash(): ByteArray {
-        // We could support this but we don't have to
-        throw ProgrammerMistake("You can't call computeMerkleRootHash on a persist only block builder")
+        val digestsGtv = gtv(transactions.map { gtv(it.getHash()) })
+
+        return digestsGtv.merkleHash(merkleHashCalculator)
     }
 
     override fun makeBlockHeader(timestamp: Long): BlockHeader {
@@ -72,6 +77,13 @@ class PersistOnlyBlockBuilder(
         val blockConfigHash = header.extraData[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
         if (blockConfigHash != null && !blockConfigHash.contentEquals(configHash)) {
             throw ConfigurationMismatchException("Block configuration hash ${blockConfigHash.toHex()} does not match currently loaded configuration hash ${configHash.toHex()}")
+        }
+
+        // Ensure we persisted the correct txs
+        val blockRootHash = header.blockHeaderRec.getMerkleRootHash()
+        val computedRootHash = computeMerkleRootHash()
+        if (!skipRootHashValidation && !blockRootHash.contentEquals(computedRootHash)) {
+            throw BadBlockException("Block root hash ${blockRootHash.toHex()} does not match computed merkle root hash ${computedRootHash.toHex()}")
         }
 
         store.finalizeBlock(bctx, blockHeader)

@@ -865,7 +865,7 @@ public final class net/postchain/base/data/MinimalBlockHeaderInfo {
 }
 
 public final class net/postchain/base/data/PersistOnlyBlockBuilder : net/postchain/base/AbstractBlockBuilder {
-	public fun <init> (Lnet/postchain/core/ExecutionContext;Lnet/postchain/common/BlockchainRid;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/BlockWitnessProvider;[B)V
+	public fun <init> (Lnet/postchain/core/ExecutionContext;Lnet/postchain/common/BlockchainRid;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/BlockWitnessProvider;[BLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)V
 	public fun appendTransaction (Lnet/postchain/core/Transaction;)V
 	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;Z)V
 	public fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
