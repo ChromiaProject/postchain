@@ -97,7 +97,7 @@ class SnapshotSynchronizer(
     fun trySnapshotSync() {
         if (shouldDoSnapshotSync()) {
             // Start with blocks, we have a blockdb that simply saves the block without applying txs (after checking signature)
-            // TODO: Probably good with some extra parallelism here?
+            // TODO: Probably good with some extra parallelism here? [POS-2131]
             val fastSynchronizer = FastSynchronizer(
                     workerContext,
                     blockDatabase,
