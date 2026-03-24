@@ -16,7 +16,7 @@ data class SnapshotBlockchainConfigurationData(
     val rawGtv: Gtv,
 
     @param:Name(KEY_SNAPSHOT_INTERVAL)
-    @param:DefaultValue(defaultLong = 100) // TODO: What is reasonable?
+    @param:DefaultValue(defaultLong = 100)
     val snapshotInterval: Long,
 
     @param:Name(KEY_SNAPSHOT_LEVELS_PER_PAGE)

@@ -156,7 +156,6 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        // TODO: Maybe we need to check latest rather than current config?
         val snapshotSyncEnabled = BlockchainConfigurationData.snapshotSyncEnabled(workerContext.blockchainConfiguration.rawConfig)
         withLoggingContext(loggingContext) {
             if (params.slowSyncEnabled) {
@@ -223,7 +222,7 @@ class ReadOnlyBlockchainProcess(
     override fun currentBlockHeight(): Long = when (syncMethod) {
         SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
         SyncMethod.SLOW_SYNC -> slowSynchronizer.blockHeight.get()
-        SyncMethod.SNAPSHOT_SYNC -> blockchainEngine.getBlockQueries().getLastBlockHeight().get() // TODO: I think this is fine? Progress can't be measured in block height anyway.
+        SyncMethod.SNAPSHOT_SYNC -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }

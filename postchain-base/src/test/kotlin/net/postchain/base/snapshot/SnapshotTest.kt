@@ -254,7 +254,6 @@ class SnapshotTest : SnapshotBaseIT() {
                     val merkleRoot = calculateMerkleRoot(proof, pos, stateAtPos)
 
                     if (stateRootHash.toHex() != merkleRoot.toHex()) {
-                        // TODO: we can also try building tree afresh to see what went wrong
                         analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, stateAtPos)
                     }
                     assertEquals(stateRootHash.toHex(), merkleRoot.toHex())

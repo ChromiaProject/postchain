@@ -35,7 +35,7 @@ class RootSnapshotBlockBuilder(
         logger.info("Creating snapshot at height ${bctx.height}")
 
         val rootHash = DatabaseAccess.of(bctx).run {
-            // TODO: This size might be too big? Do we need to limit it?
+            // TODO: This size might be too big? Do we need to limit it? [POS-2130]
             val updatedDataByContext = getUpdatedDatumsByContext(bctx)
             val contextRootHashes = updatedDataByContext.map { (contextId, updatedData) ->
                 val snapshotPageStore = SnapshotPageStore(bctx, levelsPerPage, snapshotsToKeep, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
