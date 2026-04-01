@@ -1,1 +1,1 @@
-net.postchain.integrationtest.GlobalStorageInitializerModule
+net.postchain.integrationtest.ModuleWithGlobalDBInitializer

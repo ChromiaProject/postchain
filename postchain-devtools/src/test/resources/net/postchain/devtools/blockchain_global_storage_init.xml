@@ -19,7 +19,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.integrationtest.GlobalStorageInitializerModule</string>
+                    <string>net.postchain.integrationtest.ModuleWithGlobalDBInitializer</string>
                 </array>
             </entry>
         </dict>
