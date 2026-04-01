@@ -39,6 +39,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
+        // Build storage
         val blockBuilderStorage = StorageBuilder.buildStorage(
                 appConfig,
                 maxWaitWrite = appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
@@ -68,6 +69,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
             }
         }
 
+        // Check DB version and collation
         val databaseServerVersion = sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
@@ -75,8 +77,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
         logger.info("Database server: ${appConfig.databaseDriverclass} $databaseServerVersion")
 
+        // Build infrastructure
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
 
+        // Build context
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         val nodeConfigProvider = infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage)
