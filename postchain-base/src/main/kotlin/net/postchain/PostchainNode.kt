@@ -7,17 +7,20 @@ import mu.withLoggingContext
 import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.GlobalStorageInitializer
 import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.initMetrics
+import java.util.ServiceLoader
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -50,6 +53,12 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
+
+        blockBuilderStorage.withWriteConnection { ctx ->
+            ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
+                init.initializeGlobalStorage(ctx.conn)
+            }
+        }
 
         val databaseServerVersion = sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx)
