@@ -37,7 +37,7 @@ class GlobalStorageInitializerTest : IntegrationTestSetup() {
         createNodes(1, blockchainConfig)
 
         // Chain-level DB init fired (blockchain started)
-        assertEquals(1, ModuleWithGlobalDBInitializer.dbInitCallCount)
+        assertEquals(1, ModuleWithGlobalDBInitializer.chainInitCallCount)
         // Global init fired exactly once — not once per blockchain
         assertEquals(1, ModuleWithGlobalDBInitializer.globalInitCallCount)
     }
@@ -52,7 +52,7 @@ class GlobalStorageInitializerTest : IntegrationTestSetup() {
         await.untilAsserted { nodes[0].assertChainStarted(2L) }
 
         // Both chains triggered their own initializeDB
-        assertEquals(2, ModuleWithGlobalDBInitializer.dbInitCallCount)
+        assertEquals(2, ModuleWithGlobalDBInitializer.chainInitCallCount)
         // Global init still ran only once — at node startup, not per blockchain
         assertEquals(1, ModuleWithGlobalDBInitializer.globalInitCallCount)
     }

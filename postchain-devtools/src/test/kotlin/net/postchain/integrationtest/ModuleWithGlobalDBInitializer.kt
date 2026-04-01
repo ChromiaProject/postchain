@@ -15,7 +15,7 @@ import java.sql.Connection
  *
  * Two separate counters let tests verify the distinction:
  * - [globalInitCallCount]: incremented by [initializeGlobalStorage] (node startup, committed before any chain)
- * - [dbInitCallCount]: incremented by [initializeDB] (per-blockchain startup)
+ * - [chainInitCallCount]: incremented by [initializeDB] (per-blockchain startup)
  *
  * State is held in the companion object because both ServiceLoader and GTXBlockchainConfigurationFactory
  * construct fresh instances independently. Call [reset] in @BeforeEach to isolate tests.
@@ -24,12 +24,12 @@ class ModuleWithGlobalDBInitializer : GTXModule, GlobalStorageInitializer {
 
     companion object {
         @Volatile var globalInitCallCount = 0
-        @Volatile var dbInitCallCount = 0
+        @Volatile var chainInitCallCount = 0
         @Volatile var connectionWasOpen = false
 
         fun reset() {
             globalInitCallCount = 0
-            dbInitCallCount = 0
+            chainInitCallCount = 0
             connectionWasOpen = false
         }
     }
@@ -42,7 +42,7 @@ class ModuleWithGlobalDBInitializer : GTXModule, GlobalStorageInitializer {
 
     // GTXModule — called per blockchain startup
     override fun initializeDB(ctx: EContext) {
-        dbInitCallCount++
+        chainInitCallCount++
     }
 
     override fun makeTransactor(opData: ExtOpData): Transactor = throw NotImplementedError()

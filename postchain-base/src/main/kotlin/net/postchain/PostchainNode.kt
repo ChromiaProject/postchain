@@ -53,8 +53,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
-
-        blockBuilderStorage.withWriteConnection { ctx ->
+        sharedStorage.withWriteConnection { ctx ->
             ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
                 init.initializeGlobalStorage(ctx.conn)
             }
