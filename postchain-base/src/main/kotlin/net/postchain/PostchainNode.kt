@@ -10,6 +10,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainInfrastructure
@@ -53,9 +54,15 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
-        sharedStorage.withWriteConnection { ctx ->
-            ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
-                init.initializeGlobalStorage(ctx.conn)
+        ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
+            try {
+                sharedStorage.withWriteConnection { ctx ->
+                    init.initializeGlobalStorage(ctx.conn)
+                }
+            } catch (e: Exception) {
+                logger.error(ProgrammerMistake("GlobalStorageInitializer ${init::class.qualifiedName} failed", e)) {
+                    "Global storage initialization failed for ${init::class.qualifiedName}, blockchains depending on it will fail to start"
+                }
             }
         }
 

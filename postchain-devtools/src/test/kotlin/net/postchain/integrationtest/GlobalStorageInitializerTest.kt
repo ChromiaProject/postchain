@@ -51,4 +51,16 @@ class GlobalStorageInitializerTest : IntegrationTestSetup() {
         // Each blockchain triggers its own initializeDB
         assertEquals(2, ModuleWithGlobalDBInitializer.chainInitCallCount)
     }
+
+    @Test
+    fun `node starts even if GlobalStorageInitializer throws`() {
+        ModuleWithGlobalDBInitializer.shouldThrow = true
+
+        createNodes(1, blockchainConfig)
+
+        // Global init was attempted
+        assertEquals(1, ModuleWithGlobalDBInitializer.globalInitCallCount)
+        // Node started and chain is running despite the failure
+        await.untilAsserted { nodes[0].assertChainStarted() }
+    }
 }

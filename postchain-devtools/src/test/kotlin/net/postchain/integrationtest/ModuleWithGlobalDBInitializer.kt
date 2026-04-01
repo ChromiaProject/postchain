@@ -26,11 +26,13 @@ class ModuleWithGlobalDBInitializer : GTXModule, GlobalStorageInitializer {
         @Volatile var globalInitCallCount = 0
         @Volatile var chainInitCallCount = 0
         @Volatile var connectionWasOpen = false
+        @Volatile var shouldThrow = false
 
         fun reset() {
             globalInitCallCount = 0
             chainInitCallCount = 0
             connectionWasOpen = false
+            shouldThrow = false
         }
     }
 
@@ -38,6 +40,7 @@ class ModuleWithGlobalDBInitializer : GTXModule, GlobalStorageInitializer {
     override fun initializeGlobalStorage(connection: Connection) {
         globalInitCallCount++
         connectionWasOpen = !connection.isClosed
+        if (shouldThrow) throw RuntimeException("Simulated global init failure")
     }
 
     // GTXModule — called per blockchain startup
