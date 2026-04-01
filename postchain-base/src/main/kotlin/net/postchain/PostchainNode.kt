@@ -54,15 +54,13 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
-        val initializers = ServiceLoader.load(GlobalStorageInitializer::class.java).toList()
-        logger.debug { "Found ${initializers.size} GlobalStorageInitializer(s)" }
-        initializers.forEach { init ->
-            logger.debug { "Running GlobalStorageInitializer: ${init::class.qualifiedName}" }
+        // Run GlobalStorageInitializer(s)
+        ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
             try {
                 sharedStorage.withWriteConnection { ctx ->
                     init.initializeGlobalStorage(ctx.conn)
                 }
-                logger.debug { "GlobalStorageInitializer completed: ${init::class.qualifiedName}" }
+                logger.info { "GlobalStorageInitializer completed: ${init::class.qualifiedName}" }
             } catch (e: Exception) {
                 logger.error(ProgrammerMistake("GlobalStorageInitializer ${init::class.qualifiedName} failed", e)) {
                     "Global storage initialization failed for ${init::class.qualifiedName}, blockchains depending on it will fail to start"
