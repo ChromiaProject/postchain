@@ -36,14 +36,19 @@ class GlobalStorageInitializerTest : IntegrationTestSetup() {
     fun `global init is called once while per-chain initializeDB is called per blockchain`() {
         createNodes(1, blockchainConfig)
 
+        // Global init fired
+        assertEquals(1, ModuleWithGlobalDBInitializer.globalInitCallCount)
+        // Chain-level DB init fired (blockchain started)
+        assertEquals(1, ModuleWithGlobalDBInitializer.chainInitCallCount)
+
         // Start a second chain with the same module config
         val config2 = readBlockchainConfig(blockchainConfig)
         nodes[0].addBlockchainAndStart(2L, config2)
         await.untilAsserted { nodes[0].assertChainStarted(2L) }
 
-        // Each blockchain triggers its own initializeDB
-        assertEquals(2, ModuleWithGlobalDBInitializer.chainInitCallCount)
         // Global init fired exactly once — not once per blockchain
         assertEquals(1, ModuleWithGlobalDBInitializer.globalInitCallCount)
+        // Each blockchain triggers its own initializeDB
+        assertEquals(2, ModuleWithGlobalDBInitializer.chainInitCallCount)
     }
 }
