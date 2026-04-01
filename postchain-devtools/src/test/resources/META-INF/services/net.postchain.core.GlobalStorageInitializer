@@ -1,1 +1,1 @@
-net.postchain.integrationtest.TrackingGlobalStorageInitializer
+net.postchain.integrationtest.GlobalStorageInitializerModule

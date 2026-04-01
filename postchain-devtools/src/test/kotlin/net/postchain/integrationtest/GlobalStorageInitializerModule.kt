@@ -20,7 +20,7 @@ import java.sql.Connection
  * State is held in the companion object because both ServiceLoader and GTXBlockchainConfigurationFactory
  * construct fresh instances independently. Call [reset] in @BeforeEach to isolate tests.
  */
-class TrackingGlobalStorageInitializer : GTXModule, GlobalStorageInitializer {
+class GlobalStorageInitializerModule : GTXModule, GlobalStorageInitializer {
 
     companion object {
         @Volatile var globalInitCallCount = 0
