@@ -3,6 +3,7 @@ package net.postchain.integrationtest
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.addBlockchainAndStart
 import net.postchain.devtools.assertChainStarted
+import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -42,7 +43,8 @@ class GlobalStorageInitializerTest : IntegrationTestSetup() {
         assertEquals(1, ModuleWithGlobalDBInitializer.chainInitCallCount)
 
         // Start a second chain with the same module config
-        val config2 = readBlockchainConfig(blockchainConfig)
+        val config = readBlockchainConfig(blockchainConfig)
+        val config2 = gtv(config.asDict().toMutableMap().apply { put("nonce", gtv(1)) })
         nodes[0].addBlockchainAndStart(2L, config2)
         await.untilAsserted { nodes[0].assertChainStarted(2L) }
 
