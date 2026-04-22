@@ -144,7 +144,7 @@ class RestApiTimeoutTest {
     }
 
     fun setupRestApi(): RestApi {
-        val restApi = RestApi(0, basePath, gracefulShutdown = false)
+        val restApi = RestApi(0, basePath, gracefulShutdown = false, requestConcurrency = 4)
         restApis.add(restApi)
         return restApi
     }
