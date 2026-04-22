@@ -123,7 +123,7 @@ class RestApiSemaphoresIT {
                 "/query/$blockchainRID3?type=container-full-3", // Consume locks: container 2, brid 3, external model
         )
         val api = RestApi(0, "",
-                requestConcurrency = okQueryPaths.size + 3,
+                requestConcurrency = okQueryPaths.size + 5,
                 requestConcurrencyExternal = okQueryPaths.size + 1,
                 containerRequestConcurrency = 3,
                 chainRequestConcurrency = 2
