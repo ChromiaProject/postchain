@@ -23,6 +23,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 
@@ -254,13 +255,14 @@ class RestApiSemaphoresIT {
     }
 
     private fun runAsyncOkQueries(port: Int, queries: List<String>): Array<CompletableFuture<Int>> {
+        val executor = Executors.newFixedThreadPool(queries.size)
         return queries.map {
-            CompletableFuture.supplyAsync {
+            CompletableFuture.supplyAsync({
                 given().port(port)
                         .get(it)
                         .then()
                         .extract().statusCode()
-            }
+            }, executor)
         }.toTypedArray()
     }
 }
