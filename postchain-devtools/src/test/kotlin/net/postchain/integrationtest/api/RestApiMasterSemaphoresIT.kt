@@ -23,6 +23,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 
@@ -39,7 +40,7 @@ class RestApiSemaphoresIT {
     @Test
     fun `test container concurrency limit`() {
 
-        val api = RestApi(0, "", containerRequestConcurrency = 2)
+        val api = RestApi(0, "", requestConcurrency = 5, containerRequestConcurrency = 2)
 
         val awaitRejectQueryLatch = CountDownLatch(1)
         val awaitOkQueriesSentLatch = CountDownLatch(3)
@@ -79,7 +80,7 @@ class RestApiSemaphoresIT {
     @Test
     fun `test external model concurrency limit`() {
 
-        val api = RestApi(0, "", requestConcurrencyExternal = 2)
+        val api = RestApi(0, "", requestConcurrency = 4, requestConcurrencyExternal = 2)
 
         val awaitRejectQueryLatch = CountDownLatch(1)
         val awaitOkQueriesSentLatch = CountDownLatch(2)
@@ -122,6 +123,7 @@ class RestApiSemaphoresIT {
                 "/query/$blockchainRID3?type=container-full-3", // Consume locks: container 2, brid 3, external model
         )
         val api = RestApi(0, "",
+                requestConcurrency = okQueryPaths.size + 5,
                 requestConcurrencyExternal = okQueryPaths.size + 1,
                 containerRequestConcurrency = 3,
                 chainRequestConcurrency = 2
@@ -196,7 +198,7 @@ class RestApiSemaphoresIT {
     @Test
     fun `test internal model concurrency limit`() {
 
-        val api = RestApi(0, "", requestConcurrencyLocal = 2)
+        val api = RestApi(0, "", requestConcurrency = 4, requestConcurrencyLocal = 2)
 
         val awaitRejectQueryLatch = CountDownLatch(1)
         val awaitOkQueriesSentLatch = CountDownLatch(2)
@@ -253,13 +255,14 @@ class RestApiSemaphoresIT {
     }
 
     private fun runAsyncOkQueries(port: Int, queries: List<String>): Array<CompletableFuture<Int>> {
+        val executor = Executors.newFixedThreadPool(queries.size)
         return queries.map {
-            CompletableFuture.supplyAsync {
+            CompletableFuture.supplyAsync({
                 given().port(port)
                         .get(it)
                         .then()
                         .extract().statusCode()
-            }
+            }, executor)
         }.toTypedArray()
     }
 }
