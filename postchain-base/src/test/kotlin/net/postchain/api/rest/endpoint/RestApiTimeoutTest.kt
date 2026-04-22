@@ -96,8 +96,10 @@ class RestApiTimeoutTest {
     fun `http external model - http request to sub node timeout`() {
         val masterRestApi = setupRestApi()
         val subQueryIsCalled = AtomicBoolean(false)
+        val queryStartedLatch = CountDownLatch(1)
         val latch = CountDownLatch(1)
         val subRestApi = setupBlockQueriesTest(Long.MAX_VALUE) { _, _ ->
+            queryStartedLatch.countDown()
             subQueryIsCalled.set(true)
             latch.await()
             gtv(false)
@@ -107,14 +109,17 @@ class RestApiTimeoutTest {
                 1L, "", requestTimeoutMs = 1)
         masterRestApi.attachModel(blockchainRID, masterModel)
 
-        RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
-                .get("/query/$blockchainRID?type=dummy")
-                .then()
-                .statusCode(GATEWAY_TIMEOUT.code)
-        assertThat(subQueryIsCalled.get()).isTrue()
-
-        // Release the blocked sub-node query so it can shutdown the rest api
-        latch.countDown()
+        try {
+            RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
+                    .get("/query/$blockchainRID?type=dummy")
+                    .then()
+                    .statusCode(GATEWAY_TIMEOUT.code)
+            queryStartedLatch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            assertThat(subQueryIsCalled.get()).isTrue()
+        } finally {
+            // Release the blocked sub-node query so the rest api can shutdown
+            latch.countDown()
+        }
     }
 
     @Test
