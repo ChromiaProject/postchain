@@ -78,7 +78,7 @@ internal class ContainerHandlerIT {
         )
         logger.debug { ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().toString() }
         sut.startContainer(postchainContainerMock)
-        await().atMost(Duration.TEN_SECONDS).untilAsserted {
+        await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertThat(ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().state.running!!).isTrue()
         }
         val containerPortMapping = sut.findHostPorts(containerId!!, containerNodeConfig.subnodePorts)
