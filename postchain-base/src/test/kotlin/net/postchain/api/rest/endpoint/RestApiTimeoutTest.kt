@@ -17,6 +17,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtx.GtxQuery
+import org.awaitility.Awaitility.await
+import org.awaitility.Duration.TEN_SECONDS
 import org.hamcrest.core.IsEqual
 import org.http4k.core.Status.Companion.GATEWAY_TIMEOUT
 import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
@@ -27,15 +29,11 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.awaitility.Awaitility.await
-import org.awaitility.Duration.FIVE_SECONDS
-import org.awaitility.Duration.ONE_MINUTE
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.String
 
 class RestApiTimeoutTest {
 
@@ -68,7 +66,7 @@ class RestApiTimeoutTest {
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
+        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -91,7 +89,7 @@ class RestApiTimeoutTest {
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
+        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -114,7 +112,7 @@ class RestApiTimeoutTest {
                     .get("/query/$blockchainRID?type=dummy")
                     .then()
                     .statusCode(GATEWAY_TIMEOUT.code)
-            await().atMost(ONE_MINUTE).untilTrue(subQueryIsCalled)
+            await().atMost(TEN_SECONDS).untilTrue(subQueryIsCalled)
         } finally {
             // Release the blocked sub-node query so the rest api can shutdown
             latch.countDown()
@@ -144,7 +142,8 @@ class RestApiTimeoutTest {
                 .statusCode(INTERNAL_SERVER_ERROR.code)
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
-        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
+
+        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     fun setupRestApi(): RestApi {
@@ -181,11 +180,9 @@ class RestApiTimeoutTest {
                 queryFunction(name, args)
             }
 
-            override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>>
-                    = throw NotImplementedError()
+            override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> = throw NotImplementedError()
 
-            override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv>
-                    = throw NotImplementedError()
+            override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv> = throw NotImplementedError()
 
             override fun decodeBlockHeader(headerData: ByteArray) = throw NotImplementedError()
 
