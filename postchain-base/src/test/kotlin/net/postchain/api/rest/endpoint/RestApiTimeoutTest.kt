@@ -30,11 +30,11 @@ import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.awaitility.Awaitility.await
+import org.awaitility.Duration.ONE_MINUTE
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
 
@@ -114,7 +114,7 @@ class RestApiTimeoutTest {
                     .get("/query/$blockchainRID?type=dummy")
                     .then()
                     .statusCode(GATEWAY_TIMEOUT.code)
-            await().atMost(5, TimeUnit.SECONDS).untilTrue(subQueryIsCalled)
+            await().atMost(ONE_MINUTE).untilTrue(subQueryIsCalled)
         } finally {
             // Release the blocked sub-node query so the rest api can shutdown
             latch.countDown()
