@@ -78,8 +78,18 @@ internal class ContainerHandlerIT {
         )
         logger.debug { ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().toString() }
         sut.startContainer(postchainContainerMock)
-        await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertThat(ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().state.running!!).isTrue()
+        try {
+            await().atMost(Duration.ONE_MINUTE).untilAsserted {
+                assertThat(ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().state.running!!).isTrue()
+            }
+        } catch (e: org.awaitility.core.ConditionTimeoutException) {
+            ContainerEnvironment.dockerClient.logContainerCmd(containerId!!)
+                    .withStdOut(true).withStdErr(true)
+                    .asyncExecAwaitMultiResponse(
+                            { logger.error("[Container] ${String(it.payload).trim()}") },
+                            { logger.error("[Container] Failed to collect logs", it) }
+                    )
+            throw e
         }
         val containerPortMapping = sut.findHostPorts(containerId!!, containerNodeConfig.subnodePorts)
         val nodeDiagnosticContext: NodeDiagnosticContext = mock()
