@@ -29,10 +29,12 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.awaitility.Awaitility.await
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
 
@@ -48,7 +50,7 @@ class RestApiTimeoutTest {
     }
 
     @Test
-    fun `block query timeout - can't be interrupted but returns a response -  API returns timeout error`() {
+    fun `block query timeout - can't be interrupted but returns a response - API returns timeout error`() {
         val isInterrupted = AtomicBoolean(false)
         val restApi = setupBlockQueriesTest(10) { _, _ ->
             try {
@@ -107,14 +109,16 @@ class RestApiTimeoutTest {
                 1L, "", requestTimeoutMs = 1)
         masterRestApi.attachModel(blockchainRID, masterModel)
 
-        RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
-                .get("/query/$blockchainRID?type=dummy")
-                .then()
-                .statusCode(GATEWAY_TIMEOUT.code)
-        assertThat(subQueryIsCalled.get()).isTrue()
-
-        // Release the blocked sub-node query so it can shutdown the rest api
-        latch.countDown()
+        try {
+            RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
+                    .get("/query/$blockchainRID?type=dummy")
+                    .then()
+                    .statusCode(GATEWAY_TIMEOUT.code)
+            await().atMost(5, TimeUnit.SECONDS).untilTrue(subQueryIsCalled)
+        } finally {
+            // Release the blocked sub-node query so the rest api can shutdown
+            latch.countDown()
+        }
     }
 
     @Test
