@@ -2,8 +2,6 @@
 
 package net.postchain.api.rest.endpoint
 
-import assertk.assertThat
-import assertk.assertions.isTrue
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.HttpExternalModel
@@ -30,6 +28,7 @@ import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.awaitility.Awaitility.await
+import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.ONE_MINUTE
 import java.lang.Thread.sleep
 import java.time.Duration
@@ -39,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
 
 class RestApiTimeoutTest {
+
     private val basePath = "/api/v1"
     private val blockchainRID = BlockchainRid.ZERO_RID
     private val restApis: MutableList<RestApi> = mutableListOf()
@@ -68,7 +68,7 @@ class RestApiTimeoutTest {
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        assertThat(isInterrupted.get()).isTrue()
+        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -91,7 +91,7 @@ class RestApiTimeoutTest {
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        assertThat(isInterrupted.get()).isTrue()
+        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -144,7 +144,7 @@ class RestApiTimeoutTest {
                 .statusCode(INTERNAL_SERVER_ERROR.code)
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
-        assertThat(isInterrupted.get()).isTrue()
+        await().atMost(FIVE_SECONDS).untilTrue(isInterrupted)
     }
 
     fun setupRestApi(): RestApi {
