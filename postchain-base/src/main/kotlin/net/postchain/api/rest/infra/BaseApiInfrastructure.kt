@@ -60,16 +60,17 @@ open class BaseApiInfrastructure(
         )
     }
 
+    protected val databaseSharedReadConcurrency: Int
+        get() = postchainContext.appConfig.databaseSharedReadConcurrency
+
     fun getOrComputeValue(value: Int, function: (Int) -> Int): Int =
             if (value == -1 || value > 0)
                 value
             else
                 function(value)
 
-    fun computeEffectiveRequestConcurrency(cpuMultiplier: Int): Int = min(
-            postchainContext.appConfig.databaseSharedReadConcurrency,
-            cpuMultiplier * Runtime.getRuntime().availableProcessors()
-    )
+    fun computeEffectiveRequestConcurrency(cpuMultiplier: Int): Int =
+            min(databaseSharedReadConcurrency, cpuMultiplier * Runtime.getRuntime().availableProcessors())
 
     val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
