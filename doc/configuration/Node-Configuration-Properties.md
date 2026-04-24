@@ -86,21 +86,21 @@ When the `api.request-concurrency*` properties are left at their default value `
 from the number of CPU cores available to the JVM (`Runtime.availableProcessors()`) and from
 `database.sharedReadConcurrency` (default `10`).
 
-Let `P = Runtime.availableProcessors()` and `D = database.sharedReadConcurrency`.
+Let `P = Runtime.availableProcessors()`, `D = database.sharedReadConcurrency` and `T = api.request-concurrency`
+(the dynamically-computed total on master nodes).
 
 | Property                            | Standalone node                    | Master node                                                             |
 |-------------------------------------|------------------------------------|-------------------------------------------------------------------------|
 | `api.request-concurrency`           | `min(D, 5 * P)`                    | `2 * P`                                                                 |
-| `api.request-concurrency.local`     | n/a                                | `min(D, 2 * P)`                                                         |
-| `api.request-concurrency.external`  | n/a                                | `api.request-concurrency - api.request-concurrency.local` (must be > 0) |
+| `api.request-concurrency.local`     | n/a                                | `min(D, 2 * P)`, bounded to `[1, T - 1]`                                |
+| `api.request-concurrency.external`  | n/a                                | `T - api.request-concurrency.local` (must be > 0)                       |
 | `api.container-request-concurrency` | n/a                                | `max(1, api.request-concurrency.external / 4)`                          |
 
-Note that on a master node the auto-calculated `api.request-concurrency.external` is only positive when
-`2 * P > D`, i.e. when `P > D / 2`. With the default `D = 10` this requires at least 6 CPU cores; otherwise node
-startup fails with
-`IllegalArgumentException: Calculated value for api.request-concurrency.external is invalid (0)`.
-On hosts with fewer cores, set `api.request-concurrency.external` (or all three properties) explicitly, or lower
-`database.sharedReadConcurrency`.
+The upper bound on `api.request-concurrency.local` guarantees that the external pool always gets at least one permit,
+so the defaults work on low-CPU hosts. Startup only fails with
+`IllegalArgumentException: Calculated value for api.request-concurrency.external is invalid (0)` if the operator
+explicitly configured `api.request-concurrency.local` to match or exceed `api.request-concurrency`, leaving no
+capacity for external requests.
 
 ## Containers (subnodes)
 

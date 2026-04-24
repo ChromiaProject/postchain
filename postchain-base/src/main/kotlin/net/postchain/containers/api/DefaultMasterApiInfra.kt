@@ -35,13 +35,15 @@ class DefaultMasterApiInfra(
             Runtime.getRuntime().availableProcessors() * 2
         }
         dynamicRequestConcurrencyLocal = getOrComputeValue(restApiConfig.requestConcurrencyLocal) {
-            // If the operator set api.request-concurrency explicitly but left
-            // api.request-concurrency.local at its default, reuse the requested
-            // total as the local cap; otherwise derive it from CPU and DB pool.
-            if (restApiConfig.requestConcurrency > 0)
-                restApiConfig.requestConcurrency
-            else
-                computeEffectiveRequestConcurrency(2)
+            // Derive the local pool from CPU/DB, but cap at `total - 1` so the
+            // external pool always gets at least one permit. This keeps startup
+            // working on low-CPU hosts and when the operator sets only
+            // api.request-concurrency without the per-pool splits. The lower
+            // bound of 1 avoids accidentally producing 0, which RestApi would
+            // interpret as "no limit".
+            computeEffectiveRequestConcurrency(2)
+                    .coerceAtMost(dynamicRequestConcurrency - 1)
+                    .coerceAtLeast(1)
         }
         dynamicRequestConcurrencyExternal = getOrComputeValue(restApiConfig.requestConcurrencyExternal) {
             val value = dynamicRequestConcurrency - dynamicRequestConcurrencyLocal
@@ -53,7 +55,9 @@ class DefaultMasterApiInfra(
 
         dynamicContainerRequestConcurrency = getOrComputeValue(restApiConfig.containerRequestConcurrency) {
             val externalConcurrency = if (dynamicRequestConcurrencyExternal > 0)
-                dynamicRequestConcurrencyExternal else dynamicRequestConcurrency
+                dynamicRequestConcurrencyExternal
+            else
+                dynamicRequestConcurrency
             max(1, externalConcurrency / CONTAINER_CONCURRENCY_DIVIDER)
         }
 
