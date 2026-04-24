@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.api.rest.endpoint
+package net.postchain.api.rest
 
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
@@ -14,23 +14,20 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.core.Storage
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtx.GtxQuery
-import org.awaitility.Awaitility.await
-import org.awaitility.Duration.TEN_SECONDS
+import org.awaitility.Awaitility
+import org.awaitility.Duration
 import org.hamcrest.core.IsEqual
-import org.http4k.core.Status.Companion.GATEWAY_TIMEOUT
-import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
+import org.http4k.core.Status
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.ArgumentMatchers
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import java.lang.Thread.sleep
-import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -52,21 +49,21 @@ class RestApiTimeoutTest {
         val isInterrupted = AtomicBoolean(false)
         val restApi = setupBlockQueriesTest(10) { _, _ ->
             try {
-                sleep(1000)
+                Thread.sleep(1000)
             } catch (_: InterruptedException) {
                 isInterrupted.set(true)
             }
-            gtv(false)
+            GtvFactory.gtv(false)
         }
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .get("/query/$blockchainRID?type=dummy")
                 .then()
-                .statusCode(INTERNAL_SERVER_ERROR.code)
+                .statusCode(Status.INTERNAL_SERVER_ERROR.code)
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -74,22 +71,22 @@ class RestApiTimeoutTest {
         val isInterrupted = AtomicBoolean(false)
         val restApi = setupBlockQueriesTest(10) { _, _ ->
             try {
-                sleep(1000)
+                Thread.sleep(1000)
             } catch (_: InterruptedException) {
                 isInterrupted.set(true)
                 throw ProgrammerMistake("I got interrupted and can't recover from that")
             }
-            gtv(false)
+            GtvFactory.gtv(false)
         }
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .get("/query/$blockchainRID?type=dummy")
                 .then()
-                .statusCode(INTERNAL_SERVER_ERROR.code)
+                .statusCode(Status.INTERNAL_SERVER_ERROR.code)
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     @Test
@@ -100,7 +97,7 @@ class RestApiTimeoutTest {
         val subRestApi = setupBlockQueriesTest(Long.MAX_VALUE) { _, _ ->
             subQueryIsCalled.set(true)
             latch.await()
-            gtv(false)
+            GtvFactory.gtv(false)
         }
 
         val masterModel = HttpExternalModel(basePath, "http://localhost:${subRestApi.actualPort()}$basePath",
@@ -111,8 +108,8 @@ class RestApiTimeoutTest {
             RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
                     .get("/query/$blockchainRID?type=dummy")
                     .then()
-                    .statusCode(GATEWAY_TIMEOUT.code)
-            await().atMost(TEN_SECONDS).untilTrue(subQueryIsCalled)
+                    .statusCode(Status.GATEWAY_TIMEOUT.code)
+            Awaitility.await().atMost(Duration.TEN_SECONDS).untilTrue(subQueryIsCalled)
         } finally {
             // Release the blocked sub-node query so the rest api can shutdown
             latch.countDown()
@@ -125,11 +122,11 @@ class RestApiTimeoutTest {
         val isInterrupted = AtomicBoolean(false)
         val subRestApi = setupBlockQueriesTest(10) { _, _ ->
             try {
-                sleep(1000)
+                Thread.sleep(1000)
             } catch (_: InterruptedException) {
                 isInterrupted.set(true)
             }
-            gtv(false)
+            GtvFactory.gtv(false)
         }
 
         val masterModel = HttpExternalModel(basePath, "http://localhost:${subRestApi.actualPort()}$basePath",
@@ -139,11 +136,11 @@ class RestApiTimeoutTest {
         RestAssured.given().basePath(basePath).port(masterRestApi.actualPort())
                 .get("/query/$blockchainRID?type=dummy")
                 .then()
-                .statusCode(INTERNAL_SERVER_ERROR.code)
+                .statusCode(Status.INTERNAL_SERVER_ERROR.code)
                 .contentType(ContentType.JSON)
                 .body(IsEqual("{\"error\":\"Query timed out after 10 ms\"}"))
 
-        await().atMost(TEN_SECONDS).untilTrue(isInterrupted)
+        Awaitility.await().atMost(Duration.TEN_SECONDS).untilTrue(isInterrupted)
     }
 
     fun setupRestApi(): RestApi {
@@ -172,17 +169,17 @@ class RestApiTimeoutTest {
 
     private fun buildBaseBlockQueriesMock(queryTimeoutMs: Long, queryFunction: (name: String, args: Gtv) -> GtvInteger): BaseBlockQueries {
         val storage = mock<Storage> {
-            on { openReadConnection(anyLong()) } doReturn mock()
+            on { openReadConnection(ArgumentMatchers.anyLong()) } doReturn mock()
         }
         return object : BaseBlockQueries(storage, BaseBlockStore(), 1L, "".toByteArray(),
-                mock(), Duration.ofMillis(queryTimeoutMs)) {
+                mock(), java.time.Duration.ofMillis(queryTimeoutMs)) {
             override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
                 queryFunction(name, args)
             }
 
             override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> = throw NotImplementedError()
 
-            override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: Duration, lockTimeout: Duration): CompletionStage<Gtv> = throw NotImplementedError()
+            override fun queryWithTimeout(name: String, args: Gtv, queryTimeout: java.time.Duration, lockTimeout: java.time.Duration): CompletionStage<Gtv> = throw NotImplementedError()
 
             override fun decodeBlockHeader(headerData: ByteArray) = throw NotImplementedError()
 

@@ -69,16 +69,51 @@ It is possible to configure peers via node configuration with these properties.
 |-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|-------------------------|-----------------------------------------------|
 | `api.basepath`                      | The API will be attached under the basepath. Don't append a trailing slash to the basepath. To run on root, leave this empty.                                                                                                                                                                                                | String  | ""                      | `POSTCHAIN_API_BASEPATH`                      |
 | `api.port`                          | REST API port, `-1` will disable the API, `0` will assign to a random free port.                                                                                                                                                                                                                                             | Int     | 7740                    | `POSTCHAIN_API_PORT`                          |
-| `api.request-concurrency`           | Number of incoming HTTP requests to handle concurrently. The default value `0` calculates a suitable value based on node type, available processors and database connection pool size.                                                                                                                                       | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY`           |
-| `api.request-concurrency.local`     | Master node only: The maximum number of threads in `api.request-concurrency` to be used for local models. The default value `0` calculates a suitable value based on available processors and database connection pool size. If exceeded, `503 Service Unavailable` will be returned. The value `-1` disables this limit.    | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY_LOCAL`     |
-| `api.request-concurrency.external`  | Master node only: The maximum number of threads in `api.request-concurrency` to be used for external models. The default value `0` calculates a suitable value based on available processors and database connection pool size. If exceeded, `503 Service Unavailable` will be returned. The value `-1` disables this limit. | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY_EXTERNAL`  |
+| `api.request-concurrency`           | Number of incoming HTTP requests to handle concurrently. The default value `0` auto-calculates a value based on node type, available processors and database connection pool size (see [Auto-calculated request concurrency](#auto-calculated-request-concurrency) below).                                                   | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY`           |
+| `api.request-concurrency.local`     | Master node only: The maximum number of threads in `api.request-concurrency` to be used for local models. The default value `0` auto-calculates a value (see below). If exceeded, `503 Service Unavailable` will be returned. The value `-1` disables this limit.                                                            | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY_LOCAL`     |
+| `api.request-concurrency.external`  | Master node only: The maximum number of threads in `api.request-concurrency` to be used for external models. The default value `0` auto-calculates a value (see below). If exceeded, `503 Service Unavailable` will be returned. The value `-1` disables this limit.                                                         | Int     | `0`                     | `POSTCHAIN_API_REQUEST_CONCURRENCY_EXTERNAL`  |
 | `api.chain-request-concurrency`     | Number of incoming HTTP requests to handle concurrently per blockchain. Unlimited by default (-1). If exceeded, `503 Service Unavailable` will be returned.                                                                                                                                                                  | Int     | `-1`                    | `POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY`     |
-| `api.container-request-concurrency` | Master node only: Number of incoming HTTP requests to handle concurrently per container. The default value `0` sets it dynamically to 25% of `api.request-concurrency.external`. Can be disabled with `-1`. If exceeded, `503 Service Unavailable` will be returned.                                                         | Int     | `0`                     | `POSTCHAIN_API_CONTAINER_REQUEST_CONCURRENCY` |
+| `api.container-request-concurrency` | Master node only: Number of incoming HTTP requests to handle concurrently per container. The default value `0` sets it to 25% of `api.request-concurrency.external` (minimum 1). Can be disabled with `-1`. If exceeded, `503 Service Unavailable` will be returned.                                                         | Int     | `0`                     | `POSTCHAIN_API_CONTAINER_REQUEST_CONCURRENCY` |
 | `api.container-request-timeout-ms`  | Master node only: The maximum time in milliseconds for sub container requests.                                                                                                                                                                                                                                               | Int     | `60000`                 | `POSTCHAIN_API_CONTAINER_REQUEST_TIMEOUT_MS`  |
 | `api.subnode-http-redirect`         | Enable to make master node respond with 307 redirect when requests are made to subnodes instead of routing the request internally.                                                                                                                                                                                           | Boolean | false                   | `POSTCHAIN_API_SUBNODE_HTTP_REDIRECT`         |
 | `api.max-request-body-size`         | Request body limit in bytes. If request exceeds limit it is closed with a 413 (content too large).                                                                                                                                                                                                                           | Int     | 1024 * 1024 * 55 (55mb) | `POSTCHAIN_API_MAX_REQUEST_BODY_SIZE`         |
 | `api.max-data-size`                 | The maximum size of transactions and blocks REST API endpoints response.                                                                                                                                                                                                                                                     | Int     | 1024 * 1024 * 55 (55mb) | `POSTCHAIN_API_MAX_DATA_SIZE`                 |
 | `debug.port`                        | Debug API port.                                                                                                                                                                                                                                                                                                              | Int     | 7750                    | `POSTCHAIN_DEBUG_PORT`                        |
+
+### Auto-calculated request concurrency
+
+When the `api.request-concurrency*` properties are left at their default value `0`, they are computed at startup
+from the number of CPU cores available to the JVM (`Runtime.availableProcessors()`) and from
+`database.sharedReadConcurrency` (default `10`).
+
+Let `P = Runtime.availableProcessors()`, `D = database.sharedReadConcurrency` and `T = api.request-concurrency`
+(the dynamically-computed total on master nodes).
+
+| Property                            | Standalone node                    | Master node                                                             |
+|-------------------------------------|------------------------------------|-------------------------------------------------------------------------|
+| `api.request-concurrency`           | `min(D, 5 * P)`                    | `2 * P`                                                                 |
+| `api.request-concurrency.local`     | n/a                                | `min(D, 2 * P)`, bounded to `[1, T - 1]`                                |
+| `api.request-concurrency.external`  | n/a                                | `T - api.request-concurrency.local` (must be > 0)                       |
+| `api.container-request-concurrency` | n/a                                | `max(1, api.request-concurrency.external / 4)`                          |
+
+The upper bound on `api.request-concurrency.local` guarantees that the external pool always gets at least one permit,
+so the defaults work on low-CPU hosts. Startup only fails with
+`IllegalArgumentException: Calculated value for api.request-concurrency.external is invalid (0)` if the operator
+explicitly configured `api.request-concurrency.local` to match or exceed `api.request-concurrency`, leaving no
+capacity for external requests.
+
+#### When each pool applies
+
+On a master node the pools gate different request paths:
+
+- `api.request-concurrency.local` is acquired for requests that target a **local** (internal) model served
+  directly by the master.
+- `api.request-concurrency.external` and `api.container-request-concurrency` are acquired only when the master
+  **proxies** an external-model request internally, i.e. when `api.subnode-http-redirect = false` (the default).
+  When `api.subnode-http-redirect = true` the master returns a 307 redirect to the subnode instead of proxying,
+  so neither of these semaphores is acquired and the configured values have no runtime effect.
+- `api.chain-request-concurrency` is acquired on both the local and the proxy paths, and is bypassed by the
+  redirect path.
 
 ## Containers (subnodes)
 
