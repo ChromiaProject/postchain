@@ -102,6 +102,19 @@ so the defaults work on low-CPU hosts. Startup only fails with
 explicitly configured `api.request-concurrency.local` to match or exceed `api.request-concurrency`, leaving no
 capacity for external requests.
 
+#### When each pool applies
+
+On a master node the pools gate different request paths:
+
+- `api.request-concurrency.local` is acquired for requests that target a **local** (internal) model served
+  directly by the master.
+- `api.request-concurrency.external` and `api.container-request-concurrency` are acquired only when the master
+  **proxies** an external-model request internally, i.e. when `api.subnode-http-redirect = false` (the default).
+  When `api.subnode-http-redirect = true` the master returns a 307 redirect to the subnode instead of proxying,
+  so neither of these semaphores is acquired and the configured values have no runtime effect.
+- `api.chain-request-concurrency` is acquired on both the local and the proxy paths, and is bypassed by the
+  redirect path.
+
 ## Containers (subnodes)
 
 | Name                                                    | Description                                                                                                                                            | Type         | Required           | Default                                                        | Environment Variable                                          |
