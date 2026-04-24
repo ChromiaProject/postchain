@@ -47,8 +47,8 @@ open class BaseApiInfrastructure(
                 basePath = basePath,
                 nodeDiagnosticContext = nodeDiagnosticContext,
                 gracefulShutdown = gracefulShutdown,
-                requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
-                    calcRequestConcurrency(restApiConfig, 5)
+                requestConcurrency = getOrComputeValue(restApiConfig.requestConcurrency) {
+                    computeEffectiveRequestConcurrency(5)
                 },
                 requestConcurrencyLocal = -1,
                 requestConcurrencyExternal = -1,
@@ -60,20 +60,16 @@ open class BaseApiInfrastructure(
         )
     }
 
-    fun getValueOrComputeValue(value: Int, function: (Int) -> Int): Int {
-        return if (value == -1 || value > 0)
-            value
-        else
-            function(value)
-    }
+    fun getOrComputeValue(value: Int, function: (Int) -> Int): Int =
+            if (value == -1 || value > 0)
+                value
+            else
+                function(value)
 
-    fun calcRequestConcurrency(restApiConfig: RestApiConfig, cpuMultiplier: Int): Int {
-        return if (restApiConfig.requestConcurrency > 0)
-            restApiConfig.requestConcurrency
-        else
-            min(postchainContext.appConfig.databaseSharedReadConcurrency,
-                    cpuMultiplier * Runtime.getRuntime().availableProcessors())
-    }
+    fun computeEffectiveRequestConcurrency(cpuMultiplier: Int): Int = min(
+            postchainContext.appConfig.databaseSharedReadConcurrency,
+            cpuMultiplier * Runtime.getRuntime().availableProcessors()
+    )
 
     val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }

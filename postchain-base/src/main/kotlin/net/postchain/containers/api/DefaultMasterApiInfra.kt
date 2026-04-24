@@ -31,13 +31,19 @@ class DefaultMasterApiInfra(
 
     override fun restApi(restApiConfig: RestApiConfig): RestApi {
 
-        dynamicRequestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
+        dynamicRequestConcurrency = getOrComputeValue(restApiConfig.requestConcurrency) {
             Runtime.getRuntime().availableProcessors() * 2
         }
-        dynamicRequestConcurrencyLocal = getValueOrComputeValue(restApiConfig.requestConcurrencyLocal) {
-            calcRequestConcurrency(restApiConfig, 2)
+        dynamicRequestConcurrencyLocal = getOrComputeValue(restApiConfig.requestConcurrencyLocal) {
+            // If the operator set api.request-concurrency explicitly but left
+            // api.request-concurrency.local at its default, reuse the requested
+            // total as the local cap; otherwise derive it from CPU and DB pool.
+            if (restApiConfig.requestConcurrency > 0)
+                restApiConfig.requestConcurrency
+            else
+                computeEffectiveRequestConcurrency(2)
         }
-        dynamicRequestConcurrencyExternal = getValueOrComputeValue(restApiConfig.requestConcurrencyExternal) {
+        dynamicRequestConcurrencyExternal = getOrComputeValue(restApiConfig.requestConcurrencyExternal) {
             val value = dynamicRequestConcurrency - dynamicRequestConcurrencyLocal
             require(value > 0) {
                 "Calculated value for api.request-concurrency.external is invalid ($value). Please check configuration."
@@ -45,7 +51,7 @@ class DefaultMasterApiInfra(
             value
         }
 
-        dynamicContainerRequestConcurrency = getValueOrComputeValue(restApiConfig.containerRequestConcurrency) {
+        dynamicContainerRequestConcurrency = getOrComputeValue(restApiConfig.containerRequestConcurrency) {
             val externalConcurrency = if (dynamicRequestConcurrencyExternal > 0)
                 dynamicRequestConcurrencyExternal else dynamicRequestConcurrency
             max(1, externalConcurrency / CONTAINER_CONCURRENCY_DIVIDER)
