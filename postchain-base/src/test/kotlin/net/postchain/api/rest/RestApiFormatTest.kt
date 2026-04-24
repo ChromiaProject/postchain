@@ -1,11 +1,12 @@
 // Copyright (c) 2023 ChromaWay AB. See README for license information.
 
-package net.postchain.api.rest.endpoint
+package net.postchain.api.rest
 
-import io.restassured.RestAssured.given
+import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.endpoint.cryptoSystem
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockWitness
@@ -15,7 +16,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.crypto.Signature
-import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -66,11 +67,11 @@ class RestApiFormatTest {
         ).thenReturn(response)
         restApi.attachModel(blockchainRID, model)
 
-        given().basePath(basePath).port(restApi.actualPort())
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .get("/transactions/$blockchainRID/${txRID.toHex()}")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .body(equalTo(compactGson.toJson(response)))
+                .body(CoreMatchers.equalTo(compactGson.toJson(response)))
     }
 }
