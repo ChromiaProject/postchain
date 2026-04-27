@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.2.4</version>
+        <version>0.2.5</version>
     </parent>
 
     <groupId>net.postchain</groupId>
@@ -374,12 +374,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.84</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.81</version>
+                <version>1.84</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>

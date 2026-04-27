@@ -8,12 +8,11 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.bc.BCObjectIdentifiers
+import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters
-import org.bouncycastle.pqc.jcajce.interfaces.DilithiumPrivateKey
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
-import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec
+import org.bouncycastle.jcajce.interfaces.MLDSAPrivateKey
+import org.bouncycastle.jcajce.spec.MLDSAParameterSpec
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
@@ -26,11 +25,9 @@ import java.security.spec.X509EncodedKeySpec
 class DilithiumCryptoSystem : BaseCryptoSystem() {
     override val id = "dilithium2"
 
-    private val dilithiumParameters = DilithiumParameters.dilithium2 // TODO: Investigate which parameters we should use
-
     init {
         if (Security.getProvider(PROVIDER) == null) {
-            Security.addProvider(BouncyCastlePQCProvider())
+            Security.addProvider(BouncyCastleProvider())
         }
     }
 
@@ -43,7 +40,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
 
     override fun generateKeyPair(): KeyPair {
         val keyPairGenerator = KeyPairGenerator.getInstance(ALGORITHM, PROVIDER).apply {
-            initialize(DilithiumParameterSpec.fromName(dilithiumParameters.name), rand)
+            initialize(MLDSAParameterSpec.ml_dsa_44, rand)
         }
 
         val keyPair = keyPairGenerator.generateKeyPair()
@@ -59,7 +56,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
 
     override fun derivePubKey(privKey: PrivKey): PubKey {
         val decodedPrivateKey = decodePrivateKey(privKey)
-        val decodedPublicKey = (decodedPrivateKey as DilithiumPrivateKey).publicKey
+        val decodedPublicKey = (decodedPrivateKey as MLDSAPrivateKey).publicKey
         return PubKey(decodedPublicKey.encoded)
     }
 
@@ -69,8 +66,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
                 try {
                     val keyInfo = SubjectPublicKeyInfo.getInstance(ASN1InputStream(subjectID).readObject())
                     val signatureAlgorithmId = keyInfo.algorithm.algorithm
-                    // TODO: Investigate which parameters we should use
-                    if (signatureAlgorithmId == BCObjectIdentifiers.dilithium2) {
+                    if (signatureAlgorithmId == NISTObjectIdentifiers.id_ml_dsa_44) {
                         ::verifyDilithiumSignature
                     } else throw UserMistake("Unknown signature algorithm identifier $signatureAlgorithmId")
                 } catch (_: Exception) {
@@ -81,12 +77,12 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
             }
 
     companion object {
-        const val ALGORITHM = "Dilithium"
-        const val PROVIDER = "BCPQC"
+        const val ALGORITHM = "ML-DSA"
+        const val PROVIDER = "BC"
 
         fun verifyDilithiumSignature(digest: ByteArray, subjectID: ByteArray, data: ByteArray): Boolean {
             if (Security.getProvider(PROVIDER) == null) {
-                Security.addProvider(BouncyCastlePQCProvider())
+                Security.addProvider(BouncyCastleProvider())
             }
 
             val signer = java.security.Signature.getInstance(ALGORITHM, PROVIDER).apply {

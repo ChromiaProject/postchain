@@ -5,8 +5,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.devtools.KeyPairCache
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.pqc.dilithium.DilithiumCryptoSystem
-import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters
-import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec
+import org.bouncycastle.jcajce.spec.MLDSAParameterSpec
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 
@@ -26,7 +25,7 @@ object DilithiumKeyPairHelper : KeyPairCache {
         // Fixed seed so we always generate the same keys
         val scr = SecureRandom.getInstance("SHA1PRNG").apply { setSeed(ByteArray(1)) }
         keyPairGenerator = KeyPairGenerator.getInstance(DilithiumCryptoSystem.ALGORITHM, DilithiumCryptoSystem.PROVIDER).apply {
-            initialize(DilithiumParameterSpec.fromName(DilithiumParameters.dilithium2.name), scr)
+            initialize(MLDSAParameterSpec.ml_dsa_44, scr)
         }
 
         for (i in 0..10) {
