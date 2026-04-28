@@ -19,7 +19,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.integrationtest.HeavyInitModuleA</string>
+                    <string>net.postchain.integrationtest.global_storage_init.HeavyInitModuleA</string>
                 </array>
             </entry>
         </dict>

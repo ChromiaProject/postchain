@@ -1,4 +1,4 @@
-package net.postchain.integrationtest
+package net.postchain.integrationtest.global_storage_init
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
@@ -14,15 +14,16 @@ import java.sql.Connection
 /**
  * Test GTX module whose [GlobalStorageInitializer] simulates heavy work (PostgreSQL advisory lock + sleep).
  *
- * Same shape as [HeavyInitModuleA] with separate counters so the test can verify each initializer
- * was invoked independently. Shares the same lock key as A — initializers run sequentially today,
- * so they don't contend, but if execution ever became concurrent, B would block on A's lock.
+ * Opt-in via [enabled]. ServiceLoader registers this for every node startup, so we keep it a no-op by
+ * default to avoid slowing down unrelated tests.
+ *
+ * Uses lock key shared with [HeavyInitModuleB] — would contend if initializers ever ran concurrently.
  */
-class HeavyInitModuleB : GTXModule, GlobalStorageInitializer {
+class HeavyInitModuleA : GTXModule, GlobalStorageInitializer {
 
     companion object : KLogging() {
-        const val LOCK_KEY = HeavyInitModuleA.LOCK_KEY
-        const val SLEEP_MS = 2000L
+        const val LOCK_KEY = 1000
+        const val SLEEP_MS = 1000L
 
         @Volatile var enabled = false
         @Volatile var callCount = 0
@@ -37,17 +38,17 @@ class HeavyInitModuleB : GTXModule, GlobalStorageInitializer {
 
     override fun initializeGlobalStorage(connection: Connection) {
         if (!enabled) return
-        logger.info { "HeavyInitModuleB: starting heavy global init (lock=$LOCK_KEY, sleep=${SLEEP_MS}ms)" }
+        logger.info { "HeavyInitModuleA: starting heavy global init (lock=$LOCK_KEY, sleep=${SLEEP_MS}ms)" }
         val start = System.currentTimeMillis()
         try {
             connection.createStatement().use { it.execute("SELECT pg_advisory_lock($LOCK_KEY)") }
-            logger.info { "HeavyInitModuleB: acquired advisory lock $LOCK_KEY" }
+            logger.info { "HeavyInitModuleA: acquired advisory lock $LOCK_KEY" }
             Thread.sleep(SLEEP_MS)
         } finally {
             connection.createStatement().use { it.execute("SELECT pg_advisory_unlock($LOCK_KEY)") }
             durationMs = System.currentTimeMillis() - start
             callCount++
-            logger.info { "HeavyInitModuleB: released lock $LOCK_KEY, completed in ${durationMs}ms" }
+            logger.info { "HeavyInitModuleA: released lock $LOCK_KEY, completed in ${durationMs}ms" }
         }
     }
 

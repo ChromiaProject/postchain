@@ -1,4 +1,4 @@
-package net.postchain.integrationtest
+package net.postchain.integrationtest.global_storage_init
 
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
