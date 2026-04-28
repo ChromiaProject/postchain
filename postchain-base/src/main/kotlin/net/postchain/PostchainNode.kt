@@ -39,7 +39,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
-        // Build storage
+        // Build storages
         val blockBuilderStorage = StorageBuilder.buildStorage(
                 appConfig,
                 maxWaitWrite = appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
@@ -47,6 +47,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 maxReadTotal = appConfig.databaseBlockBuilderReadConcurrency,
                 wipeDatabase = wipeDb,
                 name = "block builder")
+
         val sharedStorage = StorageBuilder.buildStorage(
                 appConfig,
                 maxWaitWrite = appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
@@ -64,7 +65,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 logger.info { "GlobalStorageInitializer completed: ${init::class.qualifiedName}" }
             } catch (e: Exception) {
                 logger.error(ProgrammerMistake("GlobalStorageInitializer ${init::class.qualifiedName} failed", e)) {
-                    "Global storage initialization failed for ${init::class.qualifiedName}, blockchains depending on it will fail to start"
+                    "Global storage initialization failed for ${init::class.qualifiedName}, blockchains depending on it might fail to start"
                 }
             }
         }
