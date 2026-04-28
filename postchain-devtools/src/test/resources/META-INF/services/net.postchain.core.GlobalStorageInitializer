@@ -1,1 +1,3 @@
 net.postchain.integrationtest.ModuleWithGlobalDBInitializer
+net.postchain.integrationtest.HeavyInitModuleA
+net.postchain.integrationtest.HeavyInitModuleB
