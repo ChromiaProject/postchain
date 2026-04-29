@@ -1,0 +1,3 @@
+net.postchain.integrationtest.global_storage_init.ModuleWithGlobalDBInitializer
+net.postchain.integrationtest.global_storage_init.HeavyInitModuleA
+net.postchain.integrationtest.global_storage_init.HeavyInitModuleB
