@@ -7,17 +7,21 @@ import mu.withLoggingContext
 import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.GlobalStorageInitializer
 import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.initMetrics
+import java.util.ServiceLoader
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -35,6 +39,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
+        // Build storages
         val blockBuilderStorage = StorageBuilder.buildStorage(
                 appConfig,
                 maxWaitWrite = appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
@@ -42,6 +47,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 maxReadTotal = appConfig.databaseBlockBuilderReadConcurrency,
                 wipeDatabase = wipeDb,
                 name = "block builder")
+
         val sharedStorage = StorageBuilder.buildStorage(
                 appConfig,
                 maxWaitWrite = appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
@@ -50,7 +56,21 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
+        // Run GlobalStorageInitializer(s)
+        ServiceLoader.load(GlobalStorageInitializer::class.java).forEach { init ->
+            try {
+                sharedStorage.withWriteConnection { ctx ->
+                    init.initializeGlobalStorage(ctx.conn)
+                }
+                logger.info { "GlobalStorageInitializer completed: ${init::class.qualifiedName}" }
+            } catch (e: Exception) {
+                logger.error(ProgrammerMistake("GlobalStorageInitializer ${init::class.qualifiedName} failed", e)) {
+                    "Global storage initialization failed for ${init::class.qualifiedName}, blockchains depending on it might fail to start"
+                }
+            }
+        }
 
+        // Check DB version and collation
         val databaseServerVersion = sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
@@ -58,8 +78,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
         logger.info("Database server: ${appConfig.databaseDriverclass} $databaseServerVersion")
 
+        // Build infrastructure
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
 
+        // Build context
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         val nodeConfigProvider = infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage)

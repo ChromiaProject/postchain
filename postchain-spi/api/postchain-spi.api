@@ -1590,6 +1590,10 @@ public final class net/postchain/core/FaultyExtensionException : java/lang/Runti
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
+public abstract interface class net/postchain/core/GlobalStorageInitializer {
+	public abstract fun initializeGlobalStorage (Ljava/sql/Connection;)V
+}
+
 public final class net/postchain/core/Infrastructure : java/lang/Enum {
 	public static final field Ebft Lnet/postchain/core/Infrastructure;
 	public static final field EbftContainerSub Lnet/postchain/core/Infrastructure;
