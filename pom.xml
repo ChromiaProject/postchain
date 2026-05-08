@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.2.5</version>
+        <version>0.2.6</version>
     </parent>
 
     <groupId>net.postchain</groupId>
@@ -58,10 +58,10 @@
         <kotlin-logging.version>3.0.5</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
         <!-- NB! When updating log4j2 version from 2.20.0 check dependency overrides below -->
-        <log4j2.version>2.25.3</log4j2.version>
+        <log4j2.version>2.26.0</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.1.132.Final</netty.version>
+        <netty.version>4.1.133.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
@@ -369,7 +369,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.2</version>
+                <version>42.7.11</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
