@@ -39,6 +39,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
         </dependency>
+        <!-- commons-configuration2 2.11+ declares commons-io as optional but
+             FileLocatorUtils requires it at runtime -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
 
         <!-- Testing -->
         <dependency>
