@@ -59,8 +59,9 @@ internal class ContainerHandlerIT {
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
         ContainerEnvironment.init(appConfig)
         val fileSystem = LocalFileSystem(containerNodeConfig, DefaultCommandExecutor)
+        val pubKey = appConfig.pubKey
         whenever(postchainContainerMock.containerName)
-                .doReturn(ContainerName.create(appConfig.pubKey, "docker-container-name", 20))
+                .doReturn(ContainerName.create(pubKey, "docker-container-name", 20))
 
         sut = ContainerHandler(ContainerEnvironment.dockerClient, appConfig, fileSystem)
 
