@@ -17,6 +17,7 @@ import org.http4k.server.Http4kServer
 import org.http4k.server.ServerConfig
 import org.http4k.server.ServerConfig.StopMode
 import java.net.InetSocketAddress
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
 class NettyWithCustomWorkerGroup(
@@ -33,6 +34,10 @@ class NettyWithCustomWorkerGroup(
 
     override fun toServer(http: HttpHandler): Http4kServer = object : Http4kServer {
         private val masterGroup = NioEventLoopGroup()
+        // Run the http4k handler inline on the netty worker thread (as before http4k 6.53,
+        // which introduced a mandatory appExecutor). This keeps request concurrency bounded
+        // by the sized workerGroup, which the api.request-concurrency limit relies on.
+        private val appExecutor = Executor { it.run() }
         private var closeFuture: ChannelFuture? = null
         private lateinit var address: InetSocketAddress
 
@@ -46,7 +51,7 @@ class NettyWithCustomWorkerGroup(
                             ch.pipeline().addLast("keepAlive", HttpServerKeepAliveHandler())
                             ch.pipeline().addLast("aggregator", HttpObjectAggregator(aggregatorMaxContentLength))
                             ch.pipeline().addLast("streamer", ChunkedWriteHandler())
-                            ch.pipeline().addLast("httpHandler", Http4kChannelHandler(http))
+                            ch.pipeline().addLast("httpHandler", Http4kChannelHandler(http, appExecutor))
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 1000)

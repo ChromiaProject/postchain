@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.2.9</version>
+        <version>0.2.10</version>
     </parent>
 
     <groupId>net.postchain</groupId>
@@ -65,7 +65,7 @@
         <jasn.version>1.11.3</jasn.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
-        <jackson.version>2.21.1</jackson.version>
+        <jackson.version>2.22.0</jackson.version>
         <gson.version>2.13.1</gson.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
@@ -267,7 +267,7 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-bom</artifactId>
-                <version>6.0.1.0</version>
+                <version>6.53.0.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
