@@ -16,6 +16,7 @@ import org.http4k.server.Http4kChannelHandler
 import org.http4k.server.Http4kServer
 import org.http4k.server.ServerConfig
 import org.http4k.server.ServerConfig.StopMode
+import org.http4k.server.defaultExecutor
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -33,6 +34,7 @@ class NettyWithCustomWorkerGroup(
 
     override fun toServer(http: HttpHandler): Http4kServer = object : Http4kServer {
         private val masterGroup = NioEventLoopGroup()
+        private val appExecutor = defaultExecutor()
         private var closeFuture: ChannelFuture? = null
         private lateinit var address: InetSocketAddress
 
@@ -46,7 +48,7 @@ class NettyWithCustomWorkerGroup(
                             ch.pipeline().addLast("keepAlive", HttpServerKeepAliveHandler())
                             ch.pipeline().addLast("aggregator", HttpObjectAggregator(aggregatorMaxContentLength))
                             ch.pipeline().addLast("streamer", ChunkedWriteHandler())
-                            ch.pipeline().addLast("httpHandler", Http4kChannelHandler(http))
+                            ch.pipeline().addLast("httpHandler", Http4kChannelHandler(http, appExecutor))
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 1000)
@@ -63,6 +65,7 @@ class NettyWithCustomWorkerGroup(
             val sleepTime = minOf(2000L, shutdownTimeoutMillis)
             workerGroup.shutdownGracefully(sleepTime, shutdownTimeoutMillis, MILLISECONDS).sync()
             masterGroup.shutdownGracefully(sleepTime, shutdownTimeoutMillis, MILLISECONDS).sync()
+            appExecutor.shutdown()
         }
 
         override fun port(): Int = if (port > 0) port else address.port
