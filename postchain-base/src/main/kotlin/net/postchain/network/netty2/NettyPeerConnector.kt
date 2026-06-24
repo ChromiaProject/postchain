@@ -3,7 +3,8 @@
 package net.postchain.network.netty2
 
 import io.netty.channel.ChannelPipeline
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
@@ -23,7 +24,7 @@ class NettyPeerConnector<PacketType>(
 
     companion object : KLogging()
 
-    private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("Netty"))
+    private val eventLoopGroup = MultiThreadIoEventLoopGroup(DefaultThreadFactory("Netty"), NioIoHandler.newFactory())
     var server: NettyServer? = null
 
     override fun init(

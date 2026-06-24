@@ -5,7 +5,8 @@ package net.postchain.api.rest.controller
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.gson.JsonArray
 import io.micrometer.core.instrument.Metrics
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.api.rest.BlockchainIidRef
@@ -941,7 +942,7 @@ class RestApi(
             .asServer(NettyWithCustomWorkerGroup(
                     listenPort,
                     if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(5)) else ServerConfig.StopMode.Immediate,
-                    NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build()),
+                    MultiThreadIoEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build(), NioIoHandler.newFactory()),
                     maxRequestBodySize
             ))
             .start().also {
