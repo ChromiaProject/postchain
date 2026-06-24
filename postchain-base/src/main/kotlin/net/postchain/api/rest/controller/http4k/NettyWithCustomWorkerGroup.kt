@@ -4,7 +4,9 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.http.HttpObjectAggregator
@@ -23,7 +25,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 class NettyWithCustomWorkerGroup(
         val port: Int = 8000,
         override val stopMode: StopMode,
-        private val workerGroup: NioEventLoopGroup,
+        private val workerGroup: EventLoopGroup,
         val aggregatorMaxContentLength: Int = 0 // No post data allowed by default
 ) : ServerConfig {
 
@@ -33,7 +35,7 @@ class NettyWithCustomWorkerGroup(
     }
 
     override fun toServer(http: HttpHandler): Http4kServer = object : Http4kServer {
-        private val masterGroup = NioEventLoopGroup()
+        private val masterGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
         // Run the http4k handler inline on the netty worker thread (as before http4k 6.53,
         // which introduced a mandatory appExecutor). This keeps request concurrency bounded
         // by the sized workerGroup, which the api.request-concurrency limit relies on.

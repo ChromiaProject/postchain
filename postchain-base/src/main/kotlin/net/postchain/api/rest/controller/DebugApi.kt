@@ -3,7 +3,8 @@
 package net.postchain.api.rest.controller
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import mu.KLogging
 import net.postchain.api.rest.ErrorBody
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
@@ -79,7 +80,7 @@ class DebugApi(
             .asServer(NettyWithCustomWorkerGroup(
                     listenPort,
                     if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(5)) else ServerConfig.StopMode.Immediate,
-                    NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("DEBUG-API-%d").build()))
+                    MultiThreadIoEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("DEBUG-API-%d").build(), NioIoHandler.newFactory()))
             )
             .start().also {
                 logger.info { "Debug API listening on port ${it.port()} and were given $listenPort, attached on /" }
