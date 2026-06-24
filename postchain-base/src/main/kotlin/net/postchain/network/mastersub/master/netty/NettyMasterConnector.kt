@@ -2,7 +2,8 @@
 
 package net.postchain.network.mastersub.master.netty
 
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.network.mastersub.master.MasterConnector
@@ -15,7 +16,7 @@ class NettyMasterConnector(
         port: Int
 ) : MasterConnector {
 
-    private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("NettyMasterServer"))
+    private val eventLoopGroup = MultiThreadIoEventLoopGroup(DefaultThreadFactory("NettyMasterServer"), NioIoHandler.newFactory())
 
     companion object : KLogging()
 

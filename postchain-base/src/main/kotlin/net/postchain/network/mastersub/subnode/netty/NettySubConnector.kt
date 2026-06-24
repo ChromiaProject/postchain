@@ -2,7 +2,8 @@
 
 package net.postchain.network.mastersub.subnode.netty
 
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
@@ -17,7 +18,7 @@ class NettySubConnector(
 
     companion object : KLogging()
 
-    private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("NettySubClient"))
+    private val eventLoopGroup = MultiThreadIoEventLoopGroup(DefaultThreadFactory("NettySubClient"), NioIoHandler.newFactory())
 
     override fun connectMaster(
             masterNode: PeerInfo,
