@@ -356,10 +356,6 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-            <!-- 5.6.2 is the first httpclient5 that pulls a patched httpcore5 (5.4.3); 5.4.x/5.5.x
-                 drag in httpcore5 5.3.x/5.4(<=5.4.2), flagged by CVE-2026-54399 / CVE-2026-54428
-                 (DoS via excessive HTTP headers). Bumping here propagates the fixed httpcore5 to
-                 every consumer that imports this BOM. -->
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
