@@ -96,8 +96,15 @@ abstract class BaseBlockQueries(
     private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(defaultQueryTimeout, operation)
 
     private fun <T> runOpInternal(queryTimeout: Duration, operation: (EContext) -> T): CompletionStage<T> {
+        // If this thread already holds a write connection for this chain (e.g. the block-build
+        // thread during the first block after a config migration), reuse it so that a same-chain
+        // self-query runs inside the in-progress transaction instead of opening a second
+        // connection that would self-block on the block build's own (exclusive) locks.
+        // Cross-chain queries hold no write context for this chainId and open a read connection
+        // exactly as before. Mirrors the datasource reuse in ContainerChain0BlockchainConfiguration.
+        val existingWriteCtx = storage.getExistingWriteContext(chainId)
         val ctx = try {
-            storage.openReadConnection(chainId)
+            existingWriteCtx ?: storage.openReadConnection(chainId)
         } catch (e: SQLException) {
             if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed and database ${e.message}", chainId, e))
             return CompletableFuture.failedStage(e)
@@ -109,7 +116,8 @@ abstract class BaseBlockQueries(
             logger.trace(e) { "An error occurred" }
             return CompletableFuture.failedStage(e)
         } finally {
-            storage.closeReadConnection(ctx)
+            // Only close a connection we opened here; never close the reused write connection.
+            if (ctx.id != existingWriteCtx?.id) storage.closeReadConnection(ctx)
         }
 
         return CompletableFuture.completedStage(result)
