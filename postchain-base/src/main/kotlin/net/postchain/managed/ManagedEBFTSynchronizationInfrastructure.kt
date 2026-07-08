@@ -23,14 +23,17 @@ import org.apache.hc.core5.util.TimeValue
 import org.apache.hc.core5.util.Timeout
 import org.http4k.client.ApacheClient
 import org.http4k.core.then
-import org.http4k.filter.ClientFilters
 import org.http4k.filter.GzipCompressionMode
+import org.http4k.filter.RequestFilters
 
 open class ManagedEBFTSynchronizationInfrastructure(postchainContext: PostchainContext,
                                                     peersCommConfigFactory: PeersCommConfigFactory = DefaultManagedPeersCommConfigFactory())
     : EBFTSynchronizationInfrastructure(postchainContext, peersCommConfigFactory) {
     private val forwardingClient by lazy {
-        ClientFilters.GZip(GzipCompressionMode.Streaming()).then(ApacheClient(HttpClients.custom()
+        // Compress the request body only; let httpclient5 transparently decompress responses
+        // (httpclient5 5.5+ decodes the body but keeps the Content-Encoding header, so an
+        // additional response-side decoder would double-decompress).
+        RequestFilters.GZip(GzipCompressionMode.Streaming()).then(ApacheClient(HttpClients.custom()
                 .setRetryStrategy(DefaultHttpRequestRetryStrategy(0, TimeValue.ZERO_MILLISECONDS)) // no retries
                 .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
                         .setDefaultConnectionConfig(ConnectionConfig.custom()

@@ -23,7 +23,6 @@ import org.http4k.core.Request
 import org.http4k.core.Response
 import java.io.EOFException
 import java.io.IOException
-import java.util.zip.GZIPInputStream
 import kotlin.random.Random
 
 class BaseTransactionForwarder(
@@ -101,13 +100,11 @@ class BaseTransactionForwarder(
     }
 
     private fun responseStream(response: Response): BoundedInputStream {
-        val originalStream = if (response.header("content-encoding") == "gzip") {
-            GZIPInputStream(response.body.stream)
-        } else {
-            response.body.stream
-        }
+        // The response body is already decoded by httpclient5's transparent decompression;
+        // the forwarding client no longer decompresses at the http4k layer. We must not decode
+        // again here (httpclient5 5.5+ leaves the Content-Encoding header in place after decoding).
         return BoundedInputStream.builder()
-                .setInputStream(originalStream)
+                .setInputStream(response.body.stream)
                 .setMaxCount(64 * 1024)
                 .setPropagateClose(true)
                 .get()
