@@ -90,6 +90,13 @@ build:
     refs:
       - dev
       - tags
+  cache:
+    - paths: [ .m2/repository ]
+    - key: kotlin-ic
+      paths:
+        - "*/target/classes"
+        - "*/target/test-classes"
+        - "*/target/kotlin-ic"
   script:
     - mvn
       $MAVEN_CLI_OPTS

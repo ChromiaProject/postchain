@@ -45,6 +45,10 @@
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
         <skipSurefireTests>false</skipSurefireTests>
+        <!-- Concurrent test-class execution for modules whose tests are known
+             free of shared state (no DB, no static mutation, no shared files/ports).
+             Opt in per module only after auditing its test suite. -->
+        <junit.parallel.classes>false</junit.parallel.classes>
 
         <!-- Testing -->
         <junit.version>5.9.1</junit.version>
@@ -671,6 +675,9 @@
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.timeout.default=5m
+                            junit.jupiter.execution.parallel.enabled=${junit.parallel.classes}
+                            junit.jupiter.execution.parallel.mode.default=same_thread
+                            junit.jupiter.execution.parallel.mode.classes.default=concurrent
                         </configurationParameters>
                     </properties>
                 </configuration>

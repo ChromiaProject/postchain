@@ -16,6 +16,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
+        <junit.parallel.classes>true</junit.parallel.classes>
     </properties>
 
     <dependencies>
