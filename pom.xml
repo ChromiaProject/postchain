@@ -65,7 +65,7 @@
         <log4j2.version>2.26.1</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.2.15.Final</netty.version>
+        <netty.version>4.2.16.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
@@ -509,6 +509,11 @@
                 <groupId>io.micrometer</groupId>
                 <artifactId>micrometer-core</artifactId>
                 <version>${micrometer.version}</version>
+            </dependency>
+            <dependency> <!-- transitive of micrometer-core; raise above CVE-2026-14683/14686 -->
+                <groupId>org.hdrhistogram</groupId>
+                <artifactId>HdrHistogram</artifactId>
+                <version>2.2.2</version>
             </dependency>
             <dependency>
                 <groupId>io.micrometer</groupId>
