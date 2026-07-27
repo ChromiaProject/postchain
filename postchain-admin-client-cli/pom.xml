@@ -13,6 +13,10 @@
     <name>Postchain Admin Client CLI</name>
     <description>CLI for communicating with a postchain node running in server mode.</description>
 
+    <properties>
+        <junit.parallel.classes>true</junit.parallel.classes>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>

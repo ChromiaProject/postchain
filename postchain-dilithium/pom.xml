@@ -11,6 +11,10 @@
     <artifactId>postchain-dilithium</artifactId>
     <name>Dilithium PQC signing algorithm</name>
 
+    <properties>
+        <junit.parallel.classes>true</junit.parallel.classes>
+    </properties>
+
     <dependencies>
         <!-- Postchain -->
         <dependency>
