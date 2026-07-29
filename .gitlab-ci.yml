@@ -8,7 +8,7 @@ include:
 
 .setup:
   tags:
-    - saas-linux-large-arm64
+    - saas-linux-large-amd64
   before_script:
     - docker run
       --detach
