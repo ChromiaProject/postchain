@@ -5,7 +5,11 @@ package net.postchain.gtv.gtvml
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Test
 
 class GtvMLEncodeArraysTest {

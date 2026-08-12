@@ -3,12 +3,16 @@
 package net.postchain.gtv.merkle.proof
 
 import net.postchain.gtv.generateProof
-import net.postchain.gtv.merkle.*
+import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
+import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreeHelper
+import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 /**
  * We will generate proofs from mixes of Dict and Arrays

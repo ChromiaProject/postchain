@@ -163,9 +163,9 @@ object GtvObjectMapper {
                 getAndValidatePrimaryConstructorParameters(obj).map { parameter ->
                     val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
                     val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
-                    val name = parameter.findAnnotation<Name>()?.name
-                            ?: parameter.name
-                            ?: throw IllegalArgumentException("parameter ${parameter.name} must have Name annotation")
+                    val name = requireNotNull(parameter.findAnnotation<Name>()?.name ?: parameter.name) {
+                        "parameter ${parameter.name} must have Name annotation"
+                    }
                     name to gtv
                 }
             }
@@ -236,9 +236,9 @@ private fun transientParameterToValue(transient: Map<String, Any>, param: KParam
 }
 
 private fun annotationToValue(gtv: Gtv, param: KParameter, transient: Map<String, Any>): Any? {
-    val name = param.findAnnotation<Name>()?.name
-            ?: param.name
-            ?: throw IllegalArgumentException("parameter ${param.name} must have Name annotation")
+    val name = requireNotNull(param.findAnnotation<Name>()?.name ?: param.name) {
+        "parameter ${param.name} must have Name annotation"
+    }
     try {
         val gtvField = gtv[name]
         if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField, transient, name)
@@ -396,11 +396,14 @@ private fun KClassifier?.isGtv() = (this as? KClass<*>)?.isSubclassOf(Gtv::class
 private fun KClassifier?.isEnum(): Boolean = (this as? KClass<*>)?.java?.isEnum == true
 
 private fun getEnumValue(classType: KType, enumValue: Gtv, context: String): Any {
-    @Suppress("UNCHECKED_CAST") val enum = (classType.classifier as? KClass<*>)?.java?.enumConstants as? Array<Enum<*>>
-            ?: throw IllegalArgumentException("Invalid enum type ${classType.classifier}; context: $context")
+    @Suppress("UNCHECKED_CAST") val enum =
+            requireNotNull((classType.classifier as? KClass<*>)?.java?.enumConstants as? Array<Enum<*>>) {
+                "Invalid enum type ${classType.classifier}; context: $context"
+            }
     return when (enumValue) {
-        is GtvString -> enum.firstOrNull { it.name == enumValue.asString() }
-                ?: throw IllegalArgumentException("invalid value '${enumValue.asString()}' for enum ${classType.classifier}; context: $context")
+        is GtvString -> requireNotNull(enum.firstOrNull { it.name == enumValue.asString() }) {
+            "invalid value '${enumValue.asString()}' for enum ${classType.classifier}; context: $context"
+        }
 
         is GtvInteger -> try {
             enum[enumValue.asInteger().toInt()]

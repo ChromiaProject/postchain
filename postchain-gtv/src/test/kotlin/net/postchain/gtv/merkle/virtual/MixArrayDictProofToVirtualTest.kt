@@ -12,9 +12,9 @@ import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
+import org.junit.jupiter.api.Test
 
 class MixArrayDictProofToVirtualTest {
 
@@ -42,7 +42,7 @@ class MixArrayDictProofToVirtualTest {
         try {
             virtualGtv["one"]!![2]
             fail()
-        } catch (e: UserMistake) {
+        } catch (_: UserMistake) {
             // Nothing, it's what we expect
         }
     }

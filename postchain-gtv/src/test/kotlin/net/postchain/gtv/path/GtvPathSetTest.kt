@@ -2,7 +2,11 @@
 
 package net.postchain.gtv.path
 
-import net.postchain.gtv.merkle.path.*
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
+import net.postchain.gtv.merkle.path.DictGtvPathElement
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathLeafElement
+import net.postchain.gtv.merkle.path.GtvPathSet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

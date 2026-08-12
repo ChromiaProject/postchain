@@ -7,8 +7,8 @@ import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper.expecedMerkleRoot_dict1_array4
 import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkleHashSummary
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class MixArrayDictToMerkleRootTest {
 

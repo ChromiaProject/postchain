@@ -1,0 +1,202 @@
+public final class net/postchain/common/BlockchainRid {
+	public static final field Companion Lnet/postchain/common/BlockchainRid$Companion;
+	public fun <init> (Lnet/postchain/common/types/WrappedByteArray;)V
+	public fun <init> ([B)V
+	public static final fun buildFromHex (Ljava/lang/String;)Lnet/postchain/common/BlockchainRid;
+	public final fun component1 ()Lnet/postchain/common/types/WrappedByteArray;
+	public final fun copy (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/common/BlockchainRid;
+	public static synthetic fun copy$default (Lnet/postchain/common/BlockchainRid;Lnet/postchain/common/types/WrappedByteArray;ILjava/lang/Object;)Lnet/postchain/common/BlockchainRid;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()[B
+	public final fun getWData ()Lnet/postchain/common/types/WrappedByteArray;
+	public fun hashCode ()I
+	public final fun toHex ()Ljava/lang/String;
+	public final fun toShortHex ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/common/BlockchainRid$Companion {
+	public final fun buildFromHex (Ljava/lang/String;)Lnet/postchain/common/BlockchainRid;
+	public final fun buildRepeat (B)Lnet/postchain/common/BlockchainRid;
+	public final fun getZERO_RID ()Lnet/postchain/common/BlockchainRid;
+}
+
+public final class net/postchain/common/UtilsKt {
+	public static final fun hexStringToByteArray (Ljava/lang/String;)[B
+	public static final fun hexStringToWrappedByteArray (Ljava/lang/String;)Lnet/postchain/common/types/WrappedByteArray;
+	public static final fun safeToHex ([BI)Ljava/lang/String;
+	public static final fun toHex ([B)Ljava/lang/String;
+	public static final fun wrap ([B)Lnet/postchain/common/types/WrappedByteArray;
+}
+
+public final class net/postchain/common/data/TypesKt {
+	public static final field HASH_LENGTH I
+	public static final field KECCAK256 Ljava/lang/String;
+	public static final field SHA256 Ljava/lang/String;
+	public static final fun getEMPTY_HASH ()[B
+}
+
+public final class net/postchain/common/exception/AlreadyExists : net/postchain/common/exception/UserMistake {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/postchain/common/exception/NotFound : net/postchain/common/exception/UserMistake {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public class net/postchain/common/exception/ProgrammerMistake : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/postchain/common/exception/SpecialTransactionFailed : net/postchain/common/exception/UserMistake {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/postchain/common/exception/TransactionFailed : net/postchain/common/exception/UserMistake {
+	public fun <init> ([B)V
+}
+
+public final class net/postchain/common/exception/TransactionIncorrect : net/postchain/common/exception/UserMistake {
+	public fun <init> ([BLjava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> ([BLjava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public class net/postchain/common/exception/UserMistake : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/postchain/common/types/WrappedByteArray {
+	public static final field Companion Lnet/postchain/common/types/WrappedByteArray$Companion;
+	public fun <init> (I)V
+	public fun <init> (ILkotlin/jvm/functions/Function1;)V
+	public fun <init> ([B)V
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromHex (Ljava/lang/String;)Lnet/postchain/common/types/WrappedByteArray;
+	public final fun get (I)B
+	public final fun getData ()[B
+	public final fun getSize ()I
+	public fun hashCode ()I
+	public final fun iterator ()Lkotlin/collections/ByteIterator;
+	public final fun toHex ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/common/types/WrappedByteArray$Companion {
+	public final fun fromHex (Ljava/lang/String;)Lnet/postchain/common/types/WrappedByteArray;
+}
+
+public abstract interface class net/postchain/crypto/CryptoSystem : net/postchain/crypto/Digester {
+	public abstract fun buildSigMaker (Lnet/postchain/crypto/KeyPair;)Lnet/postchain/crypto/SigMaker;
+	public abstract fun buildSigMaker ([B[B)Lnet/postchain/crypto/SigMaker;
+	public abstract fun derivePubKey (Lnet/postchain/crypto/PrivKey;)Lnet/postchain/crypto/PubKey;
+	public abstract fun generateKeyPair ()Lnet/postchain/crypto/KeyPair;
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getRandom ()Lkotlin/random/Random;
+	public abstract fun getRandomBytes (I)[B
+	public abstract fun makeVerifier ()Lkotlin/jvm/functions/Function2;
+	public abstract fun validatePubKey ([B)Z
+	public abstract fun verifyDigest ([BLnet/postchain/crypto/Signature;)Z
+}
+
+public abstract interface class net/postchain/crypto/Digester {
+	public abstract fun digest ([B)[B
+}
+
+public abstract interface class net/postchain/crypto/Key {
+	public fun getData ()[B
+	public fun getKey ()[B
+	public abstract fun getWData ()Lnet/postchain/common/types/WrappedByteArray;
+	public fun hex ()Ljava/lang/String;
+	public fun toShortHex ()Ljava/lang/String;
+}
+
+public final class net/postchain/crypto/Key$DefaultImpls {
+	public static fun getData (Lnet/postchain/crypto/Key;)[B
+	public static fun getKey (Lnet/postchain/crypto/Key;)[B
+	public static fun hex (Lnet/postchain/crypto/Key;)Ljava/lang/String;
+	public static fun toShortHex (Lnet/postchain/crypto/Key;)Ljava/lang/String;
+}
+
+public final class net/postchain/crypto/KeyPair {
+	public static final field Companion Lnet/postchain/crypto/KeyPair$Companion;
+	public fun <init> (Lnet/postchain/crypto/PubKey;Lnet/postchain/crypto/PrivKey;)V
+	public fun <init> ([B[B)V
+	public final fun component1 ()Lnet/postchain/crypto/PubKey;
+	public final fun component2 ()Lnet/postchain/crypto/PrivKey;
+	public final fun copy (Lnet/postchain/crypto/PubKey;Lnet/postchain/crypto/PrivKey;)Lnet/postchain/crypto/KeyPair;
+	public static synthetic fun copy$default (Lnet/postchain/crypto/KeyPair;Lnet/postchain/crypto/PubKey;Lnet/postchain/crypto/PrivKey;ILjava/lang/Object;)Lnet/postchain/crypto/KeyPair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPrivKey ()Lnet/postchain/crypto/PrivKey;
+	public final fun getPubKey ()Lnet/postchain/crypto/PubKey;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;Ljava/lang/String;)Lnet/postchain/crypto/KeyPair;
+	public final fun sigMaker (Lnet/postchain/crypto/CryptoSystem;)Lnet/postchain/crypto/SigMaker;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/crypto/KeyPair$Companion {
+	public final fun of (Ljava/lang/String;Ljava/lang/String;)Lnet/postchain/crypto/KeyPair;
+}
+
+public final class net/postchain/crypto/PrivKey : net/postchain/crypto/Key {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Lnet/postchain/common/types/WrappedByteArray;)V
+	public fun <init> ([B)V
+	public final fun component1 ()Lnet/postchain/common/types/WrappedByteArray;
+	public final fun copy (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/crypto/PrivKey;
+	public static synthetic fun copy$default (Lnet/postchain/crypto/PrivKey;Lnet/postchain/common/types/WrappedByteArray;ILjava/lang/Object;)Lnet/postchain/crypto/PrivKey;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getData ()[B
+	public fun getKey ()[B
+	public fun getWData ()Lnet/postchain/common/types/WrappedByteArray;
+	public fun hashCode ()I
+	public fun hex ()Ljava/lang/String;
+	public fun toShortHex ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/crypto/PubKey : net/postchain/crypto/Key {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Lnet/postchain/common/types/WrappedByteArray;)V
+	public fun <init> ([B)V
+	public final fun component1 ()Lnet/postchain/common/types/WrappedByteArray;
+	public final fun copy (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/crypto/PubKey;
+	public static synthetic fun copy$default (Lnet/postchain/crypto/PubKey;Lnet/postchain/common/types/WrappedByteArray;ILjava/lang/Object;)Lnet/postchain/crypto/PubKey;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getData ()[B
+	public fun getKey ()[B
+	public fun getWData ()Lnet/postchain/common/types/WrappedByteArray;
+	public fun hashCode ()I
+	public fun hex ()Ljava/lang/String;
+	public fun toShortHex ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/crypto/Sha256digestKt {
+	public static final fun sha256Digest ([B)[B
+}
+
+public abstract interface class net/postchain/crypto/SigMaker {
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun signDigest ([B)Lnet/postchain/crypto/Signature;
+	public abstract fun signMessage ([B)Lnet/postchain/crypto/Signature;
+}
+
+public final class net/postchain/crypto/Signature {
+	public fun <init> ([B[B)V
+	public final fun component1 ()[B
+	public final fun component2 ()[B
+	public final fun copy ([B[B)Lnet/postchain/crypto/Signature;
+	public static synthetic fun copy$default (Lnet/postchain/crypto/Signature;[B[BILjava/lang/Object;)Lnet/postchain/crypto/Signature;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()[B
+	public final fun getSubjectID ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

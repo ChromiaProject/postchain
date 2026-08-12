@@ -1,5 +1,14 @@
 # Postchain-gtv
 
+GTV is split across two modules. `postchain-gtv-min` holds the format itself — the types, ASN.1 DER encoding and
+decoding, merkle hashing with proofs and virtual GTV, and the textual notation — and depends on nothing beyond
+`postchain-common-min`, so it survives GraalVM native-image. This module adds the parts that need a library:
+`GtvObjectMapper` and its annotations (`kotlin-reflect`), the Gson bindings, GtvML (JAXB) and `GtvFileReader`.
+Everything keeps the package names it always had, so which module a class comes from does not affect callers.
+
+A third module, `postchain-gtv-jackson`, implements `postchain-gtv-min`'s `GtvJsonCodec` on Jackson's streaming
+API. It is an alternative to the Gson bindings here, not a replacement, and pulls in no reflection.
+
 ## GTV
 
 GTV is a general purpose protocol, used to express data in
@@ -12,12 +21,20 @@ GTV is a general purpose protocol, used to express data in
 GTV is usually converted to ASN.1 DER when it's transported over the wire, and this is what we mean when
 we say "binary" format.
 
-The schema for GTV encoding can be found [here](src/main/resources/asn/gtv_messages.asn).
+The schema for GTV encoding can be found [here](../postchain-gtv-min/src/main/resources/asn/gtv_messages.asn),
+alongside the codec that implements it.
 
 ## XML and JSON
 
 Sometimes we use XML or JSON to express GTV, and we have code to translate between these format to GTV kotlin types
 and back. For XML we use "gtvml" classes.
+
+For JSON there is one mapping and two implementations of it, both behind `postchain-gtv-min`'s `GtvJsonCodec`:
+`net.postchain.gtv.json.gson.GtvJson` here, and `net.postchain.gtv.json.jackson.GtvJson` in
+`postchain-gtv-jackson`. They are interchangeable down to the byte, which `JsonCodecEquivalenceTest` holds them
+to over generated values and generated malformed documents. Gson is the one that defines those bytes, so it is
+also checked against the older `make_gtv_gson()` entry points in `gtvjson.kt`, which remain for existing
+callers.
 
 ## GTV merkle hash calculation
 

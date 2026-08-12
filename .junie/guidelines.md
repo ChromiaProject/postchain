@@ -27,8 +27,11 @@ mvn clean verify -DskipTests
 
 The project is organized into multiple modules:
 
+- `postchain-common-min`: The common types that dependency-free modules need, with no dependency of its own
 - `postchain-common`: Common utilities and interfaces
-- `postchain-gtv`: GTV (Generic Type Value) implementation
+- `postchain-gtv-min`: The GTV format itself: types, ASN.1 DER, merkle hashing, the textual notation
+- `postchain-gtv`: What GTV needs a library for: GtvObjectMapper, the Gson JSON codec, GtvML
+- `postchain-gtv-jackson`: The same JSON codec built on Jackson's streaming API
 - `postchain-spi`: Service Provider Interface
 - `postchain-base`: Core functionality
 - `postchain-server`: Server implementation

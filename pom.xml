@@ -14,8 +14,11 @@
     <artifactId>postchain</artifactId>
     <version>${revision}</version>
     <modules>
+        <module>postchain-common-min</module>
         <module>postchain-common</module>
+        <module>postchain-gtv-min</module>
         <module>postchain-gtv</module>
+        <module>postchain-gtv-jackson</module>
         <module>postchain-gtv-yaml</module>
         <module>postchain-gtx-data</module>
         <module>postchain-spi</module>
@@ -130,6 +133,21 @@
             </dependency>
 
             <!-- Postchain -->
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-common-min</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtv-min</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtv-jackson</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-common</artifactId>

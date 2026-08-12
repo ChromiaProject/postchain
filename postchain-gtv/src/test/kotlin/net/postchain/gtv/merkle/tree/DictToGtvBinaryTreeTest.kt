@@ -2,7 +2,11 @@
 
 package net.postchain.gtv.merkle.tree
 
-import net.postchain.gtv.merkle.*
+import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper
+import net.postchain.gtv.merkle.GtvBinaryTree
+import net.postchain.gtv.merkle.GtvBinaryTreeFactory
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet

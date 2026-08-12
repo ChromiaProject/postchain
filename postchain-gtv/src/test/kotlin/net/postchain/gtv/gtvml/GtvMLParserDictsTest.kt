@@ -4,7 +4,12 @@ package net.postchain.gtv.gtvml
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 

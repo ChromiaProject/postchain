@@ -6,8 +6,8 @@ import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkleHashSummary
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 /**
  * In this class we test if we can calculate merkle roots out of Gtv array structures.

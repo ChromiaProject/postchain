@@ -7,6 +7,26 @@ import net.postchain.gtv.merkle.proof.MerkleHashSummary
 import java.util.Arrays
 
 
+/**
+ *  Holds the merkle root of the structure (from the cache)
+ *
+ *  Note: we can ONLY use this type if there is no path leading in here.
+ *
+ *  @property cachedSummary is the summary we found in the cache for this leaf
+ */
+data class CachedLeaf(val cachedSummary: MerkleHashSummary): BinaryTreeElement() {
+    init {
+        setPathElement(null) // We cannot use
+    }
+
+    override fun getPrefixByte(): Byte {
+        throw IllegalStateException("Why are we asking for a prefix on a hash we found in the cache?")
+    }
+
+    override fun getNrOfBytes(): Int = cachedSummary.nrOfBytes
+}
+
+
 data class CacheElement(val orgGtv: Gtv, val merkleHashSummary: MerkleHashSummary, var age: Long) {
 
     /**

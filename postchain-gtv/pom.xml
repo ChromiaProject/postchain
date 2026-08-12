@@ -24,17 +24,11 @@
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtv-min</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging-jvm</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.beanit</groupId>
-            <artifactId>jasn1</artifactId>
         </dependency>
 
         <dependency>
@@ -63,6 +57,23 @@
         </dependency>
 
         <!-- Test dependencies -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtv-min</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtv-jackson</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
@@ -113,77 +124,6 @@
                             <schemaDirectory>${project.basedir}/src/main/resources/gtxml</schemaDirectory>
                             <episode>false</episode> <!-- skips episode file generation -->
                             <generatePackage>net.postchain.gtv.gtxml</generatePackage>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                   <execution>
-                    <id>asn1-register-sources</id>
-                    <phase>generate-sources</phase>
-                    <goals>
-                      <goal>add-source</goal>
-                    </goals>
-                    <configuration>
-                      <sources>
-                        <source>${project.build.directory}/generated-sources/asn</source>
-                      </sources>
-                    </configuration>
-                  </execution>
-                  <execution>
-                    <id>check-asn1-compile</id>
-                    <phase>generate-sources</phase>
-                    <goals>
-                      <goal>uptodate-property</goal>
-                    </goals>
-                    <configuration>
-                      <name>asn1.notRequired</name>
-                      <fileSet>
-                        <directory>${project.basedir}/src/main/resources/asn</directory>
-                        <outputDirectory>${project.build.directory}/generated-sources/asn/net/postchain/gtv/gtvmessages</outputDirectory>
-                        <mapper>
-                          <type>merge</type>
-                          <to>RawGtv.java</to>
-                        </mapper>
-                      </fileSet>
-                    </configuration>
-                  </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.beanit</groupId>
-                        <artifactId>jasn1-compiler</artifactId>
-                        <version>${jasn.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>generate-asn1</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <phase>generate-sources</phase>
-                        <configuration>
-                            <!--suppress MavenModelInspection -->
-                            <skip>${asn1.notRequired}</skip>
-                            <includePluginDependencies>true</includePluginDependencies>
-                            <mainClass>com.beanit.jasn1.compiler.Compiler</mainClass>
-                            <arguments>
-                                <argument>-f</argument>
-                                <argument>${project.basedir}/src/main/resources/asn/gtv_messages.asn</argument>
-                                <argument>-o</argument>
-                                <argument>${project.build.directory}/generated-sources/asn/</argument>
-                                <argument>-p</argument>
-                                <argument>net.postchain.gtv</argument>
-                                <argument>-l</argument>
-                            </arguments>
                         </configuration>
                     </execution>
                 </executions>

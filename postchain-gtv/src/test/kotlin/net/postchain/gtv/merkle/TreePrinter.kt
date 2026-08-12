@@ -3,8 +3,18 @@
 package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.gtv.*
-import net.postchain.gtv.merkle.proof.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
+import net.postchain.gtv.merkle.proof.MerkleProofElement
+import net.postchain.gtv.merkle.proof.ProofHashedLeaf
+import net.postchain.gtv.merkle.proof.ProofNode
+import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
+import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
+import net.postchain.gtv.merkle.proof.ProofValueLeaf
 import kotlin.math.pow
 
 

@@ -75,8 +75,7 @@ object GtvMLParser {
     }
 
     private fun parseParam(paramType: ParamType, params: Map<String, Gtv>): Gtv {
-        val gtv = params[paramType.key]
-                ?: throw IllegalArgumentException("Can't resolve param ${paramType.key}")
+        val gtv = requireNotNull(params[paramType.key]) { "Can't resolve param ${paramType.key}" }
 
         if (paramType.type != null && GtvType.fromString(paramType.type) != gtv.type) {
             throw IllegalArgumentException("Incompatible types of <param> and Gtv: " +
