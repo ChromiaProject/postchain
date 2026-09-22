@@ -20,6 +20,7 @@ import net.postchain.gtv.GtvDictionary
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -43,6 +44,7 @@ internal class ContainerHandlerIT {
 
     @Test
     @Tag("docker")
+    @Disabled("The subnode image tag this test pulls is not currently published to the registry")
     fun `create and start container`(@TempDir tempDir: Path) {
         val dockerHost = getResolvedDockerHost()?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")
         val appConfig = AppConfig.fromPropertiesFile(
