@@ -8,7 +8,8 @@ include:
 
 .setup:
   tags:
-    - saas-linux-large-amd64
+    - linux-large-amd64
+    - chromaway
   before_script:
     - docker run
       --detach
