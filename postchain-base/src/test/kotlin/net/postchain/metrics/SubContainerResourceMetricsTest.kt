@@ -5,8 +5,8 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNull
 import io.micrometer.core.instrument.Metrics
-import io.micrometer.prometheus.PrometheusConfig
-import io.micrometer.prometheus.PrometheusMeterRegistry
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import net.postchain.containers.bpm.ContainerResourceUsage
 import net.postchain.metrics.SubContainerResourceMetrics.Companion.getContainerMetricValue
 import org.awaitility.Awaitility

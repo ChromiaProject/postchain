@@ -13,13 +13,12 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import io.micrometer.prometheus.PrometheusConfig
-import io.micrometer.prometheus.PrometheusMeterRegistry
-import io.prometheus.client.exporter.HTTPServer
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.prometheus.metrics.exporter.httpserver.HTTPServer
 import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
 import net.postchain.logging.NODE_PUBKEY_TAG
-import java.net.InetSocketAddress
 
 fun initMetrics(appConfig: AppConfig) {
     val registry = Metrics.globalRegistry
@@ -51,7 +50,10 @@ private fun initPrometheus(registry: CompositeMeterRegistry, port: Int) {
     val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     registry.add(prometheusRegistry)
     try {
-        HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
+        HTTPServer.builder()
+                .port(port)
+                .registry(prometheusRegistry.prometheusRegistry)
+                .buildAndStart()
         PostchainNode.logger.info("Exposing Prometheus metrics on port $port")
     } catch (e: Exception) {
         PostchainNode.logger.error(e) { "Error when starting Prometheus metrics on $port" }
