@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.13</version>
+                <version>42.7.14</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
@@ -491,7 +491,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>32.1.2-jre</version>
+                <version>33.7.2-jre</version>
             </dependency>
 
             <dependency>
