@@ -331,7 +331,7 @@ open class ManagedBlockchainProcessManager(
 
         try {
             val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
-            withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
+            withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString(), BLOCKCHAIN_RID_TAG to chainIdToBrid[CHAIN0]?.toHex()) {
                 logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: ${inactiveChains.associate { it.blockchainRid.toHex() to (it.state to it.height) }}" }
 
                 // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
