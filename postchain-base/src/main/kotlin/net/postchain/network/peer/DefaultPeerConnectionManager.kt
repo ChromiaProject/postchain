@@ -328,7 +328,7 @@ open class DefaultPeerConnectionManager<PacketType>(
 
             // Find the connected Chain IID (Will report any error it finds)
             val chainID = getChainIdOnConnected(descriptor, connection) ?: return null
-            withLoggingContext(CHAIN_IID_TAG to chainID.toString()) {
+            withLoggingContext(CHAIN_IID_TAG to chainID.toString(), BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
                 // Find the connected chain (Will report any error it finds)
                 val chain = getChainOnConnected(chainID, descriptor, connection) ?: return null
 
@@ -420,7 +420,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                 return
             }
 
-            withLoggingContext(CHAIN_IID_TAG to chainID.toString()) {
+            withLoggingContext(CHAIN_IID_TAG to chainID.toString(), BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
                 // Find the disconnected chain
                 val chain = chainsWithConnections.get(chainID)
                 if (chain == null) {

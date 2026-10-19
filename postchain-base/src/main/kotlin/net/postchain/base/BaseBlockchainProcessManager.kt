@@ -114,7 +114,7 @@ open class BaseBlockchainProcessManager(
     private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, pendingConfigHash: ByteArray?) {
         logger.info { "startBlockchainAsync() - Enqueue async starting of blockchain with chainId: $chainId" }
         executor.execute {
-            withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+            withLoggingContext(CHAIN_IID_TAG to chainId.toString(), BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()) {
                 try {
                     startBlockchainInternal(chainId, bTrace, pendingConfigHash)
                 } catch (e: Exception) {
@@ -155,7 +155,7 @@ open class BaseBlockchainProcessManager(
      * @return the Blockchain's RID if successful
      * @throws UserMistake if failed
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid = withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid = withLoggingContext(CHAIN_IID_TAG to chainId.toString(), BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()) {
         startBlockchainInternal(chainId, bTrace, null)
     }
 

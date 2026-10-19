@@ -32,6 +32,7 @@ import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.CONTAINER_NAME_TAG
 import net.postchain.managed.BaseDirectoryDataSource
@@ -200,7 +201,7 @@ class ContainerManagedBlockchainProcessManager(
 
         // Launching new and updated state blockchains except chain0
         toLaunch.filter { it.chainId != CHAIN0 }.forEach { bcInfo ->
-            withLoggingContext(CHAIN_IID_TAG to bcInfo.chainId.toString()) {
+            withLoggingContext(CHAIN_IID_TAG to bcInfo.chainId.toString(), BLOCKCHAIN_RID_TAG to chainIdToBrid[bcInfo.chainId]?.toHex()) {
                 if (bcInfo.system) {
                     val process = masterLaunched[bcInfo.chainId]
                     if (process == null) {
