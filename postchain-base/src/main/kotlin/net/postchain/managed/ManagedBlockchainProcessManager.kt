@@ -403,7 +403,7 @@ open class ManagedBlockchainProcessManager(
                                         ?: BaseBlockBuildingStrategyConfigurationData.default).maxBlockTime
 
                                 if (elapsedTimeSinceCommit >= (maxBlockTime * 2)) {
-                                    withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+                                    withLoggingContext(CHAIN_IID_TAG to chainId.toString(), BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()) {
                                         logger.info { "Chain has been idling for ${Duration.ofMillis(elapsedTimeSinceCommit).toKotlinDuration()} and will be restarted" }
                                     }
                                     startBlockchainAsync(chainId, null)
