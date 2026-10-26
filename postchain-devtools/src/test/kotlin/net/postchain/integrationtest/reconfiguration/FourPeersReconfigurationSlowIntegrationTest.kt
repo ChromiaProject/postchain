@@ -12,13 +12,12 @@ import net.postchain.devtools.enqueueTxs
 import net.postchain.devtools.enqueueTxsAndAwaitBuiltBlock
 import net.postchain.devtools.getModules
 import net.postchain.devtools.query
+import net.postchain.integrationtest.reconfiguration.TxChartHelper.assertChartsEqual
 import net.postchain.integrationtest.reconfiguration.TxChartHelper.buildTxChart
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.skyscreamer.jsonassert.JSONAssert
-import org.skyscreamer.jsonassert.JSONCompareMode
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.timer
 
@@ -166,9 +165,9 @@ class FourPeersReconfigurationSlowIntegrationTest : ReconfigurationTest() {
 
         // Asserting equality of tx charts of all nodes
         val chart0 = buildTxChart(nodes[0], DEFAULT_CHAIN_IID)
-        JSONAssert.assertEquals(chart0, buildTxChart(nodes[1], DEFAULT_CHAIN_IID), JSONCompareMode.NON_EXTENSIBLE)
-        JSONAssert.assertEquals(chart0, buildTxChart(nodes[2], DEFAULT_CHAIN_IID), JSONCompareMode.NON_EXTENSIBLE)
-        JSONAssert.assertEquals(chart0, buildTxChart(nodes[3], DEFAULT_CHAIN_IID), JSONCompareMode.NON_EXTENSIBLE)
+        assertChartsEqual(chart0, buildTxChart(nodes[1], DEFAULT_CHAIN_IID))
+        assertChartsEqual(chart0, buildTxChart(nodes[2], DEFAULT_CHAIN_IID))
+        assertChartsEqual(chart0, buildTxChart(nodes[3], DEFAULT_CHAIN_IID))
 
         // Asserting blocks and txs of chart
 //        val jsonChar0 = gson.fromJson(chart0, JsonElement::class.java).asJsonObject
@@ -266,9 +265,9 @@ class FourPeersReconfigurationSlowIntegrationTest : ReconfigurationTest() {
                     val chart2 = buildTxChart(nodes[2], DEFAULT_CHAIN_IID, commonHeight)
                     val chart3 = buildTxChart(nodes[3], DEFAULT_CHAIN_IID, commonHeight)
 
-                    JSONAssert.assertEquals(chart0, chart1, JSONCompareMode.NON_EXTENSIBLE)
-                    JSONAssert.assertEquals(chart0, chart2, JSONCompareMode.NON_EXTENSIBLE)
-                    JSONAssert.assertEquals(chart0, chart3, JSONCompareMode.NON_EXTENSIBLE)
+                    assertChartsEqual(chart0, chart1)
+                    assertChartsEqual(chart0, chart2)
+                    assertChartsEqual(chart0, chart3)
                 }
 
 
