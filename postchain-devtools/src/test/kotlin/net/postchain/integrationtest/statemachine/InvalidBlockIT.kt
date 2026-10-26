@@ -9,8 +9,6 @@ import net.postchain.integrationtest.reconfiguration.TxChartHelper
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
-import org.skyscreamer.jsonassert.JSONAssert
-import org.skyscreamer.jsonassert.JSONCompareMode
 
 class InvalidBlockIT : IntegrationTest() {
 
@@ -59,7 +57,7 @@ class InvalidBlockIT : IntegrationTest() {
                 .untilAsserted {
                     val chart0 = TxChartHelper.buildTxChart(nodes[0], PostchainTestNode.DEFAULT_CHAIN_IID, 0)
                     val chart1 = TxChartHelper.buildTxChart(nodes[1], PostchainTestNode.DEFAULT_CHAIN_IID, 0)
-                    JSONAssert.assertEquals(chart0, chart1, JSONCompareMode.NON_EXTENSIBLE)
+                    TxChartHelper.assertChartsEqual(chart0, chart1)
                     println(chart1)
                 }
 
@@ -72,7 +70,7 @@ class InvalidBlockIT : IntegrationTest() {
                 .untilAsserted {
                     val chart0 = TxChartHelper.buildTxChart(nodes[0], PostchainTestNode.DEFAULT_CHAIN_IID, 1)
                     val chart1 = TxChartHelper.buildTxChart(nodes[1], PostchainTestNode.DEFAULT_CHAIN_IID, 1)
-                    JSONAssert.assertEquals(chart0, chart1, JSONCompareMode.NON_EXTENSIBLE)
+                    TxChartHelper.assertChartsEqual(chart0, chart1)
                     println(chart1)
                 }
 

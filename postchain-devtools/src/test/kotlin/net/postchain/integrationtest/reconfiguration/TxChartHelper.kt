@@ -5,11 +5,13 @@ package net.postchain.integrationtest.reconfiguration
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import net.postchain.common.toHex
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.query
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.core.Transaction
+import org.junit.jupiter.api.Assertions.assertEquals
 
 object TxChartHelper {
 
@@ -59,6 +61,10 @@ object TxChartHelper {
 
         //return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chart)
         return gson.toJson(chart)
+    }
+
+    fun assertChartsEqual(expected: String, actual: String) {
+        assertEquals(JsonParser.parseString(expected), JsonParser.parseString(actual))
     }
 
     fun collectAllTxs(node: PostchainTestNode, chainId: Long): List<Transaction> {
