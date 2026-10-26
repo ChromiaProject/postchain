@@ -2,12 +2,12 @@
 
 package net.postchain.api.rest.json
 
+import com.google.gson.JsonParser
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.common.tx.TransactionStatus
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.skyscreamer.jsonassert.JSONAssert
-import org.skyscreamer.jsonassert.JSONCompareMode
 
 class ApiStatusSerializerTest {
 
@@ -24,7 +24,7 @@ class ApiStatusSerializerTest {
             }
         """.trimIndent()
 
-        JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT)
+        assertEquals(JsonParser.parseString(expected), JsonParser.parseString(actual))
     }
 
     @Test
@@ -39,7 +39,7 @@ class ApiStatusSerializerTest {
             }
         """.trimIndent()
 
-        JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT)
+        assertEquals(JsonParser.parseString(expected), JsonParser.parseString(actual))
     }
 
     @Test
@@ -55,7 +55,7 @@ class ApiStatusSerializerTest {
             }
         """.trimIndent()
 
-        JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT)
+        assertEquals(JsonParser.parseString(expected), JsonParser.parseString(actual))
     }
 
     @Test
@@ -69,7 +69,7 @@ class ApiStatusSerializerTest {
             }
         """.trimIndent()
 
-        JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT)
+        assertEquals(JsonParser.parseString(expected), JsonParser.parseString(actual))
     }
 
     @Test
