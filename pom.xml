@@ -490,6 +490,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.objenesis</groupId>
+                <artifactId>objenesis</artifactId>
+                <version>3.6</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.beanit</groupId>
                 <artifactId>jasn1-compiler</artifactId>
                 <version>${jasn.version}</version>
