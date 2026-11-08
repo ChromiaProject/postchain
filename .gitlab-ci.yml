@@ -24,7 +24,7 @@ include:
   # launched in Docker manually (and not as a service, here) because then we can
   # use a tmpfs (in-memory disk) for the data, making it faster.
   services:
-    - name: docker:29.1.1-dind
+    - name: docker:29.1.1-dind@sha256:9b20eb23e1f0443655673efb9db76c4b18cc1b45de1fcf82b3c1b749b9647bdf
       alias: docker
       command: [ "--tls=false" , "--experimental" ]
   artifacts:
