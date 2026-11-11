@@ -26,7 +26,19 @@ import org.jetbrains.annotations.TestOnly
 // bump the version and handle old versions accordingly
 const val EBFT_VERSION: Long = 3
 
-class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketCodec<EbftMessage> {
+class EbftPacketCodec(
+        val config: PeerCommConfiguration,
+        val blockchainRID: BlockchainRid,
+        private val clock: () -> Long = System::currentTimeMillis
+) : XPacketCodec<EbftMessage> {
+
+    companion object {
+        /**
+         * How far the timestamp of a received Identification may be from our own clock, in either direction.
+         * Limits how long a captured Identification packet can be replayed to open a connection as that peer.
+         */
+        const val IDENT_PACKET_MAX_CLOCK_SKEW_MS: Long = 10 * 60 * 1000L
+    }
 
     private val statusCache = EbftPacketCache()
     private val appliedConfigCache = EbftPacketCache()
@@ -34,7 +46,7 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
     override fun getPacketVersion(): Long = EBFT_VERSION
 
     override fun makeIdentPacket(forNode: NodeRid): ByteArray {
-        val idMessage = Identification(forNode.data, blockchainRID, System.currentTimeMillis())
+        val idMessage = Identification(forNode.data, blockchainRID, clock())
         val sigMaker = config.sigMaker()
         val signature = sigMaker.signMessage(idMessage.encoded(1).value)
         return SignedMessage(idMessage, config.pubKey, signature.data).encoded(1).value
@@ -62,6 +74,12 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
 
         if (!config.pubKey.contentEquals(message.pubKey)) {
             throw BadMessageException("'yourPubKey' ${message.pubKey.toHex()} of Identification is not mine")
+        }
+
+        val skew = Math.abs(clock() - message.timestamp)
+        if (skew > IDENT_PACKET_MAX_CLOCK_SKEW_MS) {
+            throw BadMessageException(
+                    "Identification timestamp ${message.timestamp} is $skew ms away from local time")
         }
 
         return IdentPacketInfo(NodeRid(signedMessage.pubKey), message.blockchainRID, null)
