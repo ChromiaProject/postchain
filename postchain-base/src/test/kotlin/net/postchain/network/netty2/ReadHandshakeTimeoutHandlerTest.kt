@@ -35,4 +35,18 @@ class ReadHandshakeTimeoutHandlerTest {
         channel.runScheduledPendingTasks()
         assertThat(channel.isOpen).isTrue()
     }
+
+    @Test
+    fun `closes active channel when handshake handler is added after activation`() {
+        val channel = EmbeddedChannel()
+        channel.pipeline().fireChannelActive()
+        channel.pipeline().addLast(
+                ReadHandshakeTimeoutHandler(ConnectionConfig(readHandshakeTimeout = 20)) { false }
+        )
+
+        await().atMost(Duration.ONE_SECOND).untilAsserted {
+            channel.runScheduledPendingTasks()
+            assertThat(channel.isOpen).isFalse()
+        }
+    }
 }

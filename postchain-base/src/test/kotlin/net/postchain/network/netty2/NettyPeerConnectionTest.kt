@@ -1,7 +1,10 @@
 package net.postchain.network.netty2
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
+import net.postchain.network.MAX_PAYLOAD_SIZE
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -11,6 +14,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.util.concurrent.CompletableFuture
 
@@ -40,6 +44,30 @@ class NettyPeerConnectionTest {
 
         verify(ctx).close()
         verify(ctx, never()).writeAndFlush(any())
+    }
+
+    @Test
+    fun `write buffer watermarks exceed the maximum frame size`() {
+        assertThat(NettyPeerConnection.WRITE_BUFFER_LOW_WATER_MARK).isEqualTo(MAX_PAYLOAD_SIZE)
+        assertThat(NettyPeerConnection.WRITE_BUFFER_HIGH_WATER_MARK).isEqualTo(2 * MAX_PAYLOAD_SIZE)
+    }
+
+    @Test
+    fun `sendPacketSafely keeps writable channel open for consecutive large packets`() {
+        val channel = mock<Channel> {
+            on { isWritable } doReturn true
+        }
+        val ctx = mock<ChannelHandlerContext> {
+            on { channel() } doReturn channel
+        }
+        val packet = lazy<ByteArray> { ByteArray(2 * 1024 * 1024) { 1 } }
+
+        repeat(2) {
+            TestPeerConnection().sendSafely(ctx, packet)
+        }
+
+        verify(ctx, times(2)).writeAndFlush(any())
+        verify(ctx, never()).close()
     }
 
     @Test

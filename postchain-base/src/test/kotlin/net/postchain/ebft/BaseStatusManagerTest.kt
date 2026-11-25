@@ -107,7 +107,7 @@ class BaseStatusManagerTest {
     }
 
     @Test
-    fun `prepared node fetches block at current height when peers are ahead`() {
+    fun `prepared node fetches block at current height when enough peers are ahead`() {
         val node4 = "4444444444444444444444444444444444444444444444444444444444444444".hexStringToByteArray()
         val manager = BaseStatusManager(
                 listOf(node1, node2, myNode, node4),
@@ -121,10 +121,37 @@ class BaseStatusManagerTest {
         manager.myStatus.state = NodeBlockState.Prepared
         manager.myStatus.blockRID = blockRID
         manager.nodeStatuses[0].height = 11
+        manager.nodeStatuses[1].height = 11
 
         manager.recomputeStatus()
 
         assertThat(manager.intent).isEqualTo(FetchBlockAtHeightIntent(10))
+        assertThat(manager.myStatus.state).isEqualTo(NodeBlockState.Prepared)
+    }
+
+    @Test
+    fun `prepared node with commit quorum commits instead of syncing when peer is ahead`() {
+        val node4 = "4444444444444444444444444444444444444444444444444444444444444444".hexStringToByteArray()
+        val manager = BaseStatusManager(
+                listOf(node1, node2, myNode, node4),
+                2,
+                10,
+                nodeStatusMetrics,
+                stateChangeTracker,
+                clock
+        )
+        val blockRID = ByteArray(32) { 1 }
+        val signature = Signature(ByteArray(33) { 3 }, ByteArray(64) { 4 })
+        manager.myStatus.state = NodeBlockState.Prepared
+        manager.myStatus.blockRID = blockRID
+        manager.commitSignatures[0] = signature
+        manager.commitSignatures[1] = signature
+        manager.commitSignatures[2] = signature
+        manager.nodeStatuses[0].height = 11
+
+        manager.recomputeStatus()
+
+        assertThat(manager.intent).isEqualTo(CommitBlockIntent)
         assertThat(manager.myStatus.state).isEqualTo(NodeBlockState.Prepared)
     }
 
@@ -179,9 +206,34 @@ class BaseStatusManagerTest {
         )
         val conflictingRID = ByteArray(32) { 6 }
         val signature = Signature(ByteArray(33) { 7 }, ByteArray(64) { 8 })
+        manager.intent = FetchProposedBlockIntent(conflictingRID)
 
         assertThat(manager.acceptBlock(conflictingRID, signature)).isFalse()
         assertThat(manager.myStatus.blockRID).isEqualTo(null)
+        assertThat(manager.intent).isEqualTo(DoNothingIntent)
+    }
+
+    @Test
+    fun `locked primary fetches locked block instead of building`() {
+        val node4 = "4444444444444444444444444444444444444444444444444444444444444444".hexStringToByteArray()
+        val lockedRID = ByteArray(32) { 5 }
+        val store = InMemoryPreparedBlockStore()
+        store.saved[10] = lockedRID
+        val manager = BaseStatusManager(
+                listOf(node1, node2, myNode, node4),
+                2,
+                10,
+                nodeStatusMetrics,
+                stateChangeTracker,
+                clock,
+                store
+        )
+
+        assertThat(manager.isMyNodePrimary()).isTrue()
+        manager.recomputeStatus()
+
+        assertThat(manager.intent).isEqualTo(FetchProposedBlockIntent(lockedRID))
+        assertThat(manager.intent == BuildBlockIntent).isFalse()
     }
 
     private class InMemoryPreparedBlockStore : PreparedBlockStore {

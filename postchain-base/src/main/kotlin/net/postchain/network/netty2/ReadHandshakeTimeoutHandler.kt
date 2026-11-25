@@ -21,12 +21,27 @@ class ReadHandshakeTimeoutHandler(
     override fun channelActive(ctx: ChannelHandlerContext?) {
         val context = ctx ?: return super.channelActive(ctx)
         channelActivatedTime = ticksInNanos()
-        timeoutFuture = context.executor().schedule(
-                { closeOnTimeout(context) },
-                handshakeTimeoutMillis,
-                TimeUnit.MILLISECONDS
-        )
+        if (timeoutFuture == null && !isHandshaked()) {
+            timeoutFuture = context.executor().schedule(
+                    { closeOnTimeout(context) },
+                    handshakeTimeoutMillis,
+                    TimeUnit.MILLISECONDS
+            )
+        }
         super.channelActive(ctx)
+    }
+
+    override fun handlerAdded(ctx: ChannelHandlerContext?) {
+        val context = ctx ?: return super.handlerAdded(ctx)
+        if (context.channel().isActive && timeoutFuture == null && !isHandshaked()) {
+            channelActivatedTime = ticksInNanos()
+            timeoutFuture = context.executor().schedule(
+                    { closeOnTimeout(context) },
+                    handshakeTimeoutMillis,
+                    TimeUnit.MILLISECONDS
+            )
+        }
+        super.handlerAdded(ctx)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {

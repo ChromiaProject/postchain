@@ -229,6 +229,7 @@ class BaseStatusManager(
         val locked = lockedBlock
         if (locked != null && locked.height == myStatus.height && !locked.blockRID.contentEquals(blockRID)) {
             logger.error("Refusing to sign block ${blockRID.toHex()} at height ${myStatus.height}: locked to ${locked.blockRID.toHex()} by Prepared state")
+            intent = DoNothingIntent
             return false
         }
         resetCommitSignatures()
@@ -416,7 +417,9 @@ class BaseStatusManager(
                 }
             }
             if (myStatus.state == NodeBlockState.Prepared) {
-                if (higherHeightCount == 0) return FlowStatus.JustRunOn
+                if (commitSignatures.count { it != null } >= quorum) return FlowStatus.JustRunOn
+                val minHigherHeightCount = nodeCount - quorum + 1
+                if (higherHeightCount < minHigherHeightCount) return FlowStatus.JustRunOn
                 val currentIntent = intent
                 if (currentIntent is FetchBlockAtHeightIntent && currentIntent.height == myStatus.height) {
                     return FlowStatus.Break
@@ -575,6 +578,16 @@ class BaseStatusManager(
          *       that the primary node has
          */
         fun handleWaitBlockState(): Boolean {
+            val locked = lockedBlock
+            if (locked != null && locked.height == myStatus.height) {
+                val lockedIntent = FetchProposedBlockIntent(locked.blockRID)
+                return if (intent == lockedIntent) {
+                    false
+                } else {
+                    intent = lockedIntent
+                    true
+                }
+            }
             if (isMyNodePrimary()) {
                 if (intent !is BuildBlockIntent) {
                     intent = BuildBlockIntent

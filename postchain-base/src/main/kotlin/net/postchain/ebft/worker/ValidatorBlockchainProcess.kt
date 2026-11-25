@@ -216,7 +216,7 @@ private class ValidatorPreparedBlockStore(private val workerContext: WorkerConte
     }
 
     private val chainID = workerContext.blockchainConfiguration.chainID
-    private val storage = workerContext.engine.blockBuilderStorage
+    private val storage = workerContext.engine.sharedStorage
 
     override fun initialize() {
         withWriteConnection(storage, chainID) { ctx ->
@@ -234,8 +234,13 @@ private class ValidatorPreparedBlockStore(private val workerContext: WorkerConte
     override fun save(height: Long, blockRID: ByteArray): Boolean = withWriteConnection(storage, chainID) { ctx ->
         val databaseAccess = DatabaseAccess.of(ctx)
         databaseAccess.createStateLeafTable(ctx, PREFIX)
-        databaseAccess.insertState(ctx, PREFIX, height, STATE_N, blockRID)
-        true
+        val existing = databaseAccess.getState(ctx, PREFIX, height, STATE_N)
+        if (existing != null && existing.blockHeight == height) {
+            existing.data.contentEquals(blockRID)
+        } else {
+            databaseAccess.insertState(ctx, PREFIX, height, STATE_N, blockRID)
+            true
+        }
     }
 }
 

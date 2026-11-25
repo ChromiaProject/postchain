@@ -6,6 +6,7 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
+import net.postchain.network.MAX_PAYLOAD_SIZE
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
@@ -18,8 +19,8 @@ abstract class NettyPeerConnection<PacketType>(
     companion object : KLogging() {
         const val PING_SEND_INTERVAL = 30
         const val READ_TIMEOUT = 60
-        const val WRITE_BUFFER_LOW_WATER_MARK = 256 * 1024
-        const val WRITE_BUFFER_HIGH_WATER_MARK = 1024 * 1024
+        const val WRITE_BUFFER_LOW_WATER_MARK = MAX_PAYLOAD_SIZE
+        const val WRITE_BUFFER_HIGH_WATER_MARK = 2 * MAX_PAYLOAD_SIZE
     }
 
     private val pingBytes = ByteArray(1) { 1 }
