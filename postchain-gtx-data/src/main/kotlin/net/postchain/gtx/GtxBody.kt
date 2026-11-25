@@ -79,7 +79,7 @@ class GtxBody(
 
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxBody {
-            if ((gtv !is GtvArray) && gtv.asArray().size != 3) throw IllegalArgumentException("Gtv must be an array of size 3")
+            if (gtv !is GtvArray || gtv.asArray().size != 3) throw IllegalArgumentException("Gtv must be an array of size 3")
             gtv.asArray().let { array ->
                 if (array[0] !is GtvByteArray) throw IllegalArgumentException("First element must be a byte array")
                 if (array[1] !is GtvArray) throw IllegalArgumentException("Second element must be an array")

@@ -7,6 +7,7 @@ import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
 import net.postchain.network.XPacketCodec
+import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
 import java.util.concurrent.CompletableFuture
 
@@ -17,6 +18,8 @@ abstract class NettyPeerConnection<PacketType>(
     companion object : KLogging() {
         const val PING_SEND_INTERVAL = 30
         const val READ_TIMEOUT = 60
+        const val WRITE_BUFFER_LOW_WATER_MARK = 256 * 1024
+        const val WRITE_BUFFER_HIGH_WATER_MARK = 1024 * 1024
     }
 
     private val pingBytes = ByteArray(1) { 1 }
@@ -39,6 +42,15 @@ abstract class NettyPeerConnection<PacketType>(
         } else {
             return versionMessage.contentEquals(msg)
         }
+    }
+
+    protected fun sendPacketSafely(ctx: ChannelHandlerContext, packet: LazyPacket) {
+        if (!ctx.channel().isWritable) {
+            logger.warn("Closing connection to slow peer at ${ctx.channel().remoteAddress()} because the write buffer is full")
+            ctx.close()
+            return
+        }
+        ctx.writeAndFlush(Transport.wrapMessage(packet.value))
     }
 
     protected fun sendPing(ctx: ChannelHandlerContext) {

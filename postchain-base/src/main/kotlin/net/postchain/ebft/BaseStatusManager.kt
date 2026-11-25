@@ -24,7 +24,8 @@ class BaseStatusManager(
         myNextHeight: Long,
         private val nodeStatusMetrics: NodeStatusMetrics,
         private val stateChangeTracker: StateChangeTracker,
-        private val clock: Clock = Clock.systemUTC()
+        private val clock: Clock = Clock.systemUTC(),
+        private val preparedBlockStore: PreparedBlockStore? = null
 ) : StatusManager {
     private val nodeCount = nodes.size
     override val nodeStatuses = Array(nodeCount) { NodeStatus() }
@@ -35,6 +36,9 @@ class BaseStatusManager(
     private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
     val nodeReportedRevolt = Array(nodeCount) { false }
     private val nodeRids = nodes.map { NodeRid(it) }
+    private var lockedBlock: LockedBlock? = null
+
+    private data class LockedBlock(val height: Long, val blockRID: ByteArray)
 
     companion object : KLogging() {
         const val ZERO_SERIAL_TIME = 1518000000000L
@@ -42,6 +46,7 @@ class BaseStatusManager(
 
     init {
         myStatus.height = myNextHeight
+        preparedBlockStore?.load(myNextHeight)?.let { lockedBlock = LockedBlock(myNextHeight, it) }
         // make sure that after restart status updates are still considered fresh,
         // this works fine as long as we have fewer than 1000 updates per second,
         // otherwise we are screwed
@@ -150,6 +155,7 @@ class BaseStatusManager(
             state = NodeBlockState.WaitBlock
             signature = null
         }
+        if (lockedBlock != null && lockedBlock!!.height < myStatus.height) lockedBlock = null
         resetCommitSignatures()
         intent = DoNothingIntent
         recomputeStatus()
@@ -219,7 +225,12 @@ class BaseStatusManager(
      * @param blockRID block identifier
      * @param mySignature signature of [blockRID]
      */
-    fun acceptBlock(blockRID: ByteArray, mySignature: Signature) {
+    fun acceptBlock(blockRID: ByteArray, mySignature: Signature): Boolean {
+        val locked = lockedBlock
+        if (locked != null && locked.height == myStatus.height && !locked.blockRID.contentEquals(blockRID)) {
+            logger.error("Refusing to sign block ${blockRID.toHex()} at height ${myStatus.height}: locked to ${locked.blockRID.toHex()} by Prepared state")
+            return false
+        }
         resetCommitSignatures()
         myStatus.blockRID = blockRID
         myStatus.serial += 1
@@ -228,6 +239,7 @@ class BaseStatusManager(
         intent = DoNothingIntent
         stateChangeTracker.myStatusChange(myStatus)
         recomputeStatus()
+        return true
     }
 
     /**
@@ -242,8 +254,7 @@ class BaseStatusManager(
         val theIntent = intent
         return if (theIntent is FetchProposedBlockIntent) {
             if (theIntent.isThisTheBlockWeAreWaitingFor(blockRID)) {
-                acceptBlock(blockRID, mySignature)
-                true
+                return acceptBlock(blockRID, mySignature)
             } else {
                 logger.info("Received block which is irrelevant. Need ${theIntent.blockRID.toHex()}, got ${blockRID.toHex()}")
                 false
@@ -283,8 +294,7 @@ class BaseStatusManager(
                 intent = DoNothingIntent
                 return false
             }
-            acceptBlock(blockRID, mySignature)
-            return true
+            return acceptBlock(blockRID, mySignature)
         } else {
             logger.warn("Received built block while not requesting it: blockRid = ${blockRID.toHex()}")
             return false
@@ -346,6 +356,13 @@ class BaseStatusManager(
 
     override fun shouldApplySignature(state: NodeBlockState): Boolean = state == NodeBlockState.Prepared
 
+    private fun persistPreparedBlock(blockRID: ByteArray): Boolean = try {
+        preparedBlockStore?.save(myStatus.height, blockRID) ?: true
+    } catch (e: Exception) {
+        logger.error(e) { "Failed to persist Prepared block lock at height ${myStatus.height}" }
+        false
+    }
+
     /**
      * Recompute status until no more updates occur.
      */
@@ -398,12 +415,19 @@ class BaseStatusManager(
                     higherHeightCount++
                 }
             }
+            if (myStatus.state == NodeBlockState.Prepared) {
+                if (higherHeightCount == 0) return FlowStatus.JustRunOn
+                val currentIntent = intent
+                if (currentIntent is FetchBlockAtHeightIntent && currentIntent.height == myStatus.height) {
+                    return FlowStatus.Break
+                }
+                intent = FetchBlockAtHeightIntent(myStatus.height)
+                return FlowStatus.Continue
+            }
             if (sameHeightCount < this.quorum) {
                 // cannot build a block
 
                 // worth trying to sync?
-                // if we are in prepared state, we fetch block only if there's a supermajority
-                // of nodes with higher height
                 if (higherHeightCount > 0) {
                     val _intent = intent
 
@@ -482,9 +506,12 @@ class BaseStatusManager(
             val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID, myStatus.round) +
                     countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID, myStatus.round)
             return if (count >= this.quorum) {
+                val blockRID = myStatus.blockRID
+                if (blockRID == null || !persistPreparedBlock(blockRID)) return false
                 myStatus.state = NodeBlockState.Prepared
                 myStatus.signature = this.commitSignatures[myIndex]
                 myStatus.serial += 1
+                lockedBlock = LockedBlock(myStatus.height, blockRID)
                 stateChangeTracker.myStatusChange(myStatus)
                 true
             } else {
@@ -574,14 +601,12 @@ class BaseStatusManager(
             return false
         }
 
-        // We should make sure we have enough nodes who can participate in building a block.
-        // (If we are in [Prepared] state we ignore this check, it has been done before we got here)
-        if (myStatus.state != NodeBlockState.Prepared) {
-            when (potentiallyDoSync()) {
-                FlowStatus.Break -> return false
-                FlowStatus.Continue -> return true
-                FlowStatus.JustRunOn -> Unit // nothing, just go on
-            }
+        // A Prepared node must be able to fetch a committed block at the current height when
+        // peers have moved ahead; the block still has to pass normal witness/DB validation.
+        when (potentiallyDoSync()) {
+            FlowStatus.Break -> return false
+            FlowStatus.Continue -> return true
+            FlowStatus.JustRunOn -> Unit // nothing, just go on
         }
 
         // Are we interested in checking for revolt?

@@ -45,7 +45,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) : ToGtv {
     companion object {
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOp {
-            if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
+            if (gtv !is GtvArray || gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
             gtv.asArray().let { array ->
                 if (array[0] !is GtvString) throw IllegalArgumentException("First element must be a string")
                 if (array[1] !is GtvArray) throw IllegalArgumentException("Second element must be an array")

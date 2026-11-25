@@ -147,6 +147,15 @@ interface BlockManager {
 }
 
 /**
+ * Durable store for the block a validator has locked by reaching the Prepared state.
+ */
+interface PreparedBlockStore {
+    fun initialize()
+    fun load(height: Long): ByteArray?
+    fun save(height: Long, blockRID: ByteArray): Boolean
+}
+
+/**
  * Manages the status of the consensus protocol
  */
 interface StatusManager {

@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.timeout.ReadTimeoutException
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 class ReadHandshakeTimeoutHandler(
@@ -13,10 +14,18 @@ class ReadHandshakeTimeoutHandler(
 
     private var closed = false
     private var channelActivatedTime: Long = 0
+    private var timeoutFuture: ScheduledFuture<*>? = null
+    private val handshakeTimeoutMillis = connectionConfig.readHandshakeTimeout
     val timeoutNanos = TimeUnit.MILLISECONDS.toNanos(connectionConfig.readHandshakeTimeout)
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
+        val context = ctx ?: return super.channelActive(ctx)
         channelActivatedTime = ticksInNanos()
+        timeoutFuture = context.executor().schedule(
+                { closeOnTimeout(context) },
+                handshakeTimeoutMillis,
+                TimeUnit.MILLISECONDS
+        )
         super.channelActive(ctx)
     }
 
@@ -27,19 +36,41 @@ class ReadHandshakeTimeoutHandler(
         }
 
         if (isHandshaked()) {
+            cancelTimeout()
             super.channelRead(ctx, msg)
             return
         }
 
         if (ticksInNanos() - channelActivatedTime > timeoutNanos) {
             (msg as ByteBuf).release()
-            ctx?.close()
-            closed = true
-            ctx?.fireExceptionCaught(ReadTimeoutException("Handshake timeout"))
+            ctx?.let { closeOnTimeout(it) }
             return
         }
 
         super.channelRead(ctx, msg)
+    }
+
+    override fun channelInactive(ctx: ChannelHandlerContext?) {
+        cancelTimeout()
+        super.channelInactive(ctx)
+    }
+
+    override fun handlerRemoved(ctx: ChannelHandlerContext?) {
+        cancelTimeout()
+        super.handlerRemoved(ctx)
+    }
+
+    private fun closeOnTimeout(ctx: ChannelHandlerContext) {
+        if (closed || isHandshaked()) return
+        closed = true
+        cancelTimeout()
+        ctx.close()
+        ctx.fireExceptionCaught(ReadTimeoutException("Handshake timeout"))
+    }
+
+    private fun cancelTimeout() {
+        timeoutFuture?.cancel(false)
+        timeoutFuture = null
     }
 
     private fun ticksInNanos(): Long {

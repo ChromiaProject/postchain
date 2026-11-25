@@ -5,7 +5,10 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.base.configuration.KEY_REVOLT
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
@@ -24,6 +27,7 @@ import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.PersistOnlyBlockWriter
+import net.postchain.ebft.PreparedBlockStore
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.SpecialTxExtension
 import net.postchain.ebft.message.StateChangeTracker
@@ -82,12 +86,15 @@ class ValidatorBlockchainProcess(
         val stateChangeTracker = StateChangeTracker(workerContext.appConfig, nodeStatusMetrics)
         val blockchainConfiguration = workerContext.blockchainConfiguration
         val revoltConfiguration = blockchainConfiguration.revoltConfiguration
+        val preparedBlockStore = ValidatorPreparedBlockStore(workerContext)
+        preparedBlockStore.initialize()
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
                 nodeStatusMetrics,
-                stateChangeTracker
+                stateChangeTracker,
+                preparedBlockStore = preparedBlockStore
         )
 
         // Other nodes will need at least half the round time to load + some margin for consensus/networking
@@ -200,6 +207,36 @@ class ValidatorBlockchainProcess(
 
     override fun currentBlockHeight(): Long = syncManager.currentBlockHeight()
             ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+}
+
+private class ValidatorPreparedBlockStore(private val workerContext: WorkerContext) : PreparedBlockStore {
+    companion object {
+        private const val PREFIX = "_ebft_prepared_block"
+        private const val STATE_N = 0L
+    }
+
+    private val chainID = workerContext.blockchainConfiguration.chainID
+    private val storage = workerContext.engine.blockBuilderStorage
+
+    override fun initialize() {
+        withWriteConnection(storage, chainID) { ctx ->
+            DatabaseAccess.of(ctx).createStateLeafTable(ctx, PREFIX)
+            true
+        }
+    }
+
+    override fun load(height: Long): ByteArray? = withReadConnection(storage, chainID) { ctx ->
+        DatabaseAccess.of(ctx).getState(ctx, PREFIX, height, STATE_N)
+                ?.takeIf { it.blockHeight == height }
+                ?.data
+    }
+
+    override fun save(height: Long, blockRID: ByteArray): Boolean = withWriteConnection(storage, chainID) { ctx ->
+        val databaseAccess = DatabaseAccess.of(ctx)
+        databaseAccess.createStateLeafTable(ctx, PREFIX)
+        databaseAccess.insertState(ctx, PREFIX, height, STATE_N, blockRID)
+        true
+    }
 }
 
 val BlockchainConfiguration.revoltConfiguration: RevoltConfigurationData

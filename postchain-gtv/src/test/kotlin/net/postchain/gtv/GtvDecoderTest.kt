@@ -96,4 +96,17 @@ class GtvDecoderTest {
         val result = GtvDecoder.decodeGtv(ByteArrayInputStream(dict1 + dict2))
         assertThat(result).equals(dict1)
     }
+
+    @Test
+    fun `rejects oversized BER length before allocation`() {
+        val crafted = byteArrayOf(0x04.toByte(), 0x84.toByte(), 0x7F.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte())
+
+        assertFailure {
+            GtvDecoder.decodeGtv(crafted)
+        }.isInstanceOf(GtvException::class)
+
+        assertFailure {
+            GtvDecoder.decodeGtv(ByteArrayInputStream(crafted))
+        }.isInstanceOf(GtvException::class)
+    }
 }

@@ -71,7 +71,7 @@ class Gtx(
 
         @JvmStatic
         fun fromGtv(gtv: Gtv): Gtx {
-            if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
+            if (gtv !is GtvArray || gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
             gtv.asArray().let { array ->
                 if (array[0] !is GtvArray) throw IllegalArgumentException("First element must be an array")
                 if (array[1] !is GtvArray) throw IllegalArgumentException("Second element must be an array")
