@@ -108,7 +108,9 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet.value))
+        if (isContextInitialized()) {
+            sendPacketSafely(context, packet)
+        }
     }
 
     override fun remoteAddress(): String {

@@ -151,14 +151,34 @@ class EbftPacketCodecFactory : XPacketCodecFactory<EbftMessage> {
     }
 }
 
-class EbftPacketCache {
+class EbftPacketCache(
+        private val maxEntries: Int = DEFAULT_MAX_ENTRIES,
+        private val maxBytes: Int = DEFAULT_MAX_BYTES,
+        private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
+        private val clock: () -> Long = System::currentTimeMillis
+) {
 
-    private val cache = mutableMapOf<WrappedByteArray, Pair<ByteArray, EbftMessage>>()
+    private class Entry(
+            val rawMessage: ByteArray,
+            val message: EbftMessage,
+            val timestamp: Long
+    ) {
+        val size = rawMessage.size
+    }
 
-    companion object : KLogging()
+    private val cache = LinkedHashMap<WrappedByteArray, Entry>(16, 0.75f, true)
+    private var totalBytes = 0
 
+    companion object : KLogging() {
+        const val DEFAULT_MAX_ENTRIES = 1_024
+        const val DEFAULT_MAX_BYTES = 32 * 1024 * 1024
+        const val DEFAULT_TTL_MILLIS = 10 * 60 * 1000L
+    }
+
+    @Synchronized
     fun get(pubKey: WrappedByteArray, rawMessage: ByteArray, topic: MessageTopic): EbftMessage? {
-        val message = cache[pubKey]?.takeIf { it.first.contentEquals(rawMessage) }?.second
+        evictExpired()
+        val message = cache[pubKey]?.takeIf { it.rawMessage.contentEquals(rawMessage) }?.message
         if (logger.isTraceEnabled) {
             if (message != null) {
                 logger.trace { "Cache HIT for pubKey $pubKey and topic $topic" }
@@ -169,8 +189,35 @@ class EbftPacketCache {
         return message
     }
 
+    @Synchronized
     fun put(pubKey: WrappedByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
-        cache[pubKey] = rawMessage to message
+        if (rawMessage.size > maxBytes) return message
+        evictExpired()
+        cache.remove(pubKey)?.also { totalBytes -= it.size }
+        cache[pubKey] = Entry(rawMessage, message, clock())
+        totalBytes += rawMessage.size
+        evictOverflow()
         return message
+    }
+
+    private fun evictExpired() {
+        val now = clock()
+        val iterator = cache.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (now - entry.value.timestamp > ttlMillis) {
+                totalBytes -= entry.value.size
+                iterator.remove()
+            }
+        }
+    }
+
+    private fun evictOverflow() {
+        val iterator = cache.entries.iterator()
+        while ((cache.size > maxEntries || totalBytes > maxBytes) && iterator.hasNext()) {
+            val entry = iterator.next()
+            totalBytes -= entry.value.size
+            iterator.remove()
+        }
     }
 }

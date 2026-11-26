@@ -44,17 +44,25 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
         @JvmStatic
         val fromBytes = { rawWitness: ByteArray ->
             val buffer = ByteBuffer.wrap(rawWitness)
-            val sigCount = buffer.int
+            val sigCount = readLength(buffer, "signature count")
+            if (sigCount > buffer.remaining() / 8) throw IllegalArgumentException("Invalid witness signature count")
             val signatures = Array(sigCount) {
-                val subjectIdSize = buffer.int
+                val subjectIdSize = readLength(buffer, "subject ID size")
                 val subjectId = ByteArray(subjectIdSize)
                 buffer.get(subjectId)
-                val signatureSize = buffer.int
+                val signatureSize = readLength(buffer, "signature size")
                 val signature = ByteArray(signatureSize)
                 buffer.get(signature)
                 Signature(subjectId, signature)
             }
             BaseBlockWitness(rawWitness, signatures)
+        }
+
+        private fun readLength(buffer: ByteBuffer, name: String): Int {
+            if (buffer.remaining() < Int.SIZE_BYTES) throw IllegalArgumentException("Truncated witness $name")
+            val value = buffer.int
+            if (value < 0 || value > buffer.remaining()) throw IllegalArgumentException("Invalid witness $name")
+            return value
         }
 
         /**

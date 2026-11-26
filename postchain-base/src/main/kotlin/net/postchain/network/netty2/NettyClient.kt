@@ -8,6 +8,7 @@ import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPipeline
 import io.netty.channel.EventLoopGroup
+import io.netty.channel.WriteBufferWaterMark
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import net.postchain.core.Shutdownable
@@ -28,6 +29,9 @@ class NettyClient(
                 .option(ChannelOption.TCP_NODELAY, true)
                 .handler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
+                        ch.config().setWriteBufferWaterMark(WriteBufferWaterMark(
+                                NettyPeerConnection.WRITE_BUFFER_LOW_WATER_MARK,
+                                NettyPeerConnection.WRITE_BUFFER_HIGH_WATER_MARK))
                         ch.pipeline()
                                 .addLast(NettyCodecs.lengthFieldPrepender()) // outbound
                                 .addLast(NettyCodecs.lengthFieldBasedFrameDecoder()) // inbound
