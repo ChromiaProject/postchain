@@ -147,6 +147,29 @@ interface BlockManager {
 }
 
 /**
+ * Persisted record of a block locked by reaching the EBFT Prepared state.
+ *
+ * Persisting the serialized [blockData] (header + transactions) alongside [blockRID]
+ * guarantees that even if a quorum or the entire validator cluster restarts after reaching
+ * Prepared and before committing to the blockchain database, restarted validators can reload,
+ * re-sign, and serve the locked block without deadlocking.
+ */
+class PreparedBlockRecord(
+    val height: Long,
+    val blockRID: ByteArray,
+    val blockData: ByteArray? = null
+)
+
+/**
+ * Durable store for the block a validator has locked by reaching the Prepared state.
+ */
+interface PreparedBlockStore {
+    fun initialize()
+    fun load(height: Long): PreparedBlockRecord?
+    fun save(height: Long, blockRID: ByteArray, blockData: ByteArray? = null): Boolean
+}
+
+/**
  * Manages the status of the consensus protocol
  */
 interface StatusManager {
@@ -162,7 +185,12 @@ interface StatusManager {
     fun onHeightAdvance(height: Long): Boolean // a complete block was received from other peers, go forward
     fun onCommittedBlock(blockRID: ByteArray) // when block committed to the database
     fun onReceivedBlock(blockRID: ByteArray, mySignature: Signature): Boolean // received block was validated by BlockManager/DB
+    fun onReceivedBlock(blockRID: ByteArray, mySignature: Signature, blockData: ByteArray?): Boolean =
+            onReceivedBlock(blockRID, mySignature)
     fun onBuiltBlock(blockRID: ByteArray, mySignature: Signature): Boolean // block built by BlockManager/BlockDatabase (on a primary node)
+    fun onBuiltBlock(blockRID: ByteArray, mySignature: Signature, blockData: ByteArray?): Boolean =
+            onBuiltBlock(blockRID, mySignature)
+    fun getLockedBlockData(blockRID: ByteArray): ByteArray? = null
     fun onCommitSignature(nodeIndex: Int, blockRID: ByteArray, signature: Signature)
     fun onStartRevolting()
 

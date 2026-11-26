@@ -24,6 +24,7 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
+import net.postchain.ebft.syncmanager.BlockDataDecoder
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.BLOCK_RID_TAG
@@ -111,7 +112,7 @@ class BaseBlockManager(
                     withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
                         logger.info("Signed block ${block.header.blockRID.toHex()}")
                     }
-                    if (statusManager.onReceivedBlock(block.header.blockRID, signature)) {
+                    if (statusManager.onReceivedBlock(block.header.blockRID, signature, BlockDataDecoder.encodeBlockData(block))) {
                         currentBlock = block
                         lastBlockTimestamp = blockTimestamp(block)
                     }
@@ -294,7 +295,7 @@ class BaseBlockManager(
                     }, { blockAndSignature ->
                         val block = blockAndSignature.first
                         val signature = blockAndSignature.second
-                        if (statusManager.onBuiltBlock(block.header.blockRID, signature)) {
+                        if (statusManager.onBuiltBlock(block.header.blockRID, signature, BlockDataDecoder.encodeBlockData(block))) {
                             currentBlock = block
                             lastBlockTimestamp = blockTimestamp(block)
                         }

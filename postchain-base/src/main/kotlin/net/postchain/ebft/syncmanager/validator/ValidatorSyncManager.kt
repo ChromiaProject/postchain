@@ -52,6 +52,7 @@ import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.ProposedBlock
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
+import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeEncodedBlockData
 import net.postchain.ebft.syncmanager.StatusLogInterval
 import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
@@ -457,6 +458,20 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 lastRequestedProposedBlock = null
             }
         } else {
+            val persistedBytes = statusManager.getLockedBlockData(blockRID)
+            if (persistedBytes != null) {
+                val persistedBlock = decodeEncodedBlockData(persistedBytes, blockchainConfiguration)
+                if (persistedBlock != null && blockRID.contentEquals(persistedBlock.header.blockRID)) {
+                    logger.info { "Reloading persisted Prepared block ${blockRID.toHex()} locally from PreparedBlockStore" }
+                    lastRequestedProposedBlock = persistedBlock
+                    blockManager.onReceivedProposedBlock(persistedBlock, {
+                        lastRequestedProposedBlock = null
+                    }, {
+                        lastRequestedProposedBlock = null
+                    })
+                    return
+                }
+            }
             lastRequestedProposedBlock = null
             fetchProposedBlock(blockRID)
         }
