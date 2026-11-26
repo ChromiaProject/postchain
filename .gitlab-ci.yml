@@ -93,7 +93,7 @@ build:
       - tags
   cache:
     - paths: [ .m2/repository ]
-    - key: kotlin-ic
+    - key: "kotlin-ic-$CI_COMMIT_REF_SLUG"
       paths:
         - "*/target/classes"
         - "*/target/test-classes"
